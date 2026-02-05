@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>UNI OpenCourseWare</title>
+        <link rel="stylesheet" href="styles.css">
+        <link type="text/css" rel="stylesheet" href="css/style.css"/>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    </head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <a href="index.html"><img src="logo-uni-ocw.png" alt="UNI OpenCourseWare Logo" class="logo-img"></a>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">Explorar</a></li>
+                    <li><a href="#">Comunidad</a></li>
+                    <li><a href="#">Nosotros</a></li>
+                </ul>
+            </nav>
+            <button class="login-btn">Acceder</button>
+        </div>
+    </header>
+    <main>
+        <h1>La UNI  para <span> Todo el mundo</span></h1>
+        <p>Accede a las Clases de la Mejor Universidad en Ciencias e Ingenierías del Perú </p>
+        <div class="search-container">
+            <input type="text" placeholder="Inglés">
+            <button>Buscar</button>
+        </div>
+    </main>
+    <section class="featured-courses">
+        <h3>Cursos Destacados</h3>
+        <div class="course-card" onclick="location.href='calculointegral.html'">
+            <img src="integral.png" alt="Course Image">
+            <div class="course-info">
+                <h3>Calculo Integral</h3>
+                <p>Ciencias Basicas</p>
+                <p><strong>Profesor:</strong> Carlos Arámbulu.</p>
+            </div>
+        </div>
+        <div class="course-card" onclick="location.href='geometria-analitica.html'">
+            <img src="geometria-analitica.jpg" alt="Course Image">
+            <div class="course-info">
+                <h3>Geometría Analítica</h3>
+                <p>Ciencias Básicas</p>
+                <p><strong>Profesor:</strong> Alexander Bonifacio </p>
+            </div>
+        </div>
+        <!-- Añade más cursos aquí -->
+    </section>
+<script type="text/javascript" src="js/script.js"></script>
+</body>
+</html>
