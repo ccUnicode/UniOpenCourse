@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class CoursesService {
@@ -102,7 +103,23 @@ export class CoursesService {
     });
   }
 
-  remove(id: string) {
-    return 'Eliminando el curso con id ' + id;
+  async remove(id: string) {
+    try {
+      return await this.prisma.curso.delete({
+        where: { id_curso: Number(id) },
+      });
+    } catch (error) {
+      // Error P2025: El registro no existe
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`El curso con ID ${id} no existe.`);
+      }
+      // Error P2003: Fallo de restricción de llave foránea (tiene clases hijas)
+      if (error.code === 'P2003') {
+        throw new BadRequestException(
+          'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
+        );
+      }
+      throw error;
+    }
   }
 }
