@@ -83,10 +83,6 @@ export class CoursesService {
           });
           docenteId = nuevoDocente.id_docente;
         }
-      } else if (!docenteId && (!data.nombre_docente || !data.apellido_docente)) {
-        throw new Error(
-          'Debe proporcionar el id_docente o el nombre_docente y apellido_docente',
-        );
       }
 
       return await tx.curso.update({
