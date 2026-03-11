@@ -16,6 +16,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     SearchModule,
     CoursesModule,
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
