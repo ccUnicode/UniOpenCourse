@@ -54,8 +54,8 @@ model UltimaVisitaCurso {
   id_curso            Int
   fecha_inicio        DateTime @default(now())
   fecha_ultima_visita DateTime @updatedAt
-  usuario             Usuario  @relation(fields: [id_usuario], references: [id_usuario])
-  curso               Curso    @relation(fields: [id_curso], references: [id_curso])
+  usuario             Usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  curso               Curso    @relation(fields: [id_curso], references: [id_curso], onDelete: Cascade)
 
   @@unique([id_usuario, id_curso])
 }
@@ -85,5 +85,5 @@ model Material {
   url_enlace         String?
   referencia_escrita String?
   fecha_subida       DateTime @default(now())
-  clase              Clase    @relation(fields: [id_clase], references: [id_clase])
+  clase              Clase    @relation(fields: [id_clase], references: [id_clase], onDelete: Cascade)
 }
