@@ -1,7 +1,9 @@
 export class CreateCourseDto {
-  name: string;
-  code: string;
-  description: string;
-  image?: string;
-  id_docente: number;
+  nombre: string;
+  codigo_curso: string;
+  descripcion: string;
+  url_imagen?: string;
+  id_docente?: number;
+  nombre_docente?: string;
+  apellido_docente?: string;
 }

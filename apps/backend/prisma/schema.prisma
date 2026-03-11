@@ -31,8 +31,6 @@ model Docente {
   id_docente  Int     @id @default(autoincrement())
   nombres     String  @db.VarChar(25)
   apellidos   String  @db.VarChar(25)
-  correo      String  @unique @db.VarChar(75)
-  descripcion String
   cursos      Curso[]
 }
 
