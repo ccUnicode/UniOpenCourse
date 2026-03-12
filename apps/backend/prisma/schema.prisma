@@ -10,16 +10,16 @@ datasource db {
 
 model Rol {
   id_rol     Int       @id @default(autoincrement())
-  nombre_rol String    @db.VarChar(15)
+  nombre_rol String    @db.VarChar(50)
   usuarios   Usuario[]
 }
 
 model Usuario {
   id_usuario       Int                   @id @default(autoincrement())
   correo           String                @unique @db.VarChar(75)
-  nombres          String                @db.VarChar(25)
-  apellidos        String                @db.VarChar(25)
-  nombre_usuario   String                @unique @db.VarChar(25)
+  nombres          String                @db.VarChar(50)
+  apellidos        String                @db.VarChar(50)
+  nombre_usuario   String                @unique @db.VarChar(70)
   contrasena       String                @db.VarChar(255)
   id_rol           Int
   fecha_registro   DateTime              @default(now())
@@ -29,14 +29,14 @@ model Usuario {
 
 model Docente {
   id_docente  Int     @id @default(autoincrement())
-  nombres     String  @db.VarChar(25)
-  apellidos   String  @db.VarChar(25)
+  nombres     String  @db.VarChar(50)
+  apellidos   String  @db.VarChar(50)
   cursos      Curso[]
 }
 
 model Curso {
   id_curso             Int                   @id @default(autoincrement())
-  nombre               String                @db.VarChar(25)
+  nombre               String                @db.VarChar(100)
   codigo_curso         String                @unique @db.VarChar(10)
   url_imagen           String                @db.VarChar(255)
   descripcion          String
@@ -63,7 +63,7 @@ model UltimaVisitaCurso {
 model Clase {
   id_clase             Int        @id @default(autoincrement())
   id_curso             Int
-  titulo               String     @db.VarChar(50)
+  titulo               String     @db.VarChar(150)
   descripcion          String
   url_youtube          String     @db.VarChar(150)
   fecha_creacion_clase DateTime   @default(now())
