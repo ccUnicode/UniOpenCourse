@@ -6,22 +6,22 @@ export class ClassesService {
   constructor(private prisma: PrismaService) {}
 
   async findAllByCourse(courseId: number) {
-    return this.prisma.clase.findMany({
-      where: { id_curso: courseId },
-      include: { materiales: true },
+    return this.prisma.class.findMany({
+      where: { course_id: courseId },
+      include: { materials: true },
     });
   }
 
   async findOne(id: number) {
-    return this.prisma.clase.findUnique({
-      where: { id_clase: id },
-      include: { materiales: true },
+    return this.prisma.class.findUnique({
+      where: { class_id: id },
+      include: { materials: true },
     });
   }
 
   async getMaterialsByClass(classId: number) {
     return this.prisma.material.findMany({
-      where: { id_clase: classId },
+      where: { class_id: classId },
     });
   }
 }

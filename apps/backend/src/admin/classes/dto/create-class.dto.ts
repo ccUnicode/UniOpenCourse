@@ -3,15 +3,15 @@ import { IsString, IsNotEmpty, IsInt, IsUrl } from 'class-validator';
 export class CreateClassDto {
   @IsInt()
   @IsNotEmpty() 
-  id_curso: number;
+  course_id: number;
 
   @IsString()
   @IsNotEmpty()
-  titulo: string;
+  title: string;
 
   @IsString()
   @IsNotEmpty()
-  descripcion: string;
+  description: string;
 
   @IsUrl()
   @IsNotEmpty()

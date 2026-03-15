@@ -6,31 +6,31 @@ import { UpdateClassDto } from './dto/update-class.dto';
 export class ClassesService {
     constructor (private prisma: PrismaService) {};
     async create(createClassDto: CreateClassDto) {
-    return this.prisma.clase.create({
+    return this.prisma.class.create({
     data: createClassDto,
     });
     }
 
     async findAll() {
-    return this.prisma.clase.findMany();
+    return this.prisma.class.findMany();
     }
 
     async findOne(id: number) {
-    return this.prisma.clase.findUnique({
-    where: { id_clase: id },
+    return this.prisma.class.findUnique({
+    where: { class_id: id },
     });
     }
 
     async update(id: number, updateClassDto: UpdateClassDto) {
-    return this.prisma.clase.update({
-    where: { id_clase: id },
+    return this.prisma.class.update({
+    where: { class_id: id },
     data: updateClassDto,
     });
     }
 
     async remove(id: number) {
-    return this.prisma.clase.delete({
-    where: { id_clase: id },
+    return this.prisma.class.delete({
+    where: { class_id: id },
     });
     }
 }
