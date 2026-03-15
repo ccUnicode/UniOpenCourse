@@ -6,7 +6,8 @@ import { SearchModule } from './search/search.module';
 import { CoursesModule } from './courses/courses.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
-
+import { ClassesModule } from './classes/classes.module';
+import { MaterialsModule } from './materials/materials.module';
 @Module({
   imports: [
     PrismaModule,
@@ -16,6 +17,8 @@ import { ConfigModule } from '@nestjs/config';
     }),
     SearchModule,
     CoursesModule,
+    ClassesModule,
+    MaterialsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
