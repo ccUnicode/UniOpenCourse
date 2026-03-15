@@ -1,8 +1,8 @@
 import { IsString, IsNotEmpty, IsInt, IsUrl } from 'class-validator';
 
-export class CreateClaseDto {
+export class CreateClassDto {
   @IsInt()
-  @IsNotEmpty()
+  @IsNotEmpty() 
   id_curso: number;
 
   @IsString()
