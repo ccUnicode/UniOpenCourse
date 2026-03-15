@@ -8,82 +8,82 @@ datasource db {
   provider = "postgresql"
 }
 
-model Rol {
-  id_rol     Int       @id @default(autoincrement())
-  nombre_rol String    @db.VarChar(50)
-  usuarios   Usuario[]
+model Role {
+  role_id     Int       @id @default(autoincrement())
+  role_name String    @db.VarChar(50)
+  users   User[]
 }
 
-model Usuario {
-  id_usuario       Int                   @id @default(autoincrement())
-  correo           String                @unique @db.VarChar(75)
-  nombres          String                @db.VarChar(50)
-  apellidos        String                @db.VarChar(50)
-  nombre_usuario   String                @unique @db.VarChar(70)
-  contrasena       String                @db.VarChar(255)
-  id_rol           Int
-  fecha_registro   DateTime              @default(now())
-  rol              Rol                   @relation(fields: [id_rol], references: [id_rol])
-  cursos_visitados UltimaVisitaCurso[]
+model User {
+  user_id       Int                   @id @default(autoincrement())
+  email          String                @unique @db.VarChar(75)
+  name          String                @db.VarChar(50)
+  last_name        String                @db.VarChar(50)
+  username   String                @unique @db.VarChar(70)
+  password       String                @db.VarChar(255)
+  role_id           Int
+  register_date   DateTime              @default(now())
+  role              Role                  @relation(fields: [role_id], references: [role_id])
+  visited_courses LastCourseVisit[]
 }
 
-model Docente {
-  id_docente  Int     @id @default(autoincrement())
-  nombres     String  @db.VarChar(50)
-  apellidos   String  @db.VarChar(50)
-  cursos      Curso[]
+model Teacher {
+  teacher_id  Int     @id @default(autoincrement())
+  name     String  @db.VarChar(50)
+  last_name   String  @db.VarChar(50)
+  courses      Course[]
 }
 
-model Curso {
-  id_curso             Int                   @id @default(autoincrement())
-  nombre               String                @db.VarChar(100)
-  codigo_curso         String                @unique @db.VarChar(10)
-  url_imagen           String                @db.VarChar(255)
-  descripcion          String
-  id_docente           Int
-  fecha_creacion_curso DateTime              @default(now())
-  fecha_actualizacion  DateTime              @updatedAt
-  docente              Docente               @relation(fields: [id_docente], references: [id_docente])
-  clases               Clase[]
-  usuarios_visitantes  UltimaVisitaCurso[]
+model Course {
+  course_id             Int                   @id @default(autoincrement())
+  name               String                @db.VarChar(100)
+  course_code         String                @unique @db.VarChar(10)
+  url_image         String                @db.VarChar(255)
+  description          String
+  teacher_id          Int
+  course_creation_date DateTime              @default(now())
+  update_date  DateTime              @updatedAt
+  teacher              Teacher               @relation(fields: [teacher_id], references: [teacher_id])
+  classes               Class[]
+  visiting_users  LastCourseVisit[]
 }
 
-model UltimaVisitaCurso {
-  id_usuario_curso    Int      @id @default(autoincrement())
-  id_usuario          Int
-  id_curso            Int
-  fecha_inicio        DateTime @default(now())
-  fecha_ultima_visita DateTime @updatedAt
-  usuario             Usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
-  curso               Curso    @relation(fields: [id_curso], references: [id_curso], onDelete: Cascade)
+model LastCourseVisit {
+  user_course_id    Int      @id @default(autoincrement())
+  user_id          Int
+  course_id            Int
+  start_date        DateTime @default(now())
+  last_visit_date DateTime @updatedAt
+  user             User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  course               Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
 
-  @@unique([id_usuario, id_curso])
+  @@unique([user_id, course_id])
 }
 
-model Clase {
-  id_clase             Int        @id @default(autoincrement())
-  id_curso             Int
-  titulo               String     @db.VarChar(150)
-  descripcion          String
+model Class {
+  class_id             Int        @id @default(autoincrement())
+  course_id             Int
+  title               String     @db.VarChar(150)
+  description          String
   url_youtube          String     @db.VarChar(150)
-  fecha_creacion_clase DateTime   @default(now())
-  curso                Curso      @relation(fields: [id_curso], references: [id_curso])
-  materiales           Material[]
+  class_creation_date DateTime   @default(now())
+  course                Course      @relation(fields: [course_id], references: [course_id])
+  materials          Material[]
 }
 
-enum TipoMaterial {
-  archivo
-  enlace
-  referencia
+enum MaterialTypes {
+  file
+  link
+  reference
 }
 
 model Material {
-  id_material        Int      @id @default(autoincrement())
-  id_clase           Int
-  tipo_material      TipoMaterial
-  nombre_archivo     String   @db.VarChar(150)
-  url_enlace         String?
-  referencia_escrita String?
-  fecha_subida       DateTime @default(now())
-  clase              Clase    @relation(fields: [id_clase], references: [id_clase], onDelete: Cascade)
+  ma        Int      @id @default(autoincrement())
+  class_id           Int
+  material_type      MaterialTypes
+  filename     String   @db.VarChar(150)
+  url_link         String?
+  written_reference String?
+  material_creation_date       DateTime @default(now())
+  class              Class    @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }
