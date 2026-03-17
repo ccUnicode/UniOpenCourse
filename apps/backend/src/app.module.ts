@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AdminModule } from './admin/admin.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
       isGlobal: true,
     }),
     PrismaModule,
+    GlobalSearcherModule,
   ],
   controllers: [AppController],
   providers: [AppService],
