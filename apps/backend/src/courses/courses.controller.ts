@@ -36,4 +36,9 @@ export class CoursesController {
   ) {
     return this.coursesService.registerVisit(id, Number(userId));
   }
+
+  @Get('dashboard/:userId')
+  getUserDashboard(@Param('userId', ParseIntPipe) userId: number) {
+    return this.coursesService.getUserDashboard(userId);
+  }
 }

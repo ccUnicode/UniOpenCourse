@@ -78,7 +78,7 @@ enum MaterialTypes {
 }
 
 model Material {
-  ma        Int      @id @default(autoincrement())
+  material_id        Int      @id @default(autoincrement())
   class_id           Int
   material_type      MaterialTypes
   filename     String   @db.VarChar(150)
