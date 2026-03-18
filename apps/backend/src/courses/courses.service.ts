@@ -81,6 +81,13 @@ export class CoursesService {
           },
           orderBy: { class_creation_date: 'asc' },
         },
+        teacher: {
+          select: {
+            teacher_id: true,
+            name: true,
+            last_name: true,
+          },
+        },
       },
     });
 
