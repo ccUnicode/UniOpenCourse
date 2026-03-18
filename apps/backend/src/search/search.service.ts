@@ -11,20 +11,20 @@ export class SearchService {
 
     const safeLimit = Math.min(Math.max(limit, 1), 50);
 
-    return this.prisma.curso.findMany({
+    return this.prisma.course.findMany({
       where: {
         OR: [
-          { nombre: { contains: q, mode: 'insensitive' } },
-          { codigo_curso: { contains: q, mode: 'insensitive' } },
+          { name: { contains: q, mode: 'insensitive' } },
+          { course_code: { contains: q, mode: 'insensitive' } },
         ],
       },
       select: {
-        id_curso: true,
-        nombre: true,
-        codigo_curso: true,
+        course_id: true,
+        name: true,
+        course_code: true,
       },
       take: safeLimit,
-      orderBy: [{ nombre: 'asc' }],
+      orderBy: [{ name: 'asc' }],
     });
   }
 }
