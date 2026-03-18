@@ -36,10 +36,20 @@ export class GlobalSearcherService {
 
     const courses = await this.prisma.course.findMany({
       where: {
-        name: {
-          contains: q,
-          mode: 'insensitive', // Búsqueda insensible a mayúsculas
-        },
+        OR: [
+          {
+            name: {
+              contains: q,
+              mode: 'insensitive', // Búsqueda insensible a mayúsculas
+            },
+          },
+          {
+            course_code: {
+              contains: q,
+              mode: 'insensitive', // Búsqueda insensible a mayúsculas
+            },
+          },
+        ],
       },
       skip: offset,
       take: pageSize,
