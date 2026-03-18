@@ -8,7 +8,6 @@ export class ClassesService {
   async findAllByCourse(courseId: number) {
     return this.prisma.class.findMany({
       where: { course_id: courseId },
-      include: { materials: true },
     });
   }
 

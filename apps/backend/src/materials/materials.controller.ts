@@ -1,12 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { MaterialsService } from './materials.service';
+import { Controller } from '@nestjs/common';
 
 @Controller('materials')
-export class MaterialsController {
-  constructor(private readonly materialsService: MaterialsService) {}
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.materialsService.findOne(+id);
-  }
-}
+export class MaterialsController {}
