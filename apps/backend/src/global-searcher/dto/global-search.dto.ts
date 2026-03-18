@@ -1,9 +1,11 @@
 import { IsOptional, IsString, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class SearchDto {
+  @IsOptional()
   @IsString()
-  q: string;
+  @Transform(({ value }) => value)
+  q?: string;
 
   @IsOptional()
   @Type(() => Number)

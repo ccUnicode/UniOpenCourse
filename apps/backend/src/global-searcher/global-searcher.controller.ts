@@ -6,7 +6,7 @@ import { SearchDto } from './dto/global-search.dto';
 export class GlobalSearcherController {
   constructor(private readonly searcherService: GlobalSearcherService) {}
   @Get('')
-  search(@Query('q') query: SearchDto) {
+  search(@Query() query: SearchDto) {
     return this.searcherService.search(query);
   }
   @Get('suggestions')
