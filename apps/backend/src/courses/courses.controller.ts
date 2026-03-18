@@ -9,10 +9,11 @@ export class CoursesController {
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('q') q?: string,
   ) {
     const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : 1;
     const limitNum = limit ? Math.min(50, Math.max(1, parseInt(limit, 10) || 6)) : 6;
-    return this.coursesService.findAll(pageNum, limitNum);
+    return this.coursesService.findAll(pageNum, limitNum, q);
   }
 
   @Get('carrusel')

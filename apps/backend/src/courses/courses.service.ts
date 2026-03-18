@@ -5,12 +5,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page = 1, limit = 6) {
+  async findAll(page = 1, limit = 6, q?: string) {
     const skip = (page - 1) * limit;
+    const query = q?.trim();
+    const where = query
+      ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' as const } },
+            { course_code: { contains: query, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
+
     const [data, total] = await Promise.all([
       this.prisma.course.findMany({
         skip,
         take: limit,
+        where,
         select: {
           course_id: true,
           name: true,
@@ -23,7 +34,7 @@ export class CoursesService {
         },
         orderBy: { course_creation_date: 'desc' },
       }),
-      this.prisma.course.count(),
+      this.prisma.course.count({ where }),
     ]);
     return {
       data,
@@ -63,6 +74,13 @@ export class CoursesService {
         teacher_id: true,
         course_creation_date: true,
         update_date: true,
+        classes: {
+          select: {
+            class_id: true,
+            title: true,
+          },
+          orderBy: { class_creation_date: 'asc' },
+        },
       },
     });
 
