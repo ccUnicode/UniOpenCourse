@@ -4,7 +4,11 @@ import {
   Body,
   Param,
   Delete,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { storageConfig } from '../../utils/storage.config';
 import { MaterialsService } from './materials.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -15,8 +19,12 @@ export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   @Post('file')
-  createFile(@Body() createFileDto: CreateFileDto) {
-    return this.materialsService.createFile(createFileDto);
+  @UseInterceptors(FileInterceptor('file', { storage: storageConfig }))
+  createFile(
+    @Body() createFileDto: CreateFileDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.materialsService.createFile(createFileDto, file);
   }
 
   @Post('link')

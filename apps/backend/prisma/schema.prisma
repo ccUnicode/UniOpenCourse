@@ -82,6 +82,7 @@ model Material {
   class_id           Int
   material_type      MaterialTypes
   filename     String   @db.VarChar(150)
+  file_path    String?  @db.VarChar(255)
   url_link         String?
   written_reference String?
   material_creation_date       DateTime @default(now())

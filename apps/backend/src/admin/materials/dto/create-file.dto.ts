@@ -1,11 +1,9 @@
-import { IsString, IsNotEmpty, IsInt } from 'class-validator';
+import { IsNotEmpty, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateFileDto {
+  @IsNotEmpty()
+  @Type(() => Number)
   @IsInt()
-  @IsNotEmpty()
   class_id: number;
-
-  @IsString()
-  @IsNotEmpty()
-  filename: string;
 }

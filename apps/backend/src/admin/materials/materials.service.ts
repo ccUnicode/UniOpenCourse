@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -8,11 +8,17 @@ import { CreateReferenceDto } from './dto/create-reference.dto';
 export class MaterialsService {
   constructor(private prisma: PrismaService) {}
 
-  async createFile(createFileDto: CreateFileDto) {
+  async createFile(createFileDto: CreateFileDto, file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Debes adjuntar un archivo válido.');
+    }
+
     return this.prisma.material.create({
       data: {
-        ...createFileDto,
+        class_id: createFileDto.class_id,
         material_type: 'file',
+        filename: file.originalname,
+        file_path: file.filename,
       },
     });
   }
