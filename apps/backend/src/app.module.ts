@@ -4,7 +4,8 @@ import { AppService } from './app.service';
 import { AdminModule } from './admin/admin.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
-
+import { ClassesModule } from './classes/classes.module';
+import { MaterialsModule } from './materials/materials.module';
 @Module({
   imports: [
     AdminModule,
@@ -12,6 +13,8 @@ import { ConfigModule } from '@nestjs/config';
       isGlobal: true,
     }),
     PrismaModule,
+    ClassesModule,
+    MaterialsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

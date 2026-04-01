@@ -1,19 +1,15 @@
 import { IsString, IsNotEmpty, IsInt, IsUrl } from 'class-validator';
 
-export class CreateClassDto {
+export class CreateLinkDto {
   @IsInt()
-  @IsNotEmpty() 
-  course_id: number;
+  @IsNotEmpty()
+  class_id: number;
 
   @IsString()
   @IsNotEmpty()
-  title: string;
-
-  @IsString()
-  @IsNotEmpty()
-  description: string;
+  filename: string;
 
   @IsUrl()
   @IsNotEmpty()
-  url_youtube: string;
+  url_link: string;
 }
