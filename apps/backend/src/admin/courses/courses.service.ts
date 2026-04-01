@@ -57,8 +57,58 @@ export class CoursesService {
     });
   }
 
-  findAll() {
-    return this.prisma.course.findMany();
+  async findAll(page = 1, limit = 6, q?: string) {
+    const skip = (page - 1) * limit;
+    const query = q?.trim();
+    const where = query
+      ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' as const } },
+            { course_code: { contains: query, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
+
+    const [data, total] = await Promise.all([
+      this.prisma.course.findMany({
+        skip,
+        take: limit,
+        where,
+        select: {
+          course_id: true,
+          name: true,
+          course_code: true,
+        },
+        orderBy: { course_creation_date: 'desc' },
+      }),
+      this.prisma.course.count({ where }),
+    ]);
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  findOne(id: string) {
+    return this.prisma.course.findUnique({
+      where: { course_id: Number(id) },
+      select: {
+        course_id: true,
+        name: true,
+        course_code: true,
+        teacher_id: true,
+        teacher: {
+          select: {
+            teacher_id: true,
+            name: true,
+            last_name: true,
+          },
+        },
+      },
+    });
   }
 
   async update(id: string, data: CreateCourseDto) {

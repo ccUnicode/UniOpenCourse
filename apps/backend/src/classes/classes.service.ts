@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class ClassesService {
@@ -8,6 +8,15 @@ export class ClassesService {
   async findAllByCourse(courseId: number) {
     return this.prisma.class.findMany({
       where: { course_id: courseId },
+      select: {
+        class_id: true,
+        course_id: true,
+        title: true,
+        description: true,
+        url_youtube: true,
+        class_creation_date: true,
+      },
+      orderBy: { class_creation_date: 'asc' },
     });
   }
 

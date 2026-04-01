@@ -6,9 +6,8 @@ import { UpdateClassDto } from './dto/update-class.dto';
 @Controller('admin/classes')
 export class ClassesController {
   constructor(private readonly service: ClassesService) {}
-
-    @Post()
-    create(@Body() createClassDto: CreateClassDto) {
+  @Post()
+  create(@Body() createClassDto: CreateClassDto) {
     return this.service.create(createClassDto);
   }
 
