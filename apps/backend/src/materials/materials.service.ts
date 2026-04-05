@@ -1,26 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { CreateMaterialDto } from './dto/create-material.dto';
-import { UpdateMaterialDto } from './dto/update-material.dto';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
-export class MaterialService {
-  create(createMaterialDto: CreateMaterialDto) {
-    return 'This action adds a new material';
-  }
+export class MaterialsService {
+  constructor(private prisma: PrismaService) {}
 
   findAll() {
-    return `This action returns all material`;
+    return this.prisma.material.findMany();
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} material`;
-  }
-
-  update(id: number, updateMaterialDto: UpdateMaterialDto) {
-    return `This action updates a #${id} material`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} material`;
+    return this.prisma.material.findUnique({
+      where: { material_id: id }
+    });
   }
 }
