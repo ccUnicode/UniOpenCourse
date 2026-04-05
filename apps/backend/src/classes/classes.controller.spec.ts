@@ -1,12 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
-
-const mockClassesService = {
-  findAllByCourse: jest.fn(),
-  findOne: jest.fn(),
-  getMaterialsByClass: jest.fn(),
-};
+import { PrismaService } from '../prisma.service';
 
 describe('ClassesController', () => {
   let controller: ClassesController;
@@ -14,9 +9,7 @@ describe('ClassesController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClassesController],
-      providers: [
-        { provide: ClassesService, useValue: mockClassesService }
-      ],
+      providers: [ClassesService, PrismaService],
     }).compile();
 
     controller = module.get<ClassesController>(ClassesController);
@@ -26,4 +19,3 @@ describe('ClassesController', () => {
     expect(controller).toBeDefined();
   });
 });
-
