@@ -1,0 +1,99 @@
+
+> backend@0.0.1 test
+> jest
+
+PASS src/materials/materials.controller.spec.ts
+PASS src/materials/materials.service.spec.ts
+PASS src/app.controller.spec.ts
+PASS src/classes/classes.controller.spec.ts
+FAIL src/auth/auth.service.spec.ts
+  ● Test suite failed to run
+
+    Cannot find module 'src/prisma.service' from 'auth/auth.service.ts'
+
+    Require stack:
+      auth/auth.service.ts
+      auth/auth.service.spec.ts
+
+    [0m [90m 2 |[39m [36mimport[39m [33m*[39m [36mas[39m bcrypt [36mfrom[39m [32m'bcrypt'[39m[33m;[39m
+     [90m 3 |[39m [36mimport[39m { [33mJwtService[39m } [36mfrom[39m [32m'@nestjs/jwt'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { [33mPrismaService[39m } [36mfrom[39m [32m'src/prisma.service'[39m[33m;[39m
+     [90m   |[39m [31m[1m^[22m[39m
+     [90m 5 |[39m [36mimport[39m { [33mRegisterDto[39m } [36mfrom[39m [32m'./dto/register.dto'[39m[33m;[39m
+     [90m 6 |[39m [36mimport[39m { [33mLoginDto[39m } [36mfrom[39m [32m'./dto/login.dto'[39m[33m;[39m
+     [90m 7 |[39m [36mimport[39m { [33mUnauthorizedException[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m[0m
+
+      at Resolver._throwModNotFoundError (../../../node_modules/jest-resolve/build/index.js:863:11)
+      at Object.<anonymous> (auth/auth.service.ts:4:1)
+      at Object.<anonymous> (auth/auth.service.spec.ts:2:1)
+
+FAIL src/auth/auth.controller.spec.ts
+  ● Test suite failed to run
+
+    Cannot find module 'src/prisma.service' from 'auth/auth.service.ts'
+
+    Require stack:
+      auth/auth.service.ts
+      auth/auth.controller.ts
+      auth/auth.controller.spec.ts
+
+    [0m [90m 2 |[39m [36mimport[39m [33m*[39m [36mas[39m bcrypt [36mfrom[39m [32m'bcrypt'[39m[33m;[39m
+     [90m 3 |[39m [36mimport[39m { [33mJwtService[39m } [36mfrom[39m [32m'@nestjs/jwt'[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { [33mPrismaService[39m } [36mfrom[39m [32m'src/prisma.service'[39m[33m;[39m
+     [90m   |[39m [31m[1m^[22m[39m
+     [90m 5 |[39m [36mimport[39m { [33mRegisterDto[39m } [36mfrom[39m [32m'./dto/register.dto'[39m[33m;[39m
+     [90m 6 |[39m [36mimport[39m { [33mLoginDto[39m } [36mfrom[39m [32m'./dto/login.dto'[39m[33m;[39m
+     [90m 7 |[39m [36mimport[39m { [33mUnauthorizedException[39m } [36mfrom[39m [32m'@nestjs/common'[39m[33m;[39m[0m
+
+      at Resolver._throwModNotFoundError (../../../node_modules/jest-resolve/build/index.js:863:11)
+      at Object.<anonymous> (auth/auth.service.ts:4:1)
+      at Object.<anonymous> (auth/auth.controller.ts:2:1)
+      at Object.<anonymous> (auth/auth.controller.spec.ts:2:1)
+
+PASS src/classes/classes.service.spec.ts
+FAIL src/admin/materials/materials.service.spec.ts
+  ● MaterialsService › createFile › should create a material of type "file" with real uploaded file data
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      Object {
+        "data": Object {
+          "class_id": 1,
+    -     "file_path": "documento-123.pdf",
+          "filename": "documento.pdf",
+          "material_type": "file",
+    +     "url_link": "documento-123.pdf",
+        },
+      },
+
+    Number of calls: 1
+
+    [0m [90m 59 |[39m
+     [90m 60 |[39m       expect(result)[33m.[39mtoEqual(expectedResult)[33m;[39m
+    [31m[1m>[22m[39m[90m 61 |[39m       expect(prisma[33m.[39mmaterial[33m.[39mcreate)[33m.[39mtoHaveBeenCalledWith({
+     [90m    |[39m                                      [31m[1m^[22m[39m
+     [90m 62 |[39m         data[33m:[39m {
+     [90m 63 |[39m           class_id[33m:[39m dto[33m.[39mclass_id[33m,[39m
+     [90m 64 |[39m           material_type[33m:[39m [32m'file'[39m[33m,[39m[0m
+
+      at Object.<anonymous> (admin/materials/materials.service.spec.ts:61:38)
+
+PASS src/admin/classes/classes.service.spec.ts
+PASS src/admin/classes/classes.controller.spec.ts
+PASS src/admin/materials/materials.controller.spec.ts
+
+Test Suites: 3 failed, 8 passed, 11 total
+Tests:       1 failed, 31 passed, 32 total
+Snapshots:   0 total
+Time:        2.697 s, estimated 3 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\Jeferson\Desktop\uniopencourse\UniOpenCourse\apps\backend
+npm error workspace backend@0.0.1
+npm error location C:\Users\Jeferson\Desktop\uniopencourse\UniOpenCourse\apps\backend
+npm error command failed
+npm error command C:\windows\system32\cmd.exe /d /s /c jest

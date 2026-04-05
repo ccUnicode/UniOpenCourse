@@ -18,7 +18,7 @@ export class MaterialsService {
         class_id: createFileDto.class_id,
         material_type: 'file',
         filename: file.originalname,
-        file_path: file.filename,
+        url_link: file.filename,
       },
     });
   }

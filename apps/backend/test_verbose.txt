@@ -1,0 +1,82 @@
+PASS src/materials/materials.controller.spec.ts
+  MaterialsController
+    √ should be defined (19 ms)
+
+PASS src/materials/materials.service.spec.ts
+  MaterialsService
+    √ should be defined (17 ms)
+
+PASS src/admin/materials/materials.service.spec.ts
+  MaterialsService
+    √ should be defined (13 ms)
+    createFile
+      √ should create a material of type "file" with real uploaded file data (4 ms)
+    createLink
+      √ should create a material of type "link" (3 ms)
+    createReference
+      √ should create a material of type "reference" (3 ms)
+    remove
+      √ should delete a material by its ID (4 ms)
+
+PASS src/admin/classes/classes.service.spec.ts
+  ClassesService
+    √ should be defined (16 ms)
+    create
+      √ should create a class (5 ms)
+    findAll
+      √ should return paginated classes (3 ms)
+    findOne
+      √ should return a class by id (2 ms)
+    update
+      √ should update a class (2 ms)
+    remove
+      √ should remove a class (2 ms)
+
+PASS src/classes/classes.controller.spec.ts
+  ClassesController (Public)
+    √ should be defined (16 ms)
+    findAllByCourse
+      √ should call service findAllByCourse (4 ms)
+    findOne
+      √ should call service findOne (3 ms)
+    getMaterialsByClass
+      √ should call service getMaterialsByClass (2 ms)
+
+PASS src/classes/classes.service.spec.ts
+  ClassesService (Public)
+    √ should be defined (13 ms)
+    findAllByCourse
+      √ should return classes for a specific course (4 ms)
+    findOne
+      √ should return a class by id with its materials (3 ms)
+    getMaterialsByClass
+      √ should return materials for a specific class (3 ms)
+
+PASS src/admin/classes/classes.controller.spec.ts
+  ClassesController
+    √ should be defined (14 ms)
+    create
+      √ should call service create (4 ms)
+    findAll
+      √ should call service findAll with parsed page (2 ms)
+      √ should default to page 1 (1 ms)
+    findOne
+      √ should call service findOne (1 ms)
+    update
+      √ should call service update (1 ms)
+    remove
+      √ should call service remove
+
+PASS src/admin/materials/materials.controller.spec.ts
+  MaterialsController
+    √ should be defined (9 ms)
+    createFile
+      √ should call service.createFile (2 ms)
+    remove
+      √ should call service.remove with a number (1 ms)
+
+Test Suites: 8 passed, 8 total
+Tests:       31 passed, 31 total
+Snapshots:   0 total
+Time:        2.307 s
+Ran all test suites matching src/materials|src/classes|src/admin/classes|src/admin/materials.
