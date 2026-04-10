@@ -21,6 +21,11 @@ export class CoursesController {
     return this.coursesService.findForCarousel();
   }
 
+  @Get('dashboard/:userId')
+  getUserDashboard(@Param('userId', ParseIntPipe) userId: number) {
+    return this.coursesService.getUserDashboard(userId);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.coursesService.findOneById(id);
@@ -32,14 +37,7 @@ export class CoursesController {
   }
 
   @Post(':id/visit')
-  registerVisit(@Param('id', ParseIntPipe) id: number,
-  @Body('userId') userId: number,
-  ) {
+  registerVisit(@Param('id', ParseIntPipe) id: number, @Body('userId') userId: number) {
     return this.coursesService.registerVisit(id, Number(userId));
-  }
-
-  @Get('dashboard/:userId')
-  getUserDashboard(@Param('userId', ParseIntPipe) userId: number) {
-    return this.coursesService.getUserDashboard(userId);
   }
 }

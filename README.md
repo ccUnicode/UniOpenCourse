@@ -18,10 +18,15 @@ UniOpenCourse/
 │   └── backend/         # API (NestJS)
 │        └── prisma/     # Schema y migraciones de Prisma
 │
+├── docs/                # Documentación del equipo (arquitectura, API, BD, etc.)
+│   └── imagenes/        # Diagramas y capturas referenciados desde los .md
+│
 ├── package.json         # Configuración del monorepo
 ├── .prettierrc          # Configuración global de formato
 └── .env.example         # Variables de entorno de ejemplo
 ```
+
+Ver también la carpeta [`docs/`](./docs): `arquitectura.md`, `backend.md`, `frontend.md`, `endpoints.md`, `base-de-datos.md`.
 
 ---
 
