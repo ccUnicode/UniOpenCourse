@@ -14,6 +14,8 @@ Nuestro código sigue un estricto principio de separación de responsabilidades:
 - **Público:** Como decisión arquitectónica, carece de controladores propios públicos ya que los materiales "viven" estrictamente dentro de una Clase. Los estudiantes los acceden a través de la ruta jerárquica del módulo Classes (`/classes/:id/materials`).
 - **Admin (`src/admin/materials`):** 
   - Este es uno de los módulos más complejos, utilizando interceptores (`FileInterceptor`) y la librería **Multer**.
+  - **¿Qué hace `UseInterceptors` aquí?** Es un decorador de NestJS que permite ejecutar lógica *antes* de entrar al método del controlador. En este caso, inyecta el interceptor de archivos de Multer para leer el `multipart/form-data`, validar el archivo y guardarlo en disco.
+  - **¿Qué hace `@UploadedFile()`?** Es el decorador que extrae el archivo procesado por el interceptor y lo entrega como parámetro del método. Es decir: sin `UseInterceptors(FileInterceptor(...))` no existe el archivo; con `@UploadedFile()` lo recibes ya parseado y con sus metadatos (nombre, size, mimetype, path).
   - No guardamos archivos pesados (PDFs, PPTs) en la base de datos.
   - Los archivos físicos se almacenan ordenadamente en el disco duro del backend (`./storage`), renombrándolos para evitar colisiones (`storageConfig`).
   - Prisma solo almacena los metadatos y enlaces (`url_link`) categorizando a los materiales en tres variantes de la enumeración: `file`, `link` y `reference`.

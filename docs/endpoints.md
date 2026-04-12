@@ -27,7 +27,7 @@ Estos módulos tienen manipulación total de la base de datos en PostgreSQL.
 - `DELETE /:id`: Eliminación física del registro en base de datos.
 
 ### Gestión de Materiales (`/admin/materials`)
-- `POST /file`: **[Multipart/Form-Data]** Recibe un archivo binario mediante un interceptor (Multer), lo almacena localmente y graba los metadatos en la tabla `Material`.
+- `POST /file`: **[Multipart/Form-Data]** Usa `UseInterceptors(FileInterceptor(...))` para leer y guardar el archivo con Multer; luego `@UploadedFile()` entrega el archivo procesado al controlador, que persiste los metadatos en `Material`.
 - `POST /link`: Genera un material de recurso de enlace externo (Ej: link a GitHub).
 - `POST /reference`: Genera un material de ayuda textual corta sin enlace vivo.
 - `DELETE /:id`: Elimina permanentemente la referencia de ese material del curso.
