@@ -10,7 +10,7 @@ datasource db {
 
 model Role {
   role_id     Int       @id @default(autoincrement())
-  role_name String    @db.VarChar(50)
+  role_name String    @unique @db.VarChar(50)
   users   User[]
 }
 
@@ -78,7 +78,7 @@ enum MaterialTypes {
 }
 
 model Material {
-  ma        Int      @id @default(autoincrement())
+  material_id        Int      @id @default(autoincrement())
   class_id           Int
   material_type      MaterialTypes
   filename     String   @db.VarChar(150)
