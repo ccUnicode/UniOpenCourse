@@ -1,201 +1,127 @@
-# Endpoints — Módulo Users
+# Guía de API Endpoints — Usuarios y Autenticación
 
 ## Información General
 
-- **Prefijo base:** `/auth`
-- **Controlador:** `AuthController` (`src/auth/auth.controller.ts`)
-- **Autenticación:** JWT Bearer Token (para rutas protegidas)
-- **Formato de respuesta:** `application/json`
+Este documento describe la operativa técnica para manejar el acceso y las identidades en la plataforma. Todos los flujos relacionados con autenticación operan primariamente bajo este prefijo:
 
-> Todos los endpoints de autenticación son **públicos** (no requieren token previo). La protección mediante `JwtAuthGuard` y `RolesGuard` aplica en módulos que consuman estas identidades.
+- **Ruta Base:** `/auth`
+- **Mecanismo de Seguridad:** JWT (`Bearer Token`)
+- **Estructura de Datos:** Formato `application/json`
 
----
-
-## Endpoints
-
-### `POST /auth/register`
-
-Crea un nuevo usuario con el rol `USER` por defecto.
-
-**Acceso:** Público
-
-**Body (JSON):**
-
-| Campo       | Tipo     | Requerido | Descripción                  |
-|-------------|----------|-----------|------------------------------|
-| `email`     | `string` | ✅        | Correo electrónico único      |
-| `name`      | `string` | ✅        | Nombres del usuario           |
-| `last_name` | `string` | ✅        | Apellidos del usuario         |
-| `username`  | `string` | ✅        | Nombre de usuario único       |
-| `password`  | `string` | ✅        | Contraseña (se hashea con bcrypt, salt=10) |
-
-**Ejemplo de solicitud:**
-```json
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "juan.perez@example.com",
-  "name": "Juan",
-  "last_name": "Pérez",
-  "username": "juanp",
-  "password": "miContraseña123"
-}
-```
-
-**Respuesta exitosa — `201 Created`:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Posibles errores:**
-
-| Código | Causa                                         |
-|--------|-----------------------------------------------|
-| `400`  | Body inválido o campos faltantes              |
-| `409`  | Email o username ya registrado (constraint DB)|
+> **Nota Arquitectónica:** Los endpoints listados en esta guía correspondientes a registro y login de usuario estándar son catalogados internamente como **públicos** para permitir el ingreso primordial. La capa de protección real (`JwtAuthGuard` y `RolesGuard`) se acciona automáticamente un instante después, cuando estas identidades tramitan acceso directo sobre los otros módulos internos del curso.
 
 ---
 
-### `POST /auth/login`
+## Catálogo de Endpoints
 
-Inicia sesión para usuarios con rol `USER`.
+### 1. Registrar Nuevo Usuario (`/auth/register`)
 
-**Acceso:** Público
+Endpoint enfocado en dar de alta a un estudiante o visitante nuevo dentro del ecosistema. Inyecta por defecto a nivel base de datos el rol `USER`.
 
-**Body (JSON):**
+- **Método HTTP:** `POST`
+- **Requiere Header Token:** No 
 
-| Campo      | Tipo     | Requerido | Descripción            |
-|------------|----------|-----------|------------------------|
-| `email`    | `string` | ✅        | Correo electrónico     |
-| `password` | `string` | ✅        | Contraseña en texto plano |
+**Cuerpo de la Petición (`body`):**
 
-**Ejemplo de solicitud:**
+| Campo       | Requerido | Descripción Integral|
+|-------------|-----------|-------------|
+| `email`     | Sí        | Correo electrónico (Deberá ser globalmente único dentro del servicio). |
+| `name`      | Sí        | Nombres reales del portador. |
+| `last_name` | Sí        | Apellidos o familia. |
+| `username`  | Sí        | Identificador público (Nick). No puede hallarse duplicado. |
+| `password`  | Sí        | Clave segura para acceso (Será truncada y firmada remotamente por servidor mediante bcrypt; no se almacena literal). |
+
+**Ejemplo de Petición:**
 ```json
-POST /auth/login
-Content-Type: application/json
-
 {
-  "email": "juan.perez@example.com",
-  "password": "miContraseña123"
+  "email": "nuevo.perfil@ejemplo.com",
+  "name": "Maria",
+  "last_name": "Gomez",
+  "username": "mgomez_pro",
+  "password": "UnaPasswordFuerte2026*"
 }
 ```
 
-**Respuesta exitosa — `200 OK`:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Posibles errores:**
-
-| Código | Mensaje                   | Causa                          |
-|--------|---------------------------|--------------------------------|
-| `401`  | `Usuario no encontrado`   | El email no existe en la BD    |
-| `401`  | `Credenciales incorrectas`| La contraseña no coincide      |
+**Respuestas Posibles:**
+- `201 Created`: Flujo culminado. El registro se completó y se entrega el respectivo token. Retornará: `{"access_token": "..."}`.
+- `400 Bad Request`: Rechazado por faltar llaves obligatorias en el JSON o mal formato en campos.
+- `409 Conflict`: Denegado. La base de datos indica colisiones (el correo o el nombre de usuario ya existen).
 
 ---
 
-### `POST /auth/admin/login`
+### 2. Iniciar Sesión Standard (`/auth/login`)
 
-Inicia sesión exclusivamente para usuarios con rol `ADMIN`.
+Autoriza de forma remota un canal directo para las cuentas ya existentes que operan bajo permiso `USER`.
 
-**Acceso:** Público
+- **Método HTTP:** `POST`
+- **Requiere Header Token:** No
 
-**Body (JSON):**
+**Cuerpo de la Petición (`body`):**
 
-| Campo      | Tipo     | Requerido | Descripción            |
-|------------|----------|-----------|------------------------|
-| `email`    | `string` | ✅        | Correo del administrador |
-| `password` | `string` | ✅        | Contraseña en texto plano |
+| Campo      | Requerido | Finalidad |
+|------------|-----------|-------------|
+| `email`    | Sí        | Criterio de búsqueda (Correo original con el que completaron la fase `Registro`). |
+| `password` | Sí        | Se enviará transparente mediante HTTPS y será comparado unidireccionalmente en backend. |
 
-**Ejemplo de solicitud:**
-```json
-POST /auth/admin/login
-Content-Type: application/json
-
-{
-  "email": "admin@test.com",
-  "password": "123456"
-}
-```
-
-**Respuesta exitosa — `200 OK`:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Posibles errores:**
-
-| Código | Mensaje           | Causa                                            |
-|--------|-------------------|--------------------------------------------------|
-| `401`  | `No autorizado`   | El email no existe, o el usuario no es `ADMIN`   |
-| `401`  | `Credenciales incorrectas` | La contraseña no coincide               |
+**Respuestas Posibles:**
+- `200 OK`: Comparativa válida. Se retorna estructura estándar con JWT `{"access_token": "..."}`.
+- `401 Unauthorized`: Acceso repelido. Probabilidades: Email no consta en las tablas de clientes o la clave enviada no emite el mismo hash.
 
 ---
 
-### `POST /auth/logout`
+### 3. Iniciar Sesión Administrativo (`/auth/admin/login`)
 
-Cierra la sesión del usuario actual. Como el sistema usa JWT stateless, la invalidación real del token se delega al cliente.
+Vía exclusiva y altamente segregada destinada únicamente para proveer acceso de "God Mode" hacia cuentas integradas que portan nativamente el nivel de permiso `ADMIN`. Ayuda a mantener una separación estructural frente a cuentas ajenas.
 
-**Acceso:** Público
+- **Método HTTP:** `POST`
+- **Requiere Header Token:** No
 
-**Body:** No requerido
+**Cuerpo de la Petición (`body`):**
 
-**Ejemplo de solicitud:**
-```http
-POST /auth/logout
-```
+| Campo      | Requerido | Descripción |
+|------------|-----------|-------------|
+| `email`    | Sí        | Correo corporativo del moderador. |
+| `password` | Sí        | Credencial robusta. |
 
-**Respuesta exitosa — `200 OK`:**
-```json
-{
-  "message": "Logout exitoso"
-}
-```
+**Respuestas Posibles:**
+- `200 OK`: Validación óptima. Retorno de accesos.
+- `401 Unauthorized`: Denegado. Criterios de rechazo: Fallo de login clásico humano, **o si una cuenta standard (`USER`) intenta probar con esta ruta y cuenta con credencial válida; el escudo lo rebotará porque su rol subyacente difiere.**
 
 ---
 
-## Estructura del JWT
+### 4. Cerración o Terminación de Sesión (`/auth/logout`)
 
-El token retornado en todos los endpoints de login/registro contiene el siguiente payload:
+Limpia la presencia actual en estado backend. Se recalca que por el estilo y diseño "Stateless" imperante en servidores modernos mediante JWT, la obligación moral y técnica de cortar por lo sano el inicio reposa ampliamente en que el Frontend (Cliente Web, React, App) limpie o purgue las cachés y `localStorage/Cookies` de forma efectiva.
 
-```json
-{
-  "sub": 1,              // user_id del usuario
-  "email": "usuario@example.com",
-  "role": "USER",        // "USER" o "ADMIN"
-  "iat": 1712000000,     // Fecha de emisión (Unix timestamp)
-  "exp": 1712086400      // Fecha de expiración (1 día después)
-}
-```
+- **Método HTTP:** `POST`
+- **Requiere Header Token:** No
+- **Body:** *(Vacío)*
 
-Este payload queda disponible en `request.user` dentro de cualquier ruta protegida con `JwtAuthGuard`.
+**Respuestas Posibles:**
+- `200 OK`: Cierre interno procesado asertiva y formalmente. `{"message": "Logout exitoso"}`.
 
 ---
 
-## Cómo Usar el Token en Rutas Protegidas
+## Composición Interna y Naturaleza del Token (JWT)
 
-Para acceder a endpoints que requieren autenticación, incluir el token en el header de la petición:
+Tras certificar un origen humano positivo (sea por creación o reapertura), la API remite a ese cliente un comprobante criptográfico JWT empaquetado bajo tres segmentos. Si se asomara al payload descifrado, obtendría este molde vital:
+
+```json
+{
+  "sub": 142,                   // ID Fiel e inmodificable del usuario (Primary Key)
+  "email": "user@ejemplo.com",  // Criterio extra perenne de validación
+  "role": "USER",               // Constante que fija y enmarca toda su capacidad de uso y veto. (USER o ADMIN)
+  "iat": 1712000000,            // Variable Unix (Creación actual)
+  "exp": 1712086400             // Variable Unix (Fecha prevista para inadmisión total - caducidad)
+}
+```
+
+> **Implementación Inteligente:** Este bloque informativo miniatura `payload` es decodificado y pegado directamente junto a los objetos locales de Petición por parte del Backend, lo que ahorra la necesidad constante de consultar y saturar la base central al examinar "¿Quién pide esto?", ya poseyendo certeza confiable dentro de su rol de Guard en memoria de caché de Node.
+
+## Protocolo de Incorporación para Servicios Restringidos
+
+Para cualquier petición subsiguiente fuera de esta franja de `/auth`, las Apps terceras, Clientes móviles e Interfases Web, deben someter de manera obligatoria el pase devuelto bajo las Cabeceras nativas (`Headers` HTTP) en modalidad Portador Libre ("Bearer"):
 
 ```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer <CADENA_ALFANUMERICA_BASE64_FIRMADA_AQUI_CON_PUNTOS_INTERNOS>
 ```
-
----
-
-## Resumen de Endpoints
-
-| Método | Ruta                | Rol requerido | Descripción                    |
-|--------|---------------------|---------------|--------------------------------|
-| `POST` | `/auth/register`    | Ninguno       | Registro de nuevo usuario      |
-| `POST` | `/auth/login`       | Ninguno       | Login de usuario estándar      |
-| `POST` | `/auth/admin/login` | Ninguno*      | Login exclusivo de admin       |
-| `POST` | `/auth/logout`      | Ninguno       | Cierre de sesión               |
-
-> \* El endpoint es público, pero internamente verifica que el usuario tenga rol `ADMIN`.

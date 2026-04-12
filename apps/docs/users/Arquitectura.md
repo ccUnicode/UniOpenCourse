@@ -1,39 +1,41 @@
-# Arquitectura — Módulo Users
+# Arquitectura del Módulo de Autenticación y Usuarios
 
 ## Descripción General
 
-El módulo de **Users** en UniOpenCourse no existe como un módulo NestJS independiente. La creación y autenticación de usuarios está integrada dentro del **módulo Auth** (`src/auth/`). La definición de la entidad `User` y sus relaciones se gestiona a través del esquema de **Prisma ORM**.
+En **UniOpenCourse**, la gestión de usuarios y la autenticación están integrados en un único módulo para centralizar la seguridad: el **Módulo de Auth**. No existe un módulo independiente solo para usuarios, ya que las operaciones de creación y validación recaen directamente sobre los servicios de autenticación y la base de datos a través de **Prisma ORM**.
 
-La lógica relacionada con usuarios se distribuye de la siguiente manera:
+La lógica del sistema se distribuye de la siguiente manera:
 
-| Responsabilidad              | Ubicación                          |
+| Responsabilidad              | Componente Encargado               |
 |-----------------------------|------------------------------------|
-| Creación de usuario          | `AuthService.register()`            |
-| Autenticación de usuario     | `AuthService.login()`               |
-| Autenticación de admin       | `AuthService.adminLogin()`          |
-| Modelo de datos `User`       | `prisma/schema.prisma`              |
-| Autorización por roles       | `RolesGuard` + decorador `@Roles()` |
-| Verificación de identidad    | `JwtStrategy` + `JwtAuthGuard`      |
+| Creación de usuario          | `AuthService.register()`           |
+| Autenticación de usuario     | `AuthService.login()`              |
+| Autenticación de admin       | `AuthService.adminLogin()`         |
+| Modelo de datos              | Esquema de Base de Datos (`Prisma`) |
+| Autorización por roles       | `RolesGuard` + Decorador `@Roles()`|
+| Verificación de identidad    | `JwtStrategy` + `JwtAuthGuard`     |
 
 ---
 
-## Estructura de Archivos
+## Estructura Interna del Módulo
 
-```
-apps/backend/src/auth/
-├── auth.module.ts              # Configuración del módulo y dependencias JWT
-├── auth.controller.ts          # Endpoints de autenticación / registro
-├── auth.service.ts             # Lógica de negocio (register, login, logout)
+El flujo de trabajo se organiza en controladores, servicios, DTOs y Guards, siguiendo las buenas prácticas de NestJS:
+
+```text
+auth/
+├── auth.module.ts              # Configuración principal y dependencias JWT
+├── auth.controller.ts          # Exposición de Endpoints de acceso/registro
+├── auth.service.ts             # Lógica de negocio (registro, login, logout)
 ├── dto/
-│   ├── register.dto.ts         # Datos requeridos para crear un usuario
-│   └── login.dto.ts            # Datos requeridos para iniciar sesión
+│   ├── register.dto.ts         # Validaciones para crear un usuario
+│   └── login.dto.ts            # Validaciones para inicio de sesión
 ├── strategies/
-│   └── jwt.strategy.ts         # Estrategia Passport para validar JWT
+│   └── jwt.strategy.ts         # Estrategia de Passport para decodificar JWT
 ├── guards/
-│   ├── jwt-auth.guard.ts       # Guard que protege rutas con JWT
-│   └── roles.guard.ts          # Guard que valida el rol del usuario
+│   ├── jwt-auth.guard.ts       # Guard para requerir un token JWT válido
+│   └── roles.guard.ts          # Guard para requerir un rol específico
 └── decorators/
-    └── roles.decorator.ts      # Decorador @Roles() para marcar roles requeridos
+    └── roles.decorator.ts      # Decorador personalizado `@Roles()`
 ```
 
 ---
@@ -42,7 +44,7 @@ apps/backend/src/auth/
 
 ```mermaid
 graph TD
-    subgraph AuthModule["AuthModule (src/auth/)"]
+    subgraph Módulo Auth
         AC[AuthController]
         AS[AuthService]
         JS[JwtStrategy]
@@ -51,88 +53,92 @@ graph TD
         RD["@Roles() Decorator"]
     end
 
-    subgraph DTOs
+    subgraph Validaciones (DTOs)
         RDTO[RegisterDto]
         LDTO[LoginDto]
     end
 
-    subgraph Infrastructure
+    subgraph Infraestructura
         PS[PrismaService]
         JWT[JwtService]
         CFG[ConfigService]
     end
 
-    subgraph Database["PostgreSQL (Prisma)"]
-        UM[(User)]
-        RM[(Role)]
-        LCV[(LastCourseVisit)]
+    subgraph Base de Datos (PostgreSQL)
+        UM[(Tabla User)]
+        RM[(Tabla Role)]
+        LCV[(Tabla LastCourseVisit)]
     end
 
-    AC -->|usa| AS
-    AS -->|inyecta| PS
-    AS -->|inyecta| JWT
-    JS -->|lee secret de| CFG
-    JS -->|valida con| JWT
-    JG -->|hereda de| PassportStrategy
-    RG -->|lee metadata de| RD
-    AC -->|recibe| RDTO
-    AC -->|recibe| LDTO
+    AC -->|Usa| AS
+    AS -->|Inyecta| PS
+    AS -->|Genera Token| JWT
+    JS -->|Lee Secret| CFG
+    JS -->|Valida| JWT
+    JG -->|Hereda de| PassportStrategy
+    RG -->|Verifica metadata| RD
+    AC -->|Valida request con| RDTO
+    AC -->|Valida request con| LDTO
     PS --> UM
     PS --> RM
-    UM -->|FK role_id| RM
-    UM -->|1:N| LCV
+    UM -->|Foreign Key| RM
+    UM -->|Relación 1:N| LCV
 ```
 
 ---
 
 ## Flujo de Creación de Usuario (Registro)
 
+El siguiente modelo ilustra el proceso interno al registrar un usuario en el sistema:
+
 ```mermaid
 sequenceDiagram
-    participant C as Cliente
-    participant AC as AuthController
-    participant AS as AuthService
-    participant DB as PostgreSQL
+    participant Cliente
+    participant AuthController
+    participant AuthService
+    participant BaseDeDatos
 
-    C->>AC: POST /auth/register { email, name, last_name, username, password }
-    AC->>AS: register(dto: RegisterDto)
-    AS->>AS: bcrypt.hash(password, salt=10)
-    AS->>DB: user.create({ ...fields, role: { connect: { role_name: 'USER' } } })
-    DB-->>AS: Usuario creado con role_id del rol USER
-    AS->>AS: generateToken({ sub, email, role })
-    AS-->>AC: { access_token: JWT }
-    AC-->>C: 201 Created — { access_token }
+    Cliente->>AuthController: POST /auth/register { email, name, last_name... }
+    AuthController->>AuthService: register(RegisterDto)
+    AuthService->>AuthService: Encripta contraseña (bcrypt)
+    AuthService->>BaseDeDatos: Guarda usuario con Rol 'USER'
+    BaseDeDatos-->>AuthService: Confirmación de guardado exitoso
+    AuthService->>AuthService: Genera JSON Web Token (JWT)
+    AuthService-->>AuthController: { access_token }
+    AuthController-->>Cliente: Retorna 201 Created — con Token
 ```
 
 ---
 
-## Sistema de Roles
+## Sistema de Roles y Autorización
 
-El sistema maneja dos roles predefinidos, inicializados mediante el seed de base de datos:
+Para manejar los niveles de acceso, el sistema utiliza dos roles globales (precargados inicialmente en la base de datos):
 
-| Rol     | Descripción                                     |
-|---------|-------------------------------------------------|
-| `USER`  | Rol por defecto asignado al registrarse          |
-| `ADMIN` | Rol administrativo, asignado manualmente via seed |
+| Rol     | Nivel de Acceso                                  |
+|---------|--------------------------------------------------|
+| `USER`  | Nivel estándar. Asignado por defecto al registrarse. |
+| `ADMIN` | Nivel administrativo. Asignado manualmente por seguridad. |
 
-Los roles se aplican en las rutas usando la combinación de guards y decoradores:
+**Uso práctico en código:**
+Para proteger una ruta y restringirla solo a administradores, se combinan Guards y Decoradores:
 
 ```typescript
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
-@Get('ruta-protegida')
-metodoProtegido() { ... }
+@Get('ruta-administrativa')
+metodoRestringido() { ... }
 ```
 
 ---
 
-## Dependencias del Módulo
+## Tecnologías y Dependencias Principales
 
-| Paquete               | Versión  | Uso                                    |
-|-----------------------|----------|----------------------------------------|
-| `@nestjs/jwt`         | —        | Firma y verificación de tokens JWT     |
-| `@nestjs/passport`    | —        | Integración de estrategias Passport    |
-| `passport-jwt`        | —        | Estrategia JWT para Passport           |
-| `bcrypt`              | —        | Hashing seguro de contraseñas          |
-| `@nestjs/config`      | —        | Lectura de `JWT_SECRET` desde `.env`   |
-| `@prisma/client`      | —        | Acceso a la base de datos              |
+El módulo utiliza librerías estándares de seguridad y encriptación:
+
+| Herramienta / Paquete   | Propósito Integrado                             |
+|-------------------------|-------------------------------------------------|
+| `@nestjs/jwt`           | Creación segura y lectura de tokens JWT.        |
+| `@nestjs/passport`      | Motor subyacente para estrategias de seguridad. |
+| `passport-jwt`          | Verificación del contenido del JWT.             |
+| `bcrypt`                | Hashing unidireccional de contraseñas.          |
+| `@nestjs/config`        | Lectura segura de secretos desde variables de entorno. |
