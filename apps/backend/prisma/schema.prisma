@@ -1,213 +1,112 @@
-// ==============================================================================
-// ARCHIVO MAESTRO DE PRISMA (EL PLANO ARQUITECTÓNICO DE LA BASE DE DATOS)
-// ==============================================================================
-
-// 1. GENERADOR CLIENTE (Fábrica de Código):
-// Este bloque es obligatorio en cualquier esquema Prisma para que funcione.
-// Cuando ejecutamos en terminal el comando generador, este lee tus diccionarios y crea código usable.
-// - provider: Define el lenguaje objetivo. Aquí le decimos que genere código para `prisma-client-js` (JavaScript/TypeScript).
-// - output: Cambia el lugar normal donde Prisma escupe el código (que oculta en node_modules), para depositarlo en nuestra propia carpeta "../src/generated/prisma".
-// - moduleFormat: Configurado en `cjs` (CommonJS) para compatibilidad hacia atrás en Node.
+// 1. GENERADOR CLIENTE: Define el lenguaje y la ruta de salida del cliente generado.
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
-// 2. FUENTE DE DATOS (Conexión al Motor):
-// *NOTA DE ARQUITECTURA*: Generalmente aquí abajo agregan la línea `url = env(...)`.
-// Sin embargo, nosotros no la ponemos aquí. Hemos delegado la extracción
-// de la URL a nuestro archivo `prisma.config.ts` (y también en el `prisma.service.ts`), 
-// los cuales atrapan la clave oculta del `.env` y la inyectan programáticamente en vivo.
+// 2. FUENTE DE DATOS: Configura el motor de BD (PostgreSQL).
+// La URL se inyecta programáticamente desde prisma.config.ts / prisma.service.ts.
 datasource db {
   provider = "postgresql"
 }
 
-// ==========================================================
+// ==========================================
 // MÓDULO DE USUARIOS Y ROLES
-// ==========================================================
+// ==========================================
 
-// TABLA 1: ROLES (Tabla Catálogo/Lookup Table)
-// Su naturaleza es estática: alojará 2 o 3 filas permanentes ("Administrador", "Estudiante").
-// Su objetivo central es la Normalización. Sirve como ancla pura para que los cientos 
-// de miles de usuarios apuntables se amarren al ID, ahorrando toneladas de espacio de almacenamiento.
 model Role {
-  // @id = Llave Primaria (PK).
-  // @default(autoincrement()) = Postgres asignará 1, 2, 3... solo.
-  role_id     Int       @id @default(autoincrement())
-  
-  // @unique = Actúa como guardaespaldas. Bloquea la BD impidiendo que hayan nombres duplicados.
-  // @db.VarChar(50) = Optimiza la memoria de la Nube, limitando el espacio máximo exactamente a 50 letras.
-  role_name String    @unique @db.VarChar(50)
-  
-  // REGLA DE CARDINALIDAD PRISMA (users User[])
-  // Aunque en PostgreSQL no existan las columnas de "Arreglos", esta línea es obligatoria.
-  // Su único propósito es explicarle a Prisma y a TypeScript tu Cardinalidad de la Base de datos (Uno a Muchos).
-  // La forma en que Prisma sabe con quién relacionarse es porque usamos la palabra mayúscula `User[]`.
-  // Literalmente dice: Crea un arreglo agarrando los elementos del modelo 'User' de abajo.
-  // CUÁNDO SE USA: Cuando en tu código TS pides un Rol y pones `{ include: { users: true } }`. 
-  // En ese preciso instante, Prisma procesa todo y **llena físicamente este arreglo** con la lista 
-  // de usuarios para que tú puedas imprimirlos o contarlos cómodamente con código.
-  users   User[]
+  role_id   Int    @id @default(autoincrement()) // PK: Identificador único autoincremental
+  role_name String @unique @db.VarChar(50)       // Nombre de rol (Admin, Estudiante) - Único
+
+  users User[] // Relación Uno-a-Muchos con User
 }
 
-// TABLA 2: USUARIOS
 model User {
-  // PK auto-generada por Postgres.
-  user_id       Int                   @id @default(autoincrement())
-  
-  // Datos personales. email y username llevan @unique para evitar perfiles duplicados.
-  email          String                @unique @db.VarChar(75)
-  name          String                @db.VarChar(50)
-  last_name        String                @db.VarChar(50)
-  username   String                @unique @db.VarChar(70)
-  password       String                @db.VarChar(255)
-  
-  // Llave Foránea física. Guarda un Integer (ej. 1 o 2) en lugar del texto "Admin/Estudiante".
-  role_id           Int
-  
-  // Sello automático que guarda la fecha y hora exacta en la que se generó este registro.
-  register_date   DateTime              @default(now())
-  
-  // EL MOTOR DE LOS JOINS (@relation):
-  // Es el "pegamento" físico de la Foránea. Le enseña a Prisma a cruzar tablas automáticamente.
-  // Construye el puente entre tu tabla actual y la tabla padre (Role):
-  // - fields: Tu Origen (El puerto local). "Usa mi variable local llamada [role_id]".
-  // - references: Tu Destino (El enchufe remoto). "Busca en la otra tabla a la variable original [role_id]".
-  // Gracias a esta línea, si en TS pides incluir al Rol de un usuario, Prisma sabrá cómo armar el JOIN correcto detrás de escena.
-  role              Role                  @relation(fields: [role_id], references: [role_id])
-  
-  // Regla de cardinalidad: Un Usuario puede tener múltiples "visitas a cursos".
-  visited_courses LastCourseVisit[]
+  user_id       Int      @id @default(autoincrement())
+  email         String   @unique @db.VarChar(75)
+  name          String   @db.VarChar(50)
+  last_name     String   @db.VarChar(50)
+  username      String   @unique @db.VarChar(70)
+  password      String   @db.VarChar(255)
+  role_id       Int      // FK: Referencia al rol del usuario
+  register_date DateTime @default(now())
+
+  // Relación con Role: Vinculación física de la llave foránea
+  role           Role              @relation(fields: [role_id], references: [role_id])
+  visited_courses LastCourseVisit[] // Historial de interacción con cursos
 }
 
-// TABLA 3: DOCENTES (Teacher)
-// Almacena la biografía básica de los profesores.
 model Teacher {
-  // PK auto-generada
-  teacher_id  Int     @id @default(autoincrement())
-  
-  // Identificadores personales truncados a un máximo seguro de 50 caracteres para optimizar memoria en Postgres.
-  name     String  @db.VarChar(50)
-  last_name   String  @db.VarChar(50)
-  
-  // REGLA DE CARDINALIDAD (Uno-A-Muchos Virtual):
-  // Indica a Prisma que un único Docente puede tener a su cargo una lista extensísima de Cursos distintos.
-  // Este Arreglo 'courses' se empaqueta en TS cuando aplicamos `include: { courses: true }` al buscar a este profe.
-  courses      Course[]
+  teacher_id Int      @id @default(autoincrement())
+  name       String   @db.VarChar(50)
+  last_name  String   @db.VarChar(50)
+
+  courses Course[] // Un docente puede tener múltiples cursos
 }
 
-// ==========================================================
-// MÓDULO EDUCATIVO PRINCIPAL (Cursos, Clases y Materiales)
-// ==========================================================
+// ==========================================
+// MÓDULO EDUCATIVO (Cursos y Clases)
+// ==========================================
 
-// TABLA 4: CURSO (Nivel Superior)
 model Course {
-  // PK auto-generada
-  course_id             Int                   @id @default(autoincrement())
-  
-  // Metadatos descriptivos del curso. course_code con restricción UNIQUE para búsquedas ruteadas.
-  name               String                @db.VarChar(100)
-  course_code         String                @unique @db.VarChar(10)
-  url_image         String                @db.VarChar(255)
+  course_id            Int      @id @default(autoincrement())
+  name                 String   @db.VarChar(100)
+  course_code          String   @unique @db.VarChar(10)
+  url_image            String   @db.VarChar(255)
   description          String
-  
-  // FK (Llave Foránea): Identificador del Docente dictando el curso.
-  teacher_id          Int
-  
-  // Sello automático de la fecha inicial en que fue agregado a la base de datos.
-  course_creation_date DateTime              @default(now())
-  
-  // @updatedAt: Gatillo que detecta modificaciones "Update" en la fila y sobreescribe con la fecha/hora de ese momento.
-  update_date  DateTime              @updatedAt
-  
-  // Conexión física hacia la tabla Docente usando el campo teacher_id.
-  teacher              Teacher               @relation(fields: [teacher_id], references: [teacher_id])
-  
-  // Cardinalidades de relación: Un único Curso aloja una infinidad de clases y un registro extensivo de visitantes.
-  classes               Class[]
-  visiting_users  LastCourseVisit[]
+  teacher_id           Int      // FK: Docente a cargo
+  course_creation_date DateTime @default(now())
+  update_date          DateTime @updatedAt
+
+  teacher         Teacher           @relation(fields: [teacher_id], references: [teacher_id])
+  classes         Class[]           // Listado de lecciones vinculadas
+  visiting_users  LastCourseVisit[] // Estudiantes que ingresaron al curso
 }
 
-// TABLA INTERMEDIA: HISTORIAL DE VISITAS (LastCourseVisit)
-// Resuelve la relación de base de datos "Muchos a Muchos".
-// 1 Curso es visto por Múltiples Estudiantes, y 1 Estudiante cursa Múltiples Cursos.
-// En vez de colapsar las entidades principales, se usa esta tabla de historial que archiva puros METADATOS técnicos de la interacción.
 model LastCourseVisit {
-  // PK auto-generada propia al registro de interacción
-  user_course_id    Int      @id @default(autoincrement())
-  
-  // FK: Identificador del estudiante
-  user_id          Int
-  // FK: Identificador del curso visitado
-  course_id            Int
-  
-  // Fija el momento milisegundo exacto de la primera vez que hizo clic en "Ingresar al Curso"
-  start_date        DateTime @default(now())
-  // Actualizable constantemente para registrar la hora del último inicio de sesión en este curso
+  user_course_id Int      @id @default(autoincrement())
+  user_id        Int
+  course_id      Int
+  start_date     DateTime @default(now())
   last_visit_date DateTime @updatedAt
-  
-  // onDELETE Cascade aplicable hacia ambos sentidos: 
-  // Si en el futuro se elimina tanto al Usuario completo como al Curso completo de la BD,
-  // el historial se vaciará consecuentemente y prevendrá orfandades inservibles de datos de interacción.
-  user             User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  course               Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
 
-  // Restricción de doble variable unificada para impedir inserciones repetidas del mismo alumno a un curso que ya ingresó.
-  @@unique([user_id, course_id])
+  // Relaciones con Cascade: Si se borra el usuario o curso, se limpia el historial.
+  user   User   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+
+  @@unique([user_id, course_id]) // Evita duplicidad de registros para el mismo par user-course
 }
 
-// TABLA 5: CLASE (Hija directa del Curso)
 model Class {
-  // PK auto-generada
-  class_id             Int        @id @default(autoincrement())
-  // FK: Enlace numérico a la ID del Curso padre.
-  course_id             Int
-  
-  // Detalles visuales textuales y URL incrustada limitados vía VARCHAR para ahorrar memoria.
-  title               String     @db.VarChar(150)
-  description          String
-  url_youtube          String     @db.VarChar(150)
-  
-  // Sello original de registro fechado y cronológico para la clase.
-  class_creation_date DateTime   @default(now())
-  
-  // Enlace físico ejecutando la Llave foránea.
-  course                Course      @relation(fields: [course_id], references: [course_id])
-  
-  // Arreglo de relación de cardinalidad para el TypeScript apuntando hacia abajo a la TABLA 6
-  materials          Material[]
+  class_id            Int      @id @default(autoincrement())
+  course_id           Int      // FK: Curso al que pertenece
+  title               String   @db.VarChar(150)
+  description         String
+  url_youtube         String   @db.VarChar(150)
+  class_creation_date DateTime @default(now())
+
+  course    Course     @relation(fields: [course_id], references: [course_id])
+  materials Material[] // Recursos didácticos vinculados a la clase
 }
 
-// Lista enumerada (Catálogo selectivo restringido para la tabla de Materiales)
 enum MaterialTypes {
   file
   link
   reference
 }
 
-// TABLA 6: MATERIALES (Hijo biológico de la Clase)
 model Material {
-  // PK auto-generada
-  material_id        Int      @id @default(autoincrement())
-  // FK: Enlace numérico que emparienta con el Class principal.
-  class_id           Int
+  material_id      Int           @id @default(autoincrement())
+  class_id         Int           // FK: Clase a la que pertenece el recurso
+  material_type    MaterialTypes // Discriminador: Archivo, Link o Referencia
+  filename         String        @db.VarChar(150)
   
-  // Forzada a consumir puramente un campo del tipo "MaterialTypes" en base a la enumeración estricta de arriba.
-  material_type      MaterialTypes
-  filename     String   @db.VarChar(150)
-  
-  // TIPO NULLABLE (Optional - '?' )
-  // Transforma la variable en opcional `Nullable`. 
-  // Postgres lo registra y aprueba formalmente como valor vacío `NULL` en lugar de fallar la transacción por datos ausentes. 
-  // Facilita inserciones segmentadas: Si se sube puramente un Documento File, la ruta Link queda vacía legalmente.
-  url_link         String?
-  written_reference String?
-  material_creation_date       DateTime @default(now())
-  
-  // onDELETE: Cascade (Autodestrucción en Cascada)
-  // Previene "Memoria Basura" o Errores de Indexación. 
-  // Al emitirse desde Panel Admin la eliminación global de una Clase, Postgres usa este puente físico para 
-  // descender y aniquilar sin miramientos todos los componentes de material asociados de raíz.
-  class              Class    @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  // Campos opcionales según el tipo de material
+  url_link               String?
+  written_reference       String?
+  material_creation_date DateTime @default(now())
+
+  // Relación con Cascade: Al borrar la clase, se eliminan todos sus materiales.
+  class Class @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }

@@ -1,8 +1,4 @@
-// --- IMPORTACIONES DEL NUCLEO WEB Y TRANSFERENCIA ---
-// 1. Herramientas base de NestJS:
-//    - `@Controller`, `@Post`, `@Delete`: Definen rutas y el verbo HTTP.
-//    - `@Body`, `@Param`: Sacan datos del body y de la URL.
-//    - `@UseInterceptors`, `@UploadedFile`: Manejan la subida de archivos.
+// 1. Herramientas de comunicación y extracción de datos
 import {
   Controller,
   Post,
@@ -12,16 +8,11 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-
-// 2. Herramientas Especializadas Binarias (Multer):
-//    `FileInterceptor`: Lee el archivo que llega con el nombre de campo indicado.
+// 2. Interceptor para manejo de archivos binarios
 import { FileInterceptor } from '@nestjs/platform-express';
-
-// 3. Reglas de guardado:
-//    Configura la carpeta y el nombre con el que se guarda el archivo.
+// 3. Configuración del destino y nombre del archivo
 import { storageConfig } from '../../utils/storage.config';
-
-// 4. Servicio Principal y Moldes DTOs
+// 4. Lógica de negocio y modelos de datos
 import { MaterialsService } from './materials.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -29,30 +20,16 @@ import { CreateReferenceDto } from './dto/create-reference.dto';
 
 /**
  * CONTROLADOR ADMINISTRATIVO DE MATERIALES
- * Maneja la creacion de recursos (archivos, enlaces y referencias).
+ * Gestiona la creación y eliminación de recursos en el panel de control.
  */
 @Controller('admin/materials')
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   /**
-   * ENDPOINT PARA SUBIDA DE ARCHIVOS FÍSICOS (POST)
-   * 
-   * ANÁLISIS SINTÁCTICO DE LA SUBIDA DE ARCHIVOS:
-   * 
-   * 1. `@UseInterceptors()`: Funciona como un "Portero". Su misión es detener el tráfico 
-   *    antes de que llegue a esta función para que un especialista procese los datos pesados.
-   * 
-   * 2. `FileInterceptor('file', { storage: storageConfig })`: Es el "Ayudante Especializado" 
-   *    que vive dentro del portero. 
-   *    - El nombre `'file'` es la llave: debe coincidir exactamente con el nombre del campo 
-   *      que envíe el Frontend (React). 
-   *    - El objeto `{ storage }` es el manual de instrucciones que le dice dónde y cómo 
-   *      guardar el archivo físicamente en el disco duro.
-   * 
-   * 3. `@UploadedFile()`: Una vez que el Portero y el Ayudante terminan su trabajo de guardado, 
-   *    este decorador atrapa el "Resumen o Ticket" de éxito (que contiene el nombre final, 
-   *    el tamaño y la ruta) y lo entrega a la variable `file`.
+   * Registro de Archivos Físicos (PDF, Imágenes, etc.)
+   * - @UseInterceptors: Intercepta la petición para guardar el archivo en disco antes de leer los datos.
+   * - @UploadedFile: Atrapa los metadatos del archivo guardado (ruta y nombre único) para el servicio.
    */
   @Post('file')
   @UseInterceptors(FileInterceptor('file', { storage: storageConfig }))
@@ -64,9 +41,8 @@ export class MaterialsController {
   }
 
   /**
-   * ENDPOINT PARA CREACION DE ENLACES EXTERNOS (POST)
-   * - `@Post('link')` indica la ruta: /admin/materials/link.
-   * - `@Body()` espera un JSON con titulo y url.
+   * Registro de Enlaces Externos
+   * - @Body: Extrae el título y la URL del enlace para guardarlos en la tabla material.
    */
   @Post('link')
   createLink(@Body() createLinkDto: CreateLinkDto) {
@@ -74,9 +50,8 @@ export class MaterialsController {
   }
 
   /**
-   * ENDPOINT PARA REFERENCIAS DE TEXTO (POST)
-   * - `@Post('reference')` indica la ruta: /admin/materials/reference.
-   * - `@Body()` espera el texto de la referencia.
+   * Registro de Referencias de Texto
+   * - @Body: Obtiene el texto literario o bibliográfico para persistencia.
    */
   @Post('reference')
   createReference(@Body() createReferenceDto: CreateReferenceDto) {
@@ -84,10 +59,9 @@ export class MaterialsController {
   }
 
   /**
-   * ENDPOINT PARA ELIMINACION (DELETE)
-   * - `@Delete(':id')` crea la ruta /admin/materials/:id.
-   * - `@Param('id')` saca el id de la URL como string.
-   * - `+id` lo convierte a numero antes de enviarlo al servicio.
+   * Eliminación de Recursos
+   * - @Delete(':id'): Captura el identificador dinámico desde la URL.
+   * - +id: Convierte el parámetro de texto a número para la consulta en Prisma.
    */
   @Delete(':id')
   remove(@Param('id') id: string) {
