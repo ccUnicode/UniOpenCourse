@@ -1,33 +1,135 @@
-# 📡 Endpoints del Backend
+## Classes
 
-*Nota: Esta lista contiene únicamente las rutas pertenecientes a los dominios bajo nuestra gestión (**Classes** y **Materials**).*
+### Índice rápido
+
+**Público**
+
+| Método | Ruta                     | Uso                                |
+| ------ | ------------------------ | ---------------------------------- |
+| `GET`  | `/courses/:id/classes`   | Listado de clases por curso        |
+| `GET`  | `/classes/:id`           | Detalle de una clase específica    |
+| `GET`  | `/classes/:id/materials` | Listado de materiales de una clase |
+
+**Admin**
+
+| Método   | Ruta                 | Uso                         |
+| -------- | -------------------- | --------------------------- |
+| `POST`   | `/admin/classes`     | Crear clase                 |
+| `GET`    | `/admin/classes`     | Listado paginado y búsqueda |
+| `GET`    | `/admin/classes/:id` | Detalle                     |
+| `PATCH`  | `/admin/classes/:id` | Actualizar                  |
+| `DELETE` | `/admin/classes/:id` | Eliminar                    |
 
 ---
 
-## 🎓 Módulos Públicos (Estudiantes)
+### Público — `/classes` (y relacionadas)
 
-Estos endpoints proveen información segura y pasiva. Solo lectura (`GET`).
+#### `GET /courses/:id/classes`
 
-### Clases & Materiales (Jerárquico)
-- `GET /courses/:id/classes`: Lista de lecciones que pertenecen a un curso específico.
-- `GET /classes/:id`: Todos los detalles directos de una clase por su ID (ej. URL del video de YouTube).
-- `GET /classes/:id/materials`: Extrae todos los materiales anexos a una clase puntual (archivos físicos subidos, links o referencias escritas).
+| Parámetro | Descripción          |
+| --------- | -------------------- |
+| `id`      | `course_id` (entero) |
 
 ---
 
-## 🛠️ Panel Administrativo (CRUD)
+#### `GET /classes/:id`
 
-Estos módulos tienen manipulación total de la base de datos en PostgreSQL.
+| Parámetro | Descripción         |
+| --------- | ------------------- |
+| `id`      | `class_id` (entero) |
 
-### Gestión de Clases (`/admin/classes`)
-- `POST /`: Crea una nueva clase base relacionada a un curso obligatorio.
-- `GET /`: Devuelve todas las clases existentes. Soporta paginación por Query Parameters: `?search={texto}&page={numero}`.
-- `GET /:id`: Busca e inspecciona visualmente el detalle de cualquier clase.
-- `PATCH /:id`: Edición parcial de campos (título, descripción, etc.).
-- `DELETE /:id`: Eliminación física del registro en base de datos.
+**Respuesta (200):** Objeto con el título, descripción y video de una lección puntual.
 
-### Gestión de Materiales (`/admin/materials`)
-- `POST /file`: **[Multipart/Form-Data]** Usa `UseInterceptors(FileInterceptor(...))` para leer y guardar el archivo con Multer; luego `@UploadedFile()` entrega el archivo procesado al controlador, que persiste los metadatos en `Material`.
-- `POST /link`: Genera un material de recurso de enlace externo (Ej: link a GitHub).
-- `POST /reference`: Genera un material de ayuda textual corta sin enlace vivo.
-- `DELETE /:id`: Elimina permanentemente la referencia de ese material del curso.
+---
+
+#### `GET /classes/:id/materials`
+
+| Parámetro | Descripción         |
+| --------- | ------------------- |
+| `id`      | `class_id` (entero) |
+
+**Respuesta (200):** Arreglo con los recursos (PDFs, links, referencias, etc.) vinculados a la clase.
+
+---
+
+### Admin — `/admin/classes`
+
+#### Tabla de operaciones
+
+| Método   | Ruta                 | Cuerpo           | Descripción |
+| -------- | -------------------- | ---------------- | ----------- |
+| `POST`   | `/admin/classes`     | `CreateClassDto` | Crear       |
+| `GET`    | `/admin/classes`     | —                | Listado     |
+| `GET`    | `/admin/classes/:id` | —                | Detalle     |
+| `PATCH`  | `/admin/classes/:id` | `UpdateClassDto` | Actualizar  |
+| `DELETE` | `/admin/classes/:id` | —                | Eliminar    |
+
+---
+
+#### `GET /admin/classes`
+
+| Parámetro | Tipo           | Default | Descripción                |
+| --------- | -------------- | ------- | -------------------------- |
+| `page`    | número (query) | `1`     | Página de resultados       |
+| `search`  | string (query) | —       | Texto de búsqueda opcional |
+
+---
+
+#### DTO: `CreateClassDto` (POST y PATCH)
+
+| Campo         | Reglas                                                  |
+| ------------- | ------------------------------------------------------- |
+| `course_id`   | Obligatorio; entero                                     |
+| `title`       | Obligatorio; string                                     |
+| `description` | Obligatorio; string                                     |
+| `url_youtube` | Opcional; si se envía, debe ser URL válida (HTTP/HTTPS) |
+
+**Reglas de negocio**
+
+- **Actualización (PATCH):** Usa `UpdateClassDto`, donde todos los campos del `CreateClassDto` son opcionales.
+
+---
+
+## Materials
+
+### Admin — `/admin/materials`
+
+#### Tabla de operaciones
+
+| Método   | Ruta                         | Cuerpo               | Descripción                              |
+| -------- | ---------------------------- | -------------------- | ---------------------------------------- |
+| `POST`   | `/admin/materials/file`      | `CreateFileDto`      | Subir archivo físico (PDF, Imagen, etc.) |
+| `POST`   | `/admin/materials/link`      | `CreateLinkDto`      | Registrar enlace externo                 |
+| `POST`   | `/admin/materials/reference` | `CreateReferenceDto` | Registrar referencia de texto            |
+| `DELETE` | `/admin/materials/:id`       | —                    | Eliminar material                        |
+
+---
+
+#### DTO: `CreateFileDto` (`POST /admin/materials/file`)
+
+**Nota:** Este endpoint usa `Multipart/Form-Data` (`FileInterceptor`).
+
+| Campo      | Reglas                                                                            |
+| ---------- | --------------------------------------------------------------------------------- |
+| `class_id` | Obligatorio; se convertirá a entero numérico internamente (`@Type(() => Number)`) |
+| `file`     | Obligatorio; archivo binario (Atrapado en controlador y guardado por Multer)      |
+
+---
+
+#### DTO: `CreateLinkDto` (`POST /admin/materials/link`)
+
+| Campo      | Reglas                                           |
+| ---------- | ------------------------------------------------ |
+| `class_id` | Obligatorio; entero                              |
+| `filename` | Obligatorio; string (nombre o título del enlace) |
+| `url_link` | Obligatorio; URL válida (HTTP/HTTPS)             |
+
+---
+
+#### DTO: `CreateReferenceDto` (`POST /admin/materials/reference`)
+
+| Campo               | Reglas                                               |
+| ------------------- | ---------------------------------------------------- |
+| `class_id`          | Obligatorio; entero                                  |
+| `filename`          | Obligatorio; string (título o nombre visual)         |
+| `written_reference` | Obligatorio; string (contenido o cita bibliográfica) |

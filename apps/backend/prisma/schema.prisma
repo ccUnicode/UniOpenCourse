@@ -83,7 +83,7 @@ model Class {
   course_id           Int      // FK: Curso al que pertenece
   title               String   @db.VarChar(150)
   description         String
-  url_youtube         String   @db.VarChar(150)
+  url_youtube         String?   @db.VarChar(150)
   class_creation_date DateTime @default(now())
 
   course    Course     @relation(fields: [course_id], references: [course_id])

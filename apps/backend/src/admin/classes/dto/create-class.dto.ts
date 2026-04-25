@@ -1,5 +1,5 @@
 // 1. Validadores de tipo y presencia
-import { IsString, IsNotEmpty, IsInt, IsUrl } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsUrl, IsOptional } from 'class-validator';
 
 /**
  * DTO: CREACIÓN DE CLASES
@@ -28,9 +28,9 @@ export class CreateClassDto {
   description: string;
 
   /**
-   * - url_youtube: Dirección URL válida del video (HTTP/HTTPS).
+   * - url_youtube: Dirección URL válida del video (HTTP/HTTPS). Opcional.
    */
+  @IsOptional()
   @IsUrl()
-  @IsNotEmpty()
-  url_youtube: string;
+  url_youtube?: string;
 }
