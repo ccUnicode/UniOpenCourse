@@ -1,21 +1,134 @@
-# ⚙️ Documentación de Módulos (Backend)
+## Módulo: Classes
 
-*Nota: Esta sección detalla exclusivamente la arquitectura y lógica construida para los módulos de **Classes** y **Materials**.*
+### Ubicación en el repositorio
 
-## 🏗️ Arquitectura y Responsabilidades
+| Qué             | Ruta                                |
+| --------------- | ----------------------------------- |
+| API pública     | `apps/backend/src/classes/`         |
+| API admin       | `apps/backend/src/admin/classes/`   |
+| Modelo de datos | `apps/backend/prisma/schema.prisma` |
 
-Nuestro código sigue un estricto principio de separación de responsabilidades: los estudiantes usan rutas públicas restrictivas (solo consulta) y los administradores usan las rutas protegidas (Control total).
+### Responsabilidades
 
-### 1. Clases (`Classes`)
-- **Público (`src/classes`):** Se enfoca en la disponibilidad del contenido. Permite buscar el total de clases dentro de un curso y cargar los detalles de una única clase seleccionada (incluyendo sus materiales asociados).
-- **Admin (`src/admin/classes`):** Gestiona la lógica de persistencia dura (CRUD) en PostgreSQL gracias a Prisma. Encargado de creación, paginación, búsqueda, actualización de datos (título, vínculos de youtube) y eliminación de clases obsoletas.
+#### Pública — `/classes` (y jerarquía)
 
-### 2. Materiales (`Materials`)
-- **Público:** Como decisión arquitectónica, carece de controladores propios públicos ya que los materiales "viven" estrictamente dentro de una Clase. Los estudiantes los acceden a través de la ruta jerárquica del módulo Classes (`/classes/:id/materials`).
-- **Admin (`src/admin/materials`):** 
-  - Este es uno de los módulos más complejos, utilizando interceptores (`FileInterceptor`) y la librería **Multer**.
-  - **¿Qué hace `UseInterceptors` aquí?** Es un decorador de NestJS que permite ejecutar lógica *antes* de entrar al método del controlador. En este caso, inyecta el interceptor de archivos de Multer para leer el `multipart/form-data`, validar el archivo y guardarlo en disco.
-  - **¿Qué hace `@UploadedFile()`?** Es el decorador que extrae el archivo procesado por el interceptor y lo entrega como parámetro del método. Es decir: sin `UseInterceptors(FileInterceptor(...))` no existe el archivo; con `@UploadedFile()` lo recibes ya parseado y con sus metadatos (nombre, size, mimetype, path).
-  - No guardamos archivos pesados (PDFs, PPTs) en la base de datos.
-  - Los archivos físicos se almacenan ordenadamente en el disco duro del backend (`./storage`), renombrándolos para evitar colisiones (`storageConfig`).
-  - Prisma solo almacena los metadatos y enlaces (`url_link`) categorizando a los materiales en tres variantes de la enumeración: `file`, `link` y `reference`.
+| Área       | Qué cubre                                                                |
+| ---------- | ------------------------------------------------------------------------ |
+| Listado    | Lecciones pertenecientes a un curso específico (`/courses/:id/classes`)  |
+| Detalle    | Información de una lección (título, descripción, video)                  |
+| Materiales | Listado de recursos asociados a la clase (`/classes/:id/materials`)      |
+
+#### Admin — `/admin/classes`
+
+| Área       | Qué cubre                                              |
+| ---------- | ------------------------------------------------------ |
+| CRUD       | Alta, listado, detalle, actualización y baja de clases |
+| Paginación | Soporte para `page` y `search` en el listado general   |
+
+Detalle del DTO y reglas: [endpoints.md — Classes](./endpoints.md#classes).
+
+### Modelo de datos (resumen)
+
+#### Entidad `Class`
+
+| Campo                 | Descripción                  |
+| --------------------- | ---------------------------- |
+| `class_id`            | Identificador                |
+| `course_id`           | Curso al que pertenece (FK)  |
+| `title`               | Título de la clase           |
+| `description`         | Descripción o resumen        |
+| `url_youtube`         | URL del video (opcional)     |
+| `class_creation_date` | Fecha de alta                |
+
+#### Entidad `Course`
+
+| Concepto | Descripción                                         |
+| -------- | --------------------------------------------------- |
+| Relación | Curso contenedor de la clase (mediante `course_id`) |
+
+#### Entidad `Material`
+
+| Concepto | Descripción                               |
+| -------- | ----------------------------------------- |
+| Relación | Recursos didácticos vinculados a la clase |
+
+### Archivos fuente
+
+Rutas relativas a `apps/backend/`.
+
+| Archivo                                     | Rol                                    |
+| ------------------------------------------- | -------------------------------------- |
+| `src/classes/classes.module.ts`             | Módulo Nest (API pública)              |
+| `src/classes/classes.controller.ts`         | Rutas de lectura y jerarquía           |
+| `src/classes/classes.service.ts`            | Lógica y consultas Prisma (pública)    |
+| `src/admin/classes/classes.module.ts`       | Módulo Nest (API admin)                |
+| `src/admin/classes/classes.controller.ts`   | Rutas `/admin/classes`                 |
+| `src/admin/classes/classes.service.ts`      | CRUD administrativo                    |
+| `src/admin/classes/dto/create-class.dto.ts` | Validación crear/actualizar            |
+
+### Dependencias e integración
+
+| Dependencia                      | Uso                                           |
+| -------------------------------- | --------------------------------------------- |
+| `PrismaService` / `PrismaModule` | Acceso a `Class`, `Course` y `Material`       |
+
+---
+
+## Módulo: Materials
+
+### Ubicación en el repositorio
+
+| Qué             | Ruta                                |
+| --------------- | ----------------------------------- |
+| API pública     | N/A (Se consumen a través de `Classes`) |
+| API admin       | `apps/backend/src/admin/materials/` |
+| Modelo de datos | `apps/backend/prisma/schema.prisma` |
+
+### Responsabilidades
+
+#### Admin — `/admin/materials`
+
+| Área             | Qué cubre                                                                |
+| ---------------- | ------------------------------------------------------------------------ |
+| Archivos físicos | Subida y almacenamiento en disco usando `Multer` e `Interceptor`         |
+| Enlaces          | Registro de URLs externas                                                |
+| Referencias      | Registro de texto o citas bibliográficas                                 |
+| Baja             | Eliminación de materiales físicos (del disco) y/o registros de DB        |
+
+Detalle del DTO y reglas: [endpoints.md — Materials](./endpoints.md#materials).
+
+### Modelo de datos (resumen)
+
+#### Entidad `Material`
+
+| Campo                    | Descripción                                      |
+| ------------------------ | ------------------------------------------------ |
+| `material_id`            | Identificador                                    |
+| `class_id`               | Clase a la que pertenece (FK)                    |
+| `material_type`          | Discriminador enum (`file`, `link`, `reference`) |
+| `filename`               | Nombre o título del material                     |
+| `url_link`               | URL externa (si es link)                         |
+| `written_reference`      | Contenido textual (si es referencia)             |
+| `material_creation_date` | Fecha de alta                                    |
+
+### Archivos fuente
+
+Rutas relativas a `apps/backend/`.
+
+| Archivo                                           | Rol                                                |
+| ------------------------------------------------- | -------------------------------------------------- |
+| `src/admin/materials/materials.module.ts`         | Módulo Nest (API admin)                            |
+| `src/admin/materials/materials.controller.ts`     | Rutas `/admin/materials` e Interceptores           |
+| `src/admin/materials/materials.service.ts`        | Persistencia en Prisma y manejo de disco duro      |
+| `src/admin/materials/dto/create-file.dto.ts`      | Validación de clase al subir archivo               |
+| `src/admin/materials/dto/create-link.dto.ts`      | Validación crear link                              |
+| `src/admin/materials/dto/create-reference.dto.ts` | Validación crear referencia                        |
+| `src/utils/storage.config.ts`                     | Configuración Multer (destino y nombre de archivo) |
+
+### Dependencias e integración
+
+| Dependencia                  | Uso                                                              |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `PrismaService`              | Acceso a tabla `Material`                                        |
+| `@nestjs/platform-express`   | Proveedor de `FileInterceptor` para manejar `multipart/form-data`|
+| `Multer`                     | Motor interno que guarda los archivos físicos en `./storage`     |
