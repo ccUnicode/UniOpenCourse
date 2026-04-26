@@ -26,6 +26,11 @@
 
 #### `GET /courses/:id/classes`
 
+*Endpoint público para listar todas las lecciones que conforman el temario de un curso.*
+
+- **Requiere Header Token:** No
+- **Rol Necesario:** Ninguno (Público)
+
 | Parámetro | Descripción          |
 | --------- | -------------------- |
 | `id`      | `course_id` (entero) |
@@ -47,6 +52,11 @@
 ---
 
 #### `GET /classes/:id`
+
+*Endpoint enfocado en entregar la información detallada (título, descripción y video) de una lección específica.*
+
+- **Requiere Header Token:** No
+- **Rol Necesario:** Ninguno (Público)
 
 | Parámetro | Descripción         |
 | --------- | ------------------- |
@@ -71,6 +81,11 @@
 ---
 
 #### `GET /classes/:id/materials`
+
+*Endpoint encargado de recuperar todos los recursos didácticos (PDFs, referencias, enlaces) que el estudiante necesita para una clase.*
+
+- **Requiere Header Token:** No
+- **Rol Necesario:** Ninguno (Público)
 
 | Parámetro | Descripción         |
 | --------- | ------------------- |
@@ -98,6 +113,11 @@
 ---
 
 ### Admin — `/admin/classes`
+
+*Grupo de endpoints enfocados en la gestión integral de las clases (alta, baja y modificación) por parte del personal administrativo.*
+
+- **Requiere Header Token:** Sí (Bearer Token)
+- **Rol Necesario:** `ADMIN`
 
 #### Tabla de operaciones
 
@@ -161,6 +181,11 @@
 ## Materials
 
 ### Admin — `/admin/materials`
+
+*Grupo de endpoints diseñados para administrar los recursos complementarios de cada lección, destacando la subida y borrado de archivos físicos en el servidor.*
+
+- **Requiere Header Token:** Sí (Bearer Token)
+- **Rol Necesario:** `ADMIN`
 
 #### Tabla de operaciones
 
