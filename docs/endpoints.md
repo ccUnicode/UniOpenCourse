@@ -30,6 +30,20 @@
 | --------- | -------------------- |
 | `id`      | `course_id` (entero) |
 
+**Respuesta (200):** Arreglo con las lecciones pertenecientes al curso.
+```json
+[
+  {
+    "class_id": 1,
+    "course_id": 2,
+    "title": "Introducción",
+    "description": "Bienvenidos al módulo",
+    "url_youtube": "https://youtube.com/...",
+    "class_creation_date": "2023-10-01T10:00:00.000Z"
+  }
+]
+```
+
 ---
 
 #### `GET /classes/:id`
@@ -38,7 +52,21 @@
 | --------- | ------------------- |
 | `id`      | `class_id` (entero) |
 
+| Código | Situación                                         |
+| ------ | ------------------------------------------------- |
+| `404`  | Clase inexistente — mensaje `Clase no encontrada` |
+
 **Respuesta (200):** Objeto con el título, descripción y video de una lección puntual.
+```json
+{
+  "class_id": 1,
+  "course_id": 2,
+  "title": "Introducción",
+  "description": "Bienvenidos al módulo",
+  "url_youtube": "https://youtube.com/...",
+  "class_creation_date": "2023-10-01T10:00:00.000Z"
+}
+```
 
 ---
 
@@ -48,7 +76,24 @@
 | --------- | ------------------- |
 | `id`      | `class_id` (entero) |
 
+| Código | Situación                                         |
+| ------ | ------------------------------------------------- |
+| `404`  | Clase inexistente                                 |
+
 **Respuesta (200):** Arreglo con los recursos (PDFs, links, referencias, etc.) vinculados a la clase.
+```json
+[
+  {
+    "material_id": 1,
+    "class_id": 1,
+    "material_type": "file",
+    "filename": "170000000-archivo.pdf",
+    "url_link": null,
+    "written_reference": null,
+    "material_creation_date": "2023-10-01T10:05:00.000Z"
+  }
+]
+```
 
 ---
 
@@ -73,6 +118,26 @@
 | `page`    | número (query) | `1`     | Página de resultados       |
 | `search`  | string (query) | —       | Texto de búsqueda opcional |
 
+**Respuesta (200):**
+```json
+{
+  "data": [
+    {
+      "class_id": 1,
+      "course_id": 2,
+      "title": "Introducción",
+      "description": "Bienvenidos al módulo",
+      "url_youtube": "https://youtube.com/...",
+      "class_creation_date": "2023-10-01T10:00:00.000Z"
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 2
+}
+```
+
 ---
 
 #### DTO: `CreateClassDto` (POST y PATCH)
@@ -87,6 +152,9 @@
 **Reglas de negocio**
 
 - **Actualización (PATCH):** Usa `UpdateClassDto`, donde todos los campos del `CreateClassDto` son opcionales.
+
+- **DELETE:**  
+  Respuesta `404` si la clase no existe (código Prisma `P2025`).
 
 ---
 
@@ -133,3 +201,8 @@
 | `class_id`          | Obligatorio; entero                                  |
 | `filename`          | Obligatorio; string (título o nombre visual)         |
 | `written_reference` | Obligatorio; string (contenido o cita bibliográfica) |
+
+**Reglas de negocio**
+
+- **DELETE:**  
+  Respuesta `404` si el material no existe (código Prisma `P2025`). Se eliminará también el archivo físico del disco si era de tipo `file`.
