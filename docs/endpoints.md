@@ -12,7 +12,7 @@ Referencia de rutas, parámetros y respuestas de la API REST.
 
 ### Índice rápido
 
-**Público**
+**Público (sin token)**
 
 | Método   | Ruta                           | Uso                                        |
 | -------- | ------------------------------ | ------------------------------------------ |
@@ -23,7 +23,7 @@ Referencia de rutas, parámetros y respuestas de la API REST.
 | `GET`    | `/courses/:id/visits`          | Visitas registradas al curso               |
 | `POST`   | `/courses/:id/visit`           | Registrar o actualizar visita              |
 
-**Admin**
+**Admin (token Bearer | rol: admin)**
 
 | Método     | Ruta                   | Uso                                   |
 | ---------- | ---------------------- | ------------------------------------- |
@@ -35,9 +35,11 @@ Referencia de rutas, parámetros y respuestas de la API REST.
 
 ---
 
-### Público — `/courses`
+### Público (sin token) — `/courses`
 
 #### `GET /courses`
+
+Lista cursos con paginación y filtro por texto (`q`) sobre nombre o `course_code`.
 
 | Parámetro   | Tipo             | Default   | Descripción                                                     |
 | ----------- | ---------------- | --------- | --------------------------------------------------------------- |
@@ -74,6 +76,8 @@ Orden de resultados: `course_creation_date` descendente.
 
 #### `GET /courses/carrusel`
 
+Devuelve hasta 5 cursos más populares, ordenados por visitas (sin paginación).
+
 | Aspecto    | Detalle                                                                     |
 | ---------- | --------------------------------------------------------------------------- |
 | Cantidad   | Hasta **5** cursos                                                          |
@@ -83,6 +87,8 @@ Orden de resultados: `course_creation_date` descendente.
 ---
 
 #### `GET /courses/dashboard/:userId`
+
+Devuelve los cursos que el usuario ha visitado, ordenados por última visita (descendente).
 
 | Parámetro   | Descripción              |
 | ----------- | ------------------------ |
@@ -95,6 +101,8 @@ Orden de resultados: `course_creation_date` descendente.
 ---
 
 #### `GET /courses/:id`
+
+Devuelve el detalle de un curso por `id`, incluyendo sus `classes` y el `teacher` asociado.
 
 | Parámetro   | Descripción            |
 | ----------- | ---------------------- |
@@ -109,6 +117,8 @@ Incluye `classes` (`class_id`, `title`, orden ascendente por creación) y `teach
 ---
 
 #### `GET /courses/:id/visits`
+
+Devuelve el historial de visitas registradas para un curso (incluye el usuario asociado a cada visita).
 
 | Código   | Situación           |
 | -------- | ------------------- |
@@ -141,6 +151,8 @@ Incluye `classes` (`class_id`, `title`, orden ascendente por creación) y `teach
 
 #### `POST /courses/:id/visit`
 
+Registra o actualiza la visita de un usuario a un curso (upsert por `user_id` + `course_id`).
+
 | Elemento      | Descripción                                 |
 | ------------- | ------------------------------------------- |
 | `id` (ruta)   | `course_id`                                 |
@@ -154,7 +166,7 @@ Comportamiento: `upsert` en `LastCourseVisit` por (`user_id`, `course_id`) — a
 
 ---
 
-### Admin — `/admin/courses`
+### Admin (token Bearer | rol: admin) — `/admin/courses`
 
 El listado `GET /admin/courses` usa los mismos `page`, `limit` y `q` que el público, pero cada elemento de `data` solo incluye **`course_id`**, **`name`** y **`course_code`**.
 
