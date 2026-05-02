@@ -1,8 +1,9 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class SearchDto {
   @IsOptional()
+  @MaxLength(150)
   @IsString()
   @Transform(({ value }) => {
     if (value === '') return undefined;
