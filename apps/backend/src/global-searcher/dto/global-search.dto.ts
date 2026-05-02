@@ -6,7 +6,7 @@ export class SearchDto {
   @IsString()
   @Transform(({ value }) => {
     if (value === '') return undefined;
-    return value?.toLowerCase();
+    return value?.trim().toLowerCase();
   })
   q?: string;
 
