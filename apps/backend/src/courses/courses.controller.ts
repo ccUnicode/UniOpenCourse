@@ -1,5 +1,6 @@
-import { Controller, Get, Param, ParseIntPipe, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards, Request } from '@nestjs/common';
 import { CoursesService } from './courses.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('courses')
 export class CoursesController {
@@ -21,8 +22,11 @@ export class CoursesController {
     return this.coursesService.findForCarousel();
   }
 
-  @Get('dashboard/:userId')
-  getUserDashboard(@Param('userId', ParseIntPipe) userId: number) {
+  // FIX IDOR: eliminado @Param('userId'). El ID ahora proviene exclusivamente del token JWT.
+  @UseGuards(JwtAuthGuard)
+  @Get('dashboard')
+  getUserDashboard(@Request() req) {
+    const userId = Number(req.user.sub);
     return this.coursesService.getUserDashboard(userId);
   }
 
@@ -36,8 +40,14 @@ export class CoursesController {
     return this.coursesService.getVisitsByCourseId(id);
   }
 
+  // FIX IDOR: el userId ya no viene del cliente. Se extrae del token JWT validado.
+  @UseGuards(JwtAuthGuard)
   @Post(':id/visit')
-  registerVisit(@Param('id', ParseIntPipe) id: number, @Body('userId') userId: number) {
-    return this.coursesService.registerVisit(id, Number(userId));
+  registerVisit(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ) {
+    const userId = Number(req.user.sub);
+    return this.coursesService.registerVisit(id, userId);
   }
 }
