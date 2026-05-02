@@ -4,7 +4,10 @@ import { Transform, Type } from 'class-transformer';
 export class SearchDto {
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => value)
+  @Transform(({ value }) => {
+    if (value === '') return undefined;
+    return value?.toLowerCase();
+  })
   q?: string;
 
   @IsOptional()
