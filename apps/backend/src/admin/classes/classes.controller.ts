@@ -1,5 +1,5 @@
 // 1. Decoradores de comunicación y extracción de datos
-import { Post, Get, Patch, Delete, Body, Param, Query, Controller } from '@nestjs/common';
+import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe } from '@nestjs/common';
 // 2. Inyección del servicio lógico
 import { ClassesService } from './classes.service';
 // 3. Moldes de seguridad (DTOs)
@@ -34,9 +34,9 @@ export class ClassesController {
   @Get()
   findAll(
     @Query('search') search?: string,
-    @Query('page') page?: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
   ) {
-    return this.service.findAll(search, page ? +page : 1);
+    return this.service.findAll(search, page ? page : 1);
   }
 
   /**
@@ -45,8 +45,8 @@ export class ClassesController {
    * - @Param('id'): Recupera el ID y lo castea a número (+).
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(id);
   }
 
   /**
@@ -55,15 +55,15 @@ export class ClassesController {
    * - @Body: Vierte los cambios parciales mediante UpdateClassDto.
    */
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClassDto: UpdateClassDto) {
-    return this.service.update(+id, updateClassDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateClassDto: UpdateClassDto) {
+    return this.service.update(id, updateClassDto);
   }
 
   /**
    * Eliminación de Clases
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(id);
   }
 }

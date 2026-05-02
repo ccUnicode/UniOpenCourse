@@ -1,7 +1,7 @@
 // 1. Importamos el servicio de clases
 import { ClassesService } from './classes.service';
 // 2. Importamos los decoradores de NestJS para definir rutas y capturar parámetros
-import { Controller, Get, Param } from '@nestjs/common'; 
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common'; 
 
 /**
  * CONTROLADOR PÚBLICO DE CLASES
@@ -20,8 +20,8 @@ export class ClassesController {
    * - +id: Convierte el ID de la URL a número para la consulta.
    */
   @Get('courses/:id/classes')
-  findAllByCourse(@Param('id') id: string) {
-    return this.classesService.findAllByCourse(+id);
+  findAllByCourse(@Param('id', ParseIntPipe) id: number) {
+    return this.classesService.findAllByCourse(id);
   }
 
   /**
@@ -29,8 +29,8 @@ export class ClassesController {
    * - @Get('classes/:id'): Obtiene el título, descripción y video de una lección puntual.
    */
   @Get('classes/:id')
-  findOne(@Param('id') id: string) {
-    return this.classesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.classesService.findOne(id);
   }
 
   /**
@@ -38,7 +38,7 @@ export class ClassesController {
    * - @Get('classes/:id/materials'): Recupera los recursos (PDFs, links, etc.) vinculados a la clase.
    */
   @Get('classes/:id/materials')
-  getMaterialsByClass(@Param('id') id: string) {
-    return this.classesService.getMaterialsByClass(+id);
+  getMaterialsByClass(@Param('id', ParseIntPipe) id: number) {
+    return this.classesService.getMaterialsByClass(id);
   }
 }
