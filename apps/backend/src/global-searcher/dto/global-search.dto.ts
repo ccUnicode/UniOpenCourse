@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, Max, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class SearchDto {
@@ -15,5 +15,6 @@ export class SearchDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(1000)
   page?: number = 1;
 }
