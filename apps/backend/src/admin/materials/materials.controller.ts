@@ -7,6 +7,7 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 // 2. Interceptor para manejo de archivos binarios
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -32,7 +33,16 @@ export class MaterialsController {
    * - @UploadedFile: Atrapa los metadatos del archivo guardado (ruta y nombre único) para el servicio.
    */
   @Post('file')
-  @UseInterceptors(FileInterceptor('file', { storage: storageConfig }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: storageConfig,
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        const allowed = ['application/pdf', 'image/png', 'image/jpeg'];
+        cb(null, allowed.includes(file.mimetype));
+      },
+    }),
+  )
   createFile(
     @Body() createFileDto: CreateFileDto,
     @UploadedFile() file: Express.Multer.File,
@@ -64,7 +74,7 @@ export class MaterialsController {
    * - +id: Convierte el parámetro de texto a número para la consulta en Prisma.
    */
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.materialsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.materialsService.remove(id);
   }
 }
