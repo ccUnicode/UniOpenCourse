@@ -16,5 +16,10 @@ export class SearchDto {
   @IsInt()
   @Min(1)
   @Max(1000)
+  @Transform(({ value }) => {
+    const num = parseInt(value);
+    if (isNaN(num) || num < 1) return 1;
+    return num;
+  })
   page?: number = 1;
 }
