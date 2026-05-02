@@ -82,5 +82,4 @@ export class GlobalSearcherService {
       totalResults,
     };
   }
-  getSuggestions(query: string) {}
 }
