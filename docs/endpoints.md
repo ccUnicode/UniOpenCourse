@@ -14,91 +14,107 @@ Este documento describe la operativa técnica para manejar el acceso y las ident
 
 ## Catálogo de Endpoints
 
-### 1. Registrar Nuevo Usuario (`/auth/register`)
-
+## POST /auth/register
+### Descripción
 Endpoint enfocado en dar de alta a un estudiante o visitante nuevo dentro del ecosistema. Inyecta por defecto a nivel base de datos el rol `USER`.
-
-- **Método HTTP:** `POST`
-- **Requiere Header Token:** No 
-
-**Cuerpo de la Petición (`body`):**
-
-| Campo       | Requerido | Descripción Integral|
-|-------------|-----------|-------------|
-| `email`     | Sí        | Correo electrónico (Deberá ser globalmente único dentro del servicio). |
-| `name`      | Sí        | Nombres reales del portador. |
-| `last_name` | Sí        | Apellidos o familia. |
-| `username`  | Sí        | Identificador público (Nick). No puede hallarse duplicado. |
-| `password`  | Sí        | Clave segura para acceso (Será truncada y firmada remotamente por servidor mediante bcrypt; no se almacena literal). |
-
-**Ejemplo de Petición:**
+### Autenticación
+No requiere autenticación.
+### Roles permitidos
+Público.
+### Parámetros de cuerpo (Body)
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Correo electrónico (Deberá ser globalmente único dentro del servicio). |
+| name | string | Sí | Nombres reales del portador. |
+| last_name | string | Sí | Apellidos o familia. |
+| username | string | Sí | Identificador público (Nick). No puede hallarse duplicado. |
+| password | string | Sí | Clave segura para acceso (Será truncada y firmada remotamente). |
+### Respuesta 201
+Retorna el token de acceso.
 ```json
 {
-  "email": "nuevo.perfil@ejemplo.com",
-  "name": "Maria",
-  "last_name": "Gomez",
-  "username": "mgomez_pro",
-  "password": "UnaPasswordFuerte2026*"
+  "access_token": "..."
 }
 ```
-
-**Respuestas Posibles:**
-- `201 Created`: Flujo culminado. El registro se completó y se entrega el respectivo token. Retornará: `{"access_token": "..."}`.
-- `400 Bad Request`: Rechazado por faltar llaves obligatorias en el JSON o mal formato en campos.
-- `409 Conflict`: Denegado. La base de datos indica colisiones (el correo o el nombre de usuario ya existen).
+### Errores
+| Código | Caso |
+|---|---|
+| 400 | Bad Request (Faltan llaves obligatorias o mal formato) |
+| 409 | Conflict (Correo o nombre de usuario ya existen) |
 
 ---
 
-### 2. Iniciar Sesión Standard (`/auth/login`)
-
+## POST /auth/login
+### Descripción
 Autoriza de forma remota un canal directo para las cuentas ya existentes que operan bajo permiso `USER`.
-
-- **Método HTTP:** `POST`
-- **Requiere Header Token:** No
-
-**Cuerpo de la Petición (`body`):**
-
-| Campo      | Requerido | Finalidad |
-|------------|-----------|-------------|
-| `email`    | Sí        | Criterio de búsqueda (Correo original con el que completaron la fase `Registro`). |
-| `password` | Sí        | Se enviará transparente mediante HTTPS y será comparado unidireccionalmente en backend. |
-
-**Respuestas Posibles:**
-- `200 OK`: Comparativa válida. Se retorna estructura estándar con JWT `{"access_token": "..."}`.
-- `401 Unauthorized`: Acceso repelido. Probabilidades: Email no consta en las tablas de clientes o la clave enviada no emite el mismo hash.
-
----
-
-### 3. Iniciar Sesión Administrativo (`/auth/admin/login`)
-
-Vía exclusiva y altamente segregada destinada únicamente para proveer acceso de "God Mode" hacia cuentas integradas que portan nativamente el nivel de permiso `ADMIN`. Ayuda a mantener una separación estructural frente a cuentas ajenas.
-
-- **Método HTTP:** `POST`
-- **Requiere Header Token:** No
-
-**Cuerpo de la Petición (`body`):**
-
-| Campo      | Requerido | Descripción |
-|------------|-----------|-------------|
-| `email`    | Sí        | Correo corporativo del moderador. |
-| `password` | Sí        | Credencial robusta. |
-
-**Respuestas Posibles:**
-- `200 OK`: Validación óptima. Retorno de accesos.
-- `401 Unauthorized`: Denegado. Criterios de rechazo: Fallo de login clásico humano, **o si una cuenta standard (`USER`) intenta probar con esta ruta y cuenta con credencial válida; el escudo lo rebotará porque su rol subyacente difiere.**
+### Autenticación
+No requiere autenticación.
+### Roles permitidos
+Público.
+### Parámetros de cuerpo (Body)
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Criterio de búsqueda (Correo original con el que completaron la fase `Registro`). |
+| password | string | Sí | Credencial de acceso. |
+### Respuesta 200
+Retorna el token de acceso.
+```json
+{
+  "access_token": "..."
+}
+```
+### Errores
+| Código | Caso |
+|---|---|
+| 401 | Unauthorized (Email no consta en las tablas o la clave es incorrecta) |
 
 ---
 
-### 4. Cerración o Terminación de Sesión (`/auth/logout`)
+## POST /auth/admin/login
+### Descripción
+Vía exclusiva destinada únicamente para proveer acceso hacia cuentas integradas que portan nativamente el nivel de permiso `ADMIN`.
+### Autenticación
+No requiere autenticación.
+### Roles permitidos
+Público.
+### Parámetros de cuerpo (Body)
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Correo corporativo del moderador. |
+| password | string | Sí | Credencial robusta. |
+### Respuesta 200
+Retorna el token de acceso.
+```json
+{
+  "access_token": "..."
+}
+```
+### Errores
+| Código | Caso |
+|---|---|
+| 401 | Unauthorized (Credenciales incorrectas o el rol del usuario no es ADMIN) |
 
-Limpia la presencia actual en estado backend. Se recalca que por el estilo y diseño "Stateless" imperante en servidores modernos mediante JWT, la obligación moral y técnica de cortar por lo sano el inicio reposa ampliamente en que el Frontend (Cliente Web, React, App) limpie o purgue las cachés y `localStorage/Cookies` de forma efectiva.
+---
 
-- **Método HTTP:** `POST`
-- **Requiere Header Token:** No
-- **Body:** *(Vacío)*
-
-**Respuestas Posibles:**
-- `200 OK`: Cierre interno procesado asertiva y formalmente. `{"message": "Logout exitoso"}`.
+## POST /auth/logout
+### Descripción
+Limpia la presencia actual en estado backend indicando el fin de la sesión.
+### Autenticación
+No requiere autenticación.
+### Roles permitidos
+Público.
+### Parámetros
+No aplica.
+### Respuesta 200
+```json
+{
+  "message": "Logout exitoso"
+}
+```
+### Errores
+| Código | Caso |
+|---|---|
+| N/A | Ninguno especificado |
 
 ---
 
@@ -108,11 +124,11 @@ Tras certificar un origen humano positivo (sea por creación o reapertura), la A
 
 ```json
 {
-  "sub": 142,                   // ID Fiel e inmodificable del usuario (Primary Key)
-  "email": "user@ejemplo.com",  // Criterio extra perenne de validación
-  "role": "USER",               // Constante que fija y enmarca toda su capacidad de uso y veto. (USER o ADMIN)
-  "iat": 1712000000,            // Variable Unix (Creación actual)
-  "exp": 1712086400             // Variable Unix (Fecha prevista para inadmisión total - caducidad)
+  "sub": 142, // ID Fiel e inmodificable del usuario (Primary Key)
+  "email": "user@ejemplo.com", // Criterio extra perenne de validación
+  "role": "USER", // Constante que fija y enmarca toda su capacidad de uso y veto. (USER o ADMIN)
+  "iat": 1712000000, // Variable Unix (Creación actual)
+  "exp": 1712086400 // Variable Unix (Fecha prevista para inadmisión total - caducidad)
 }
 ```
 
