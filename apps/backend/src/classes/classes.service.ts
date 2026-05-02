@@ -1,5 +1,5 @@
 // 1. Decorador para inyección de dependencias
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 // 2. Conexión central a la base de datos mediante Prisma
 import { PrismaService } from '../prisma.service';
 
@@ -30,10 +30,16 @@ export class ClassesService {
    * - include: Realiza un JOIN automático para traer los materiales vinculados en la misma respuesta.
    */
   async findOne(id: number) {
-    return this.prisma.class.findUnique({
+    const classItem = await this.prisma.class.findUnique({
       where: { class_id: id },
       include: { materials: true },
     });
+
+    if (!classItem) {
+      throw new NotFoundException('Clase no encontrada');
+    }
+
+    return classItem;
   }
 
   /**
