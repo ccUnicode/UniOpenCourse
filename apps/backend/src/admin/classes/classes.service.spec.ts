@@ -1,12 +1,8 @@
-// 1. Herramientas de testing y servicios core
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClassesService } from './classes.service';
 import { PrismaService } from '../../prisma.service';
 
-/**
- * 2. Espía de Base de Datos (Mock)
- * Simula el comportamiento de Prisma para evitar dependencias reales.
- */
+// Prisma mock
 const mockPrismaService = {
   class: {
     create: jest.fn(),
@@ -19,14 +15,12 @@ const mockPrismaService = {
   $transaction: jest.fn(),
 };
 
-/**
- * 3. Pruebas Unitarias del Servicio Administrativo
- */
+
 describe('ClassesService', () => {
   let service: ClassesService;
   let prisma: PrismaService;
 
-  // Reingesta del entorno local inyectando el mock en lugar del servicio real.
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -43,15 +37,12 @@ describe('ClassesService', () => {
     expect(service).toBeDefined();
   });
 
-  /**
-   * Test: Creación de registros
-   */
   describe('create', () => {
     it('should create a class', async () => {
       const createDto = { title: 'Test Class', course_id: 1, description: 'Test', order: 1 };
       const expected = { class_id: 1, ...createDto };
       
-      // mockResolvedValue: Fuerza la respuesta inmediata de la BD simulada.
+
       mockPrismaService.class.create.mockResolvedValue(expected);
 
       const result = await service.create(createDto as any);
@@ -61,15 +52,12 @@ describe('ClassesService', () => {
     });
   });
 
-  /**
-   * Test: Búsqueda paginada (Transacción paralela)
-   */
   describe('findAll', () => {
     it('should return paginated classes', async () => {
       const filter = { search: '', page: 1 };
       const expectedData = [{ class_id: 1, title: 'Test' }];
       
-      // Simula el retorno del arreglo [datos, total] de la transacción.
+
       mockPrismaService.$transaction.mockResolvedValue([expectedData, 1]);
 
       const result = await service.findAll(filter.search, filter.page);
@@ -80,9 +68,6 @@ describe('ClassesService', () => {
     });
   });
 
-  /**
-   * Test: Lectura por ID
-   */
   describe('findOne', () => {
     it('should return a class by id', async () => {
       const expected = { class_id: 1, title: 'Test' };
@@ -95,9 +80,6 @@ describe('ClassesService', () => {
     });
   });
 
-  /**
-   * Test: Actualización parcial
-   */
   describe('update', () => {
     it('should update a class', async () => {
       const updateDto = { title: 'Updated' };
@@ -114,9 +96,6 @@ describe('ClassesService', () => {
     });
   });
 
-  /**
-   * Test: Eliminación física
-   */
   describe('remove', () => {
     it('should remove a class', async () => {
       const expected = { class_id: 1 };

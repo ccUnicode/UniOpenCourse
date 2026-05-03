@@ -1,36 +1,19 @@
-// 1. Decoradores de comunicación y extracción de datos
 import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe } from '@nestjs/common';
-// 2. Inyección del servicio lógico
 import { ClassesService } from './classes.service';
-// 3. Moldes de seguridad (DTOs)
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
 
-/**
- * CONTROLADOR ADMINISTRATIVO DE CLASES
- */
 @Controller('admin/classes')
 export class ClassesController {
-  /**
-   * - Inyección de ClassesService: Acceso a la lógica de negocio de lecciones.
-   * - Modificador 'private readonly': Asegura una instancia única y protegida del servicio.
-   */
   constructor(private readonly service: ClassesService) {}
 
-  /**
-   * Creación de Clases
-   * - @Body: Transfiere el JSON de entrada al molde CreateClassDto.
-   */
+  /** Creates a new class */
   @Post()
   create(@Body() createClassDto: CreateClassDto) {
     return this.service.create(createClassDto);
   }
 
-  /**
-   * Listado Paginado con Filtros
-   * - @Query('search'): Captura el texto de búsqueda opcional.
-   * - @Query('page'): Atrapa el número de página y lo convierte a entero (+).
-   */
+  /** Retrieves a paginated list of classes, optionally filtered by search */
   @Get()
   findAll(
     @Query('search') search?: string,
@@ -39,29 +22,19 @@ export class ClassesController {
     return this.service.findAll(search, page ? page : 1);
   }
 
-  /**
-   * Obtención de Clase Única
-   * - @Get(':id'): Define un parámetro dinámico en la URL.
-   * - @Param('id'): Recupera el ID y lo castea a número (+).
-   */
+  /** Retrieves a specific class by its ID */
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(id);
   }
 
-  /**
-   * Actualización de Clases
-   * - @Param('id'): Identifica el recurso a modificar.
-   * - @Body: Vierte los cambios parciales mediante UpdateClassDto.
-   */
+  /** Partially updates an existing class */
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateClassDto: UpdateClassDto) {
     return this.service.update(id, updateClassDto);
   }
 
-  /**
-   * Eliminación de Clases
-   */
+  /** Deletes a class and its associated materials */
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
