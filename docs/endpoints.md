@@ -142,6 +142,12 @@ Público.
 
 Arreglo de materiales.
 
+### Errores
+
+| Código | Caso                                    |
+| ------ | --------------------------------------- |
+| 400    | ID de clase no numérico                 |
+
 ### Requerimientos relacionados
 
 - RF-12.11
@@ -224,6 +230,12 @@ Actualiza parcialmente los datos de una clase.
 
 Requerida.
 
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción     |
+| --------- | ------ | --------- | --------------- |
+| id        | number | Sí        | ID de la clase. |
+
 ### Body
 
 Se recibe un `UpdateClassDto` con cualquiera de las propiedades del Body de creación de forma opcional.
@@ -231,6 +243,13 @@ Se recibe un `UpdateClassDto` con cualquiera de las propiedades del Body de crea
 ### Respuesta 200
 
 Clase actualizada.
+
+### Errores
+
+| Código | Caso                                    |
+| ------ | --------------------------------------- |
+| 404    | Clase no encontrada (NotFoundException) |
+| 400    | ID de clase no numérico                 |
 
 ### Requerimientos relacionados
 
@@ -253,11 +272,20 @@ Requerida.
 
 ### Parámetros de ruta
 
-`id` (number) de la clase a eliminar.
+| Parámetro | Tipo   | Requerido | Descripción     |
+| --------- | ------ | --------- | --------------- |
+| id        | number | Sí        | ID de la clase. |
 
 ### Respuesta 200
 
 Confirmación de eliminación.
+
+### Errores
+
+| Código | Caso                                    |
+| ------ | --------------------------------------- |
+| 404    | Clase no encontrada (NotFoundException) |
+| 400    | ID de clase no numérico                 |
 
 ### Requerimientos relacionados
 
@@ -367,11 +395,20 @@ Requerida.
 
 ### Parámetros de ruta
 
-`id` numérico del material.
+| Parámetro | Tipo   | Requerido | Descripción      |
+| --------- | ------ | --------- | ---------------- |
+| id        | number | Sí        | ID del material. |
 
 ### Respuesta 200
 
 Material eliminado.
+
+### Errores
+
+| Código | Caso                                       |
+| ------ | ------------------------------------------ |
+| 404    | Material no encontrado (NotFoundException) |
+| 400    | ID de material no numérico                 |
 
 ### Requerimientos relacionados
 

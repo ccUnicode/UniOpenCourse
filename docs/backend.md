@@ -94,6 +94,7 @@ Gestionar la estructura y contenido de las clases dentro de los cursos, tanto pa
 
 - `src/classes/classes.controller.ts`
 - `src/classes/classes.service.ts`
+- `src/classes/classes.module.ts`
 - `src/admin/classes/classes.controller.ts`
 - `src/admin/classes/classes.service.ts`
 - `src/admin/classes/dto/create-class.dto.ts`
@@ -105,7 +106,7 @@ Gestionar la estructura y contenido de las clases dentro de los cursos, tanto pa
 
 ### Dependencias
 
-- `PrismaService`
+- `PrismaService` (para acceso a la base de datos).
 
 ### Endpoints Relacionados
 
@@ -138,6 +139,8 @@ Administrar los recursos adicionales de las clases (archivos físicos, enlaces e
 - `src/admin/materials/dto/create-file.dto.ts`
 - `src/admin/materials/dto/create-link.dto.ts`
 - `src/admin/materials/dto/create-reference.dto.ts`
+- `src/materials/materials.module.ts`
+- `src/utils/storage.config.ts`
 
 ### Reglas de negocio
 
@@ -148,8 +151,9 @@ Administrar los recursos adicionales de las clases (archivos físicos, enlaces e
 
 ### Dependencias
 
-- `PrismaService`
-- `StorageModule` / `storageConfig` (para gestión de la carga física de archivos con Multer)
+- `PrismaService` (para acceso a la base de datos).
+- `@nestjs/platform-express` y `multer` (para la intercepción y carga física de archivos).
+- `storageConfig` (configuración personalizada de destino y sanitización de archivos).
 
 ### Endpoints Relacionados
 
