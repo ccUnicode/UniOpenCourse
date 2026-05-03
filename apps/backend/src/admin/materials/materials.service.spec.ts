@@ -1,16 +1,12 @@
-// 1. Herramientas de testing y mocks
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../../prisma.service';
 
-/**
- * Pruebas unitarias del servicio de materiales
- */
 describe('MaterialsService', () => {
   let service: MaterialsService;
   let prisma: PrismaService;
 
-  // Simula la base de datos de Prisma para no afectar la real
+  // Mock prisma
   const mockPrismaService = {
     material: {
       create: jest.fn(),
@@ -18,7 +14,7 @@ describe('MaterialsService', () => {
     },
   };
 
-  // Configura el entorno de prueba e inyecta el mock
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -34,7 +30,7 @@ describe('MaterialsService', () => {
     prisma = module.get<PrismaService>(PrismaService);
   });
 
-  // Limpia los registros de los espías después de cada test
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -43,14 +39,11 @@ describe('MaterialsService', () => {
     expect(service).toBeDefined();
   });
 
-  /**
-   * Test: Guardado de archivos físicos
-   */
   describe('createFile', () => {
     it('should create a material of type "file" with real uploaded file data', async () => {
       const dto = { class_id: 1 };
       
-      // Simula el objeto que devuelve Multer
+
       const mockFile = { 
         originalname: 'documento.pdf', 
         filename: 'documento-123.pdf' 
@@ -68,7 +61,7 @@ describe('MaterialsService', () => {
 
       const result = await service.createFile(dto, mockFile);
 
-      // Verifica que el servicio mapee correctamente el 'originalname' y el 'filename' único
+
       expect(result).toEqual(expectedResult);
       expect(prisma.material.create).toHaveBeenCalledWith({
         data: {
@@ -81,9 +74,6 @@ describe('MaterialsService', () => {
     });
   });
 
-  /**
-   * Test: Guardado de enlaces web
-   */
   describe('createLink', () => {
     it('should create a material of type "link"', async () => {
       const dto = { class_id: 1, filename: 'Video de YouTube', url_link: 'https://youtube.com' };
@@ -103,9 +93,6 @@ describe('MaterialsService', () => {
     });
   });
 
-  /**
-   * Test: Guardado de referencias de texto
-   */
   describe('createReference', () => {
     it('should create a material of type "reference"', async () => {
       const dto = { class_id: 1, filename: 'Mi Libro', written_reference: 'Capítulo 4, página 20' };
@@ -125,9 +112,6 @@ describe('MaterialsService', () => {
     });
   });
 
-  /**
-   * Test: Eliminación del material
-   */
   describe('remove', () => {
     it('should delete a material by its ID', async () => {
       const materialId = 10;
