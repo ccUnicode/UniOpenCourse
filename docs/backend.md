@@ -110,7 +110,13 @@ Gestionar la estructura y contenido de las clases dentro de los cursos, tanto pa
 
 ### Endpoints Relacionados
 
-Ver `endpoints.md`
+- `GET /courses/:id/classes`
+- `GET /classes/:id`
+- `GET /classes/:id/materials`
+- `POST /admin/classes`
+- `GET /admin/classes`
+- `PATCH /admin/classes/:id`
+- `DELETE /admin/classes/:id`
 
 ---
 
@@ -157,4 +163,7 @@ Administrar los recursos adicionales de las clases (archivos físicos, enlaces e
 
 ### Endpoints Relacionados
 
-Ver `endpoints.md`
+- `POST /admin/materials/file`
+- `POST /admin/materials/link`
+- `POST /admin/materials/reference`
+- `DELETE /admin/materials/:id`
