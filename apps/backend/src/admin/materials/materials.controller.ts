@@ -20,7 +20,12 @@ import { CreateReferenceDto } from './dto/create-reference.dto';
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
-  /** Uploads a physical file material */
+  /**
+   * Uploads a physical file material and saves it to local storage
+   * @param createFileDto - The material metadata (e.g. class_id)
+   * @param file - The file object extracted by Multer
+   * @returns The newly created file material record
+   */
   @Post('file')
   @UseInterceptors(
     FileInterceptor('file', {

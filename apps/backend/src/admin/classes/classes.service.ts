@@ -16,7 +16,12 @@ export class ClassesService {
         });
     }
 
-    /** Retrieves paginated classes, optionally filtered by title */
+    /**
+     * Retrieves paginated classes, optionally filtered by title
+     * @param search - Optional search term to filter classes
+     * @param page - The current page number for pagination (defaults to 1)
+     * @returns A paginated object containing the data and metadata
+     */
     async findAll(search?: string, page: number = 1) {
         const skip = (page - 1) * PAGE_SIZE;
 

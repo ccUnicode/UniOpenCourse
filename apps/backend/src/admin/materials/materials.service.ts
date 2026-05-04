@@ -8,7 +8,13 @@ import { CreateReferenceDto } from './dto/create-reference.dto';
 export class MaterialsService {
   constructor(private prisma: PrismaService) {}
 
-  /** Creates a new physical file material */
+  /**
+   * Creates a new physical file material
+   * @param createFileDto - Data containing the class_id
+   * @param file - The uploaded file object
+   * @throws BadRequestException if the file is missing or invalid
+   * @returns The newly created material record
+   */
   async createFile(createFileDto: CreateFileDto, file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Debes adjuntar un archivo válido.');
