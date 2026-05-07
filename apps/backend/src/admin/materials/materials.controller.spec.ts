@@ -14,7 +14,6 @@ describe('MaterialsController', () => {
     remove: jest.fn(),
   };
 
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MaterialsController],
@@ -37,7 +36,6 @@ describe('MaterialsController', () => {
   describe('createFile', () => {
     it('should call service.createFile', async () => {
       const dto = { class_id: 1 };
-      
 
       const mockFile = { 
         originalname: 'test.pdf', 
@@ -49,7 +47,6 @@ describe('MaterialsController', () => {
 
       const result = await controller.createFile(dto, mockFile);
 
-
       expect(result).toEqual(expectedResult);
       expect(mockMaterialsService.createFile).toHaveBeenCalledWith(dto, mockFile);
     });
@@ -59,9 +56,8 @@ describe('MaterialsController', () => {
     it('should call service.remove with a number', async () => {
       const materialId = 1;
       const expectedResult = { material_id: 1, filename: 'test.pdf' };
-      
-      mockMaterialsService.remove.mockResolvedValue(expectedResult);
 
+      mockMaterialsService.remove.mockResolvedValue(expectedResult);
 
       const result = await controller.remove(materialId);
 

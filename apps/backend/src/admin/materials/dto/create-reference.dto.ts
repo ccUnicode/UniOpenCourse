@@ -7,11 +7,9 @@ export class CreateReferenceDto {
   @IsNotEmpty()
   class_id: number;
 
-
   @IsString()
   @IsNotEmpty()
   filename: string;
-
 
   @IsString()
   @IsNotEmpty()

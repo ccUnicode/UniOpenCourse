@@ -12,11 +12,9 @@ const mockClassesService = {
   remove: jest.fn(),
 };
 
-
 describe('ClassesController', () => {
   let controller: ClassesController;
   let service: ClassesService;
-
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +38,6 @@ describe('ClassesController', () => {
   describe('create', () => {
     it('should call service create', async () => {
       const createDto = { title: 'Test', course_id: 1, description: 'Desc', order: 1 };
-      
 
       await controller.create(createDto as any);
       

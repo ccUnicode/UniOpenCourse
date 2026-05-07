@@ -15,11 +15,9 @@ const mockPrismaService = {
   $transaction: jest.fn(),
 };
 
-
 describe('ClassesService', () => {
   let service: ClassesService;
   let prisma: PrismaService;
-
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,11 +40,10 @@ describe('ClassesService', () => {
       const createDto = { title: 'Test Class', course_id: 1, description: 'Test', order: 1 };
       const expected = { class_id: 1, ...createDto };
       
-
       mockPrismaService.class.create.mockResolvedValue(expected);
 
       const result = await service.create(createDto as any);
-      
+
       expect(result).toEqual(expected);
       expect(prisma.class.create).toHaveBeenCalledWith({ data: createDto });
     });
@@ -56,12 +53,11 @@ describe('ClassesService', () => {
     it('should return paginated classes', async () => {
       const filter = { search: '', page: 1 };
       const expectedData = [{ class_id: 1, title: 'Test' }];
-      
 
       mockPrismaService.$transaction.mockResolvedValue([expectedData, 1]);
 
       const result = await service.findAll(filter.search, filter.page);
-      
+
       expect(result.data).toEqual(expectedData);
       expect(result.total).toBe(1);
       expect(result.totalPages).toBe(1);
@@ -74,7 +70,7 @@ describe('ClassesService', () => {
       mockPrismaService.class.findUnique.mockResolvedValue(expected);
 
       const result = await service.findOne(1);
-      
+
       expect(result).toEqual(expected);
       expect(prisma.class.findUnique).toHaveBeenCalledWith({ where: { class_id: 1 } });
     });
@@ -87,7 +83,7 @@ describe('ClassesService', () => {
       mockPrismaService.class.update.mockResolvedValue(expected);
 
       const result = await service.update(1, updateDto as any);
-      
+
       expect(result).toEqual(expected);
       expect(prisma.class.update).toHaveBeenCalledWith({
         where: { class_id: 1 },

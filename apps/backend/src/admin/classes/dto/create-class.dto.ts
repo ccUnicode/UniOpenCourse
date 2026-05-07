@@ -7,16 +7,13 @@ export class CreateClassDto {
   @IsNotEmpty() 
   course_id: number;
 
-
   @IsString()
   @IsNotEmpty()
   title: string;
 
-
   @IsString()
   @IsNotEmpty()
   description: string;
-
 
   @IsOptional()
   @IsUrl()

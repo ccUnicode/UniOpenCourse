@@ -1,10 +1,8 @@
-// 1. Dependencias técnicas
 import * as dotenv from 'dotenv';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 
-// 2. Configuración de conexión y adaptador
 dotenv.config();
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
@@ -14,10 +12,6 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-/**
- * FUNCIÓN DE POBLADO (Main)
- * Se encarga de insertar los roles y el administrador inicial por defecto.
- */
 async function main() {
   const adminRole = await prisma.role.upsert({
     where: { role_name: 'ADMIN' },

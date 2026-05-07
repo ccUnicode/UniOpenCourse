@@ -13,7 +13,6 @@ describe('ClassesController (Public)', () => {
   let controller: ClassesController;
   let service: ClassesService;
 
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClassesController],

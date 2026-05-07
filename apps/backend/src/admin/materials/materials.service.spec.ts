@@ -14,7 +14,6 @@ describe('MaterialsService', () => {
     },
   };
 
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -30,7 +29,6 @@ describe('MaterialsService', () => {
     prisma = module.get<PrismaService>(PrismaService);
   });
 
-
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -42,7 +40,6 @@ describe('MaterialsService', () => {
   describe('createFile', () => {
     it('should create a material of type "file" with real uploaded file data', async () => {
       const dto = { class_id: 1 };
-      
 
       const mockFile = { 
         originalname: 'documento.pdf', 
@@ -60,7 +57,6 @@ describe('MaterialsService', () => {
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
 
       const result = await service.createFile(dto, mockFile);
-
 
       expect(result).toEqual(expectedResult);
       expect(prisma.material.create).toHaveBeenCalledWith({

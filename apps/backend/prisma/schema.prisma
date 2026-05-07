@@ -1,27 +1,28 @@
-// 1. GENERADOR CLIENTE: Define el lenguaje y la ruta de salida del cliente generado.
+/// Defines the Prisma Client generator configuration.
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
-// 2. FUENTE DE DATOS: Configura el motor de BD (PostgreSQL).
-// La URL se inyecta programáticamente desde prisma.config.ts / prisma.service.ts.
+/// Configures the PostgreSQL database connection.
 datasource db {
   provider = "postgresql"
 }
 
 // ==========================================
-// MÓDULO DE USUARIOS Y ROLES
+// User & Authentication Module
 // ==========================================
 
+/// Represents a system role (e.g., Admin, Student).
 model Role {
-  role_id   Int    @id @default(autoincrement()) // PK: Identificador único autoincremental
-  role_name String @unique @db.VarChar(50)       // Nombre de rol (Admin, Estudiante) - Único
+  role_id   Int    @id @default(autoincrement())
+  role_name String @unique @db.VarChar(50)
 
-  users User[] // Relación Uno-a-Muchos con User
+  users User[]
 }
 
+/// Core user entity containing authentication and profile data.
 model User {
   user_id       Int      @id @default(autoincrement())
   email         String   @unique @db.VarChar(75)
@@ -29,84 +30,87 @@ model User {
   last_name     String   @db.VarChar(50)
   username      String   @unique @db.VarChar(70)
   password      String   @db.VarChar(255)
-  role_id       Int      // FK: Referencia al rol del usuario
+  role_id       Int
   register_date DateTime @default(now())
 
-  // Relación con Role: Vinculación física de la llave foránea
-  role           Role              @relation(fields: [role_id], references: [role_id])
-  visited_courses LastCourseVisit[] // Historial de interacción con cursos
+  role            Role              @relation(fields: [role_id], references: [role_id])
+  visited_courses LastCourseVisit[]
 }
 
+/// Represents an instructor.
 model Teacher {
   teacher_id Int      @id @default(autoincrement())
   name       String   @db.VarChar(50)
   last_name  String   @db.VarChar(50)
 
-  courses Course[] // Un docente puede tener múltiples cursos
+  courses Course[]
 }
 
 // ==========================================
-// MÓDULO EDUCATIVO (Cursos y Clases)
+// Educational Module (Courses & Classes)
 // ==========================================
 
+/// Represents an educational course.
 model Course {
   course_id            Int      @id @default(autoincrement())
   name                 String   @db.VarChar(100)
   course_code          String   @unique @db.VarChar(10)
   url_image            String   @db.VarChar(255)
   description          String
-  teacher_id           Int      // FK: Docente a cargo
+  teacher_id           Int
   course_creation_date DateTime @default(now())
   update_date          DateTime @updatedAt
 
   teacher         Teacher           @relation(fields: [teacher_id], references: [teacher_id])
-  classes         Class[]           // Listado de lecciones vinculadas
-  visiting_users  LastCourseVisit[] // Estudiantes que ingresaron al curso
+  classes         Class[]
+  visiting_users  LastCourseVisit[]
 }
 
+/// Tracks the last time a user visited a specific course.
 model LastCourseVisit {
-  user_course_id Int      @id @default(autoincrement())
-  user_id        Int
-  course_id      Int
-  start_date     DateTime @default(now())
+  user_course_id  Int      @id @default(autoincrement())
+  user_id         Int
+  course_id       Int
+  start_date      DateTime @default(now())
   last_visit_date DateTime @updatedAt
 
-  // Relaciones con Cascade: Si se borra el usuario o curso, se limpia el historial.
   user   User   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   course Course @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
 
-  @@unique([user_id, course_id]) // Evita duplicidad de registros para el mismo par user-course
+  @@unique([user_id, course_id])
 }
 
+/// Represents a single lesson or module within a Course.
 model Class {
   class_id            Int      @id @default(autoincrement())
-  course_id           Int      // FK: Curso al que pertenece
+  course_id           Int
   title               String   @db.VarChar(150)
   description         String
-  url_youtube         String?   @db.VarChar(150)
+  url_youtube         String?  @db.VarChar(150)
   class_creation_date DateTime @default(now())
 
   course    Course     @relation(fields: [course_id], references: [course_id])
-  materials Material[] // Recursos didácticos vinculados a la clase
+  materials Material[]
 }
 
+/// Defines the possible types of supplementary materials.
 enum MaterialTypes {
   file
   link
   reference
 }
 
+/// Represents supplementary material (files, links, or text references) for a Class.
 model Material {
-  material_id      Int           @id @default(autoincrement())
-  class_id         Int           // FK: Clase a la que pertenece el recurso
-  material_type    MaterialTypes // Discriminador: Archivo, Link o Referencia
-  filename         String        @db.VarChar(150)
+  material_id            Int           @id @default(autoincrement())
+  class_id               Int
+  material_type          MaterialTypes
+  filename               String        @db.VarChar(150)
   
-  // Campos opcionales según el tipo de material
   url_link               String?
-  written_reference       String?
-  material_creation_date DateTime @default(now())
+  written_reference      String?
+  material_creation_date DateTime      @default(now())
 
-  // Relación con Cascade: Al borrar la clase, se eliminan todos sus materiales.
   class Class @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }
+

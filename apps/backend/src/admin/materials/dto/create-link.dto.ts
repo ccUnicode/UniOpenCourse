@@ -7,11 +7,9 @@ export class CreateLinkDto {
   @IsNotEmpty()
   class_id: number;
 
-
   @IsString()
   @IsNotEmpty()
   filename: string;
-
 
   @IsUrl()
   @IsNotEmpty()
