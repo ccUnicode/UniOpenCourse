@@ -51,7 +51,7 @@ describe('MaterialsService', () => {
         class_id: dto.class_id, 
         material_type: 'file',
         filename: mockFile.originalname,
-        file_path: mockFile.filename 
+        url_link: mockFile.filename 
       };
 
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
