@@ -1,4 +1,4 @@
-import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe } from '@nestjs/common';
+import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
@@ -16,10 +16,10 @@ export class ClassesController {
   /** Retrieves a paginated list of classes, optionally filtered by search */
   @Get()
   findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('search') search?: string,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
   ) {
-    return this.service.findAll(search, page ? page : 1);
+    return this.service.findAll(search, Math.max(page, 1));
   }
 
   /** Retrieves a specific class by its ID */
