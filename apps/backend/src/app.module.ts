@@ -21,7 +21,6 @@ import { PrismaModule } from './prisma/prisma.module';
     CoursesModule,
     GlobalSearcherModule,
     MaterialsModule,
-    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
