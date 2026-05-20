@@ -9,9 +9,6 @@ export class GlobalSearcherService {
     const MAX_PAGE = 1000;
     const pageSize = 6;
     const { q, page = 1 } = query;
-    if (!q || q.length < 2) {
-      return { data: { courses: [], classes: [] }, page, totalPages: 0, totalResults: 0 };
-    }
     const safePage = Math.min(MAX_PAGE, page);
     const offset = (safePage - 1) * pageSize;
 

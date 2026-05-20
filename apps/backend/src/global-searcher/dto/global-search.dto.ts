@@ -1,25 +1,27 @@
-import { IsOptional, IsString, IsInt, Min, Max, MaxLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class SearchDto {
-  @IsOptional()
-  @MaxLength(150)
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsString()
-  @Transform(({ value }) => {
-    if (value === '') return undefined;
-    return value?.trim().toLowerCase();
-  })
-  q?: string;
+  @MinLength(2)
+  @MaxLength(150)
+  q!: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(1000)
-  @Transform(({ value }) => {
-    const num = parseInt(value);
-    if (isNaN(num) || num < 1) return 1;
-    return num;
-  })
   page?: number = 1;
 }
