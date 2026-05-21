@@ -24,7 +24,8 @@ export class ClassesController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('search') search?: string,
   ) {
-    return this.service.findAll(search, Math.max(page, 1));
+    const pageNum = page ? Math.max(page, 1) : 1;
+    return this.service.findAll(search, pageNum);
   }
 
   /** Retrieves a specific class by its ID */

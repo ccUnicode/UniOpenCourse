@@ -33,6 +33,11 @@ describe('MaterialsController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('should require ADMIN role', () => {
+    const roles = Reflect.getMetadata('roles', MaterialsController);
+    expect(roles).toContain('ADMIN');
+  });
+
   describe('createFile', () => {
     it('should call service.createFile', async () => {
       const dto = { class_id: 1 };

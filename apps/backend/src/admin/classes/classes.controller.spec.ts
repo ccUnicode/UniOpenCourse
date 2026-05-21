@@ -35,6 +35,11 @@ describe('ClassesController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('should require ADMIN role', () => {
+    const roles = Reflect.getMetadata('roles', ClassesController);
+    expect(roles).toContain('ADMIN');
+  });
+
   describe('create', () => {
     it('should call service create', async () => {
       const createDto = { title: 'Test', course_id: 1, description: 'Desc', order: 1 };
@@ -47,12 +52,13 @@ describe('ClassesController', () => {
 
   describe('findAll', () => {
     it('should call service findAll with parsed page', async () => {
-      await controller.findAll('query', 2);
+      await controller.findAll(2, 'query');
       expect(service.findAll).toHaveBeenCalledWith('query', 2);
     });
     
     it('should default to page 1', async () => {
-      await controller.findAll('query', undefined);
+      // @ts-ignore
+      await controller.findAll(undefined, 'query');
       expect(service.findAll).toHaveBeenCalledWith('query', 1);
     });
   });
