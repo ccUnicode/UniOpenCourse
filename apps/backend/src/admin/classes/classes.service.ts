@@ -23,7 +23,8 @@ export class ClassesService {
    * @returns A paginated object containing the data and metadata
    */
   async findAll(search?: string, page: number = 1) {
-    const skip = (page - 1) * PAGE_SIZE;
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const skip = (safePage - 1) * PAGE_SIZE;
 
     const where = search
       ? {
