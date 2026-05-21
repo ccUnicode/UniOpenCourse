@@ -16,7 +16,7 @@ export class SearchDto {
   @IsString()
   @MinLength(2)
   @MaxLength(150)
-  q!: string;
+  search_query!: string;
 
   @IsOptional()
   @Type(() => Number)

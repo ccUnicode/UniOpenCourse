@@ -8,59 +8,42 @@ export class GlobalSearcherService {
   async search(query: SearchDto) {
     const MAX_PAGE = 1000;
     const pageSize = 6;
-    const { q, page = 1 } = query;
-    const safePage = Math.min(MAX_PAGE, page);
-    const offset = (safePage - 1) * pageSize;
+    const pagePerType = Math.ceil(pageSize / 2);
+
+    const { search_query, page = 1 } = query;
+
+    const safePage = Math.max(1, Math.min(MAX_PAGE, page));
+    const offset = (safePage - 1) * pagePerType;
+
+    const searchFilter = {
+      contains: search_query,
+      mode: 'insensitive' as const,
+    };
 
     const [TotalCourses, TotalClasses, courses, classes] = await Promise.all([
       this.prisma.course.count({
         where: {
-          name: {
-            contains: q,
-            mode: 'insensitive', // Búsqueda insensible a mayúsculas
-          },
+          OR: [{ name: searchFilter }, { course_code: searchFilter }],
         },
       }),
       this.prisma.class.count({
-        where: {
-          title: {
-            contains: q,
-            mode: 'insensitive',
-          },
-        },
+        where: { title: searchFilter },
       }),
+
       this.prisma.course.findMany({
         where: {
-          OR: [
-            {
-              name: {
-                contains: q,
-                mode: 'insensitive',
-              },
-            },
-            {
-              course_code: {
-                contains: q,
-                mode: 'insensitive',
-              },
-            },
-          ],
+          OR: [{ name: searchFilter }, { course_code: searchFilter }],
         },
         skip: offset,
-        take: pageSize,
+        take: pagePerType,
         include: {
           teacher: true,
         },
       }),
       this.prisma.class.findMany({
-        where: {
-          title: {
-            contains: q,
-            mode: 'insensitive',
-          },
-        },
+        where: { title: searchFilter },
         skip: offset,
-        take: pageSize,
+        take: pagePerType,
         include: {
           course: true,
         },
@@ -93,7 +76,7 @@ export class GlobalSearcherService {
     ];
     return {
       data: data,
-      page,
+      page: safePage,
       totalPages,
       totalResults,
     };
