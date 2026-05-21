@@ -11,6 +11,7 @@ describe('MaterialsService', () => {
     material: {
       create: jest.fn(),
       delete: jest.fn(),
+      findUnique: jest.fn(),
     },
   };
 
@@ -113,11 +114,15 @@ describe('MaterialsService', () => {
       const materialId = 10;
       const expectedResult = { material_id: materialId, filename: 'test.pdf', material_type: 'file' };
       
+      mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
 
       const result = await service.remove(materialId);
 
       expect(result).toEqual(expectedResult);
+      expect(prisma.material.findUnique).toHaveBeenCalledWith({
+        where: { material_id: materialId },
+      });
       expect(prisma.material.delete).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
