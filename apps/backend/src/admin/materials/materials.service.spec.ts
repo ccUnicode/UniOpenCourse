@@ -1,3 +1,4 @@
+import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../../prisma.service';

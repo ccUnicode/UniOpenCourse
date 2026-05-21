@@ -1,3 +1,4 @@
+import 'multer';
 
 import {
   Controller,
@@ -54,8 +55,11 @@ export class MaterialsController {
   )
   createFile(
     @Body() createFileDto: CreateFileDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
+    if (!file) {
+      throw new BadRequestException('El archivo es obligatorio.');
+    }
     return this.materialsService.createFile(createFileDto, file);
   }
 

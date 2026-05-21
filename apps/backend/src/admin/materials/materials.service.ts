@@ -1,3 +1,4 @@
+import 'multer';
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
@@ -18,7 +19,7 @@ export class MaterialsService {
    * @throws BadRequestException if the file is missing or invalid
    * @returns The newly created material record
    */
-  async createFile(createFileDto: CreateFileDto, file: Express.Multer.File) {
+  async createFile(createFileDto: CreateFileDto, file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Debes adjuntar un archivo válido.');
     }
