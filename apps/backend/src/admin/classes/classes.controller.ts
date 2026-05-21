@@ -1,9 +1,14 @@
-import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe, DefaultValuePipe, UseGuards } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @Controller('admin/classes')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 export class ClassesController {
   constructor(private readonly service: ClassesService) {}
 

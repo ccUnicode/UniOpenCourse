@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { storageConfig } from '../../utils/storage.config';
@@ -15,8 +16,13 @@ import { MaterialsService } from './materials.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @Controller('admin/materials')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
