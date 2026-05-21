@@ -20,7 +20,7 @@ export class GlobalSearcherService {
       mode: 'insensitive' as const,
     };
 
-    const [TotalCourses, TotalClasses, courses, classes] = await Promise.all([
+    const [totalCourses, totalClasses, courses, classes] = await Promise.all([
       this.prisma.course.count({
         where: {
           OR: [{ name: searchFilter }, { course_code: searchFilter }],
@@ -50,7 +50,7 @@ export class GlobalSearcherService {
       }),
     ]);
 
-    const totalResults = TotalCourses + TotalClasses;
+    const totalResults = totalCourses + totalClasses;
     const totalPages = Math.ceil(totalResults / pageSize);
 
     const data = [
