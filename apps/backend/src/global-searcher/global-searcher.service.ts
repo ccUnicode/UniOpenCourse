@@ -56,22 +56,19 @@ export class GlobalSearcherService {
     const data = [
       ...courses.map((course) => ({
         type: 'course',
-        course_id: course.course_id,
-        name: course.name,
-        url_image: course.url_image,
-        description: course.description,
-        course_code: course.course_code,
-        teacher: {
-          id: course.teacher.teacher_id,
-          name: course.teacher.name,
-        },
+        id: course.course_id,
+        title: course.name,
+        subtitle: course.teacher.name,
+        image: course.url_image,
+        meta: course.course_code,
       })),
       ...classes.map((cls) => ({
         type: 'class',
-        class_id: cls.class_id,
+        id: cls.class_id,
         title: cls.title,
-        course: { course_id: cls.course.course_id, name: cls.course.name },
-        url_youtube: cls.url_youtube,
+        subtitle: cls.course.name,
+        image: cls.course.url_image,
+        meta: cls.course.course_code,
       })),
     ];
     return {
