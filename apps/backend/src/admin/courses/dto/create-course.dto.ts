@@ -7,6 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateCourseDto {
   @IsString()
@@ -28,6 +29,7 @@ export class CreateCourseDto {
   @IsOptional()
   url_image?: string;
 
+  @Type(() => Number)
   @IsInt({ message: 'El ID del docente debe ser un número entero' })
   @IsOptional()
   teacher_id?: number;
