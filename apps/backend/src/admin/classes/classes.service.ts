@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
@@ -54,13 +54,20 @@ export class ClassesService {
 
     /** Finds a class by ID */
     async findOne(id: number) {
-        return this.prisma.class.findUnique({
+        const classItem = await this.prisma.class.findUnique({
             where: { class_id: id },
         });
+
+        if (!classItem) {
+            throw new NotFoundException('Clase no encontrada');
+        }
+
+        return classItem;
     }
 
     /** Partially updates a class */
     async update(id: number, updateClassDto: UpdateClassDto) {
+        await this.findOne(id);
         return this.prisma.class.update({
             where: { class_id: id },
             data: updateClassDto,
@@ -69,6 +76,7 @@ export class ClassesService {
 
     /** Deletes a class */
     async remove(id: number) {
+        await this.findOne(id);
         return this.prisma.class.delete({
             where: { class_id: id },
         });
