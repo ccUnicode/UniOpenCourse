@@ -22,10 +22,12 @@ export class ClassesController {
   @Get()
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
     @Query('search') search?: string,
   ) {
     const pageNum = page ? Math.max(page, 1) : 1;
-    return this.service.findAll(search, pageNum);
+    const limitNum = limit ? Math.max(limit, 1) : 12;
+    return this.service.findAll(search, pageNum, limitNum);
   }
 
   /** Retrieves a specific class by its ID */

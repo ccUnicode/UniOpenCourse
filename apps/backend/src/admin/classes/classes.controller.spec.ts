@@ -51,15 +51,15 @@ describe('ClassesController', () => {
   });
 
   describe('findAll', () => {
-    it('should call service findAll with parsed page', async () => {
-      await controller.findAll(2, 'query');
-      expect(service.findAll).toHaveBeenCalledWith('query', 2);
+    it('should call service findAll with parsed page and limit', async () => {
+      await controller.findAll(2, 12, 'query');
+      expect(service.findAll).toHaveBeenCalledWith('query', 2, 12);
     });
     
-    it('should default to page 1', async () => {
+    it('should default to page 1 and limit 12', async () => {
       // @ts-ignore
-      await controller.findAll(undefined, 'query');
-      expect(service.findAll).toHaveBeenCalledWith('query', 1);
+      await controller.findAll(undefined, undefined, 'query');
+      expect(service.findAll).toHaveBeenCalledWith('query', 1, 12);
     });
   });
 

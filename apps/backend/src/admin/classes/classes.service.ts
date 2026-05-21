@@ -3,7 +3,8 @@ import { PrismaService } from '../../prisma.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
 
-const PAGE_SIZE = 12;
+const DEFAULT_PAGE_SIZE = 12;
+const MAX_PAGE_SIZE = 100;
 
 @Injectable()
 export class ClassesService {
@@ -22,9 +23,10 @@ export class ClassesService {
    * @param page - The current page number for pagination (defaults to 1)
    * @returns A paginated object containing the data and metadata
    */
-  async findAll(search?: string, page: number = 1) {
+  async findAll(search?: string, page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
     const safePage = Number.isInteger(page) && page > 0 ? page : 1;
-    const skip = (safePage - 1) * PAGE_SIZE;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+    const skip = (safePage - 1) * safeLimit;
 
     const where = search
       ? {
@@ -39,7 +41,7 @@ export class ClassesService {
       this.prisma.class.findMany({
         where,
         skip,
-        take: PAGE_SIZE,
+        take: safeLimit,
         orderBy: { class_creation_date: 'desc' },
       }),
       this.prisma.class.count({ where }),
@@ -48,8 +50,9 @@ export class ClassesService {
     return {
       data,
       total,
-      page,
-      totalPages: Math.ceil(total / PAGE_SIZE),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
     };
   }
 

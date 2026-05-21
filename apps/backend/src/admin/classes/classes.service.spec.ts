@@ -60,6 +60,7 @@ describe('ClassesService', () => {
 
       expect(result.data).toEqual(expectedData);
       expect(result.total).toBe(1);
+      expect(result.limit).toBe(12);
       expect(result.totalPages).toBe(1);
     });
   });
