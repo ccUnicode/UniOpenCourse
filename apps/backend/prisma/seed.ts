@@ -13,31 +13,38 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error('SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD son requeridos para crear el admin inicial');
+  }
+
   const adminRole = await prisma.role.upsert({
     where: { role_name: 'ADMIN' },
     update: {},
     create: { role_name: 'ADMIN' },
   });
 
-  const userRole = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { role_name: 'USER' },
     update: {},
     create: { role_name: 'USER' },
   });
 
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@test.com' },
+    where: { email: adminEmail },
   });
 
   if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash('123456', 10);
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     await prisma.user.create({
       data: {
-        email: 'admin@test.com',
-        username: 'admin123',
-        name: 'Franz',
-        last_name: 'Nuñez',
+        email: adminEmail,
+        username: 'admin',
+        name: 'Admin',
+        last_name: 'System',
         password: hashedPassword,
         role_id: adminRole.role_id,
       },
