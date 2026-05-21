@@ -31,6 +31,10 @@ describe('ClassesController', () => {
     service = module.get<ClassesService>(ClassesService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });

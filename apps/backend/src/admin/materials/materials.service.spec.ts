@@ -2,6 +2,7 @@ import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../../prisma.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('MaterialsService', () => {
   let service: MaterialsService;
@@ -70,6 +71,13 @@ describe('MaterialsService', () => {
         },
       });
     });
+
+    it('should throw BadRequestException if file is undefined', async () => {
+      const dto = { class_id: 1 };
+      await expect(service.createFile(dto, undefined)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('createLink', () => {
@@ -125,6 +133,18 @@ describe('MaterialsService', () => {
         where: { material_id: materialId },
       });
       expect(prisma.material.delete).toHaveBeenCalledWith({
+        where: { material_id: materialId },
+      });
+    });
+
+    it('should throw NotFoundException if material does not exist', async () => {
+      const materialId = 999;
+      mockPrismaService.material.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove(materialId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
     });

@@ -30,6 +30,10 @@ describe('MaterialsController', () => {
     service = module.get<MaterialsService>(MaterialsService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
