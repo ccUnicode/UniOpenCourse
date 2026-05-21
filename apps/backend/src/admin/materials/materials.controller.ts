@@ -9,6 +9,7 @@ import {
   UploadedFile,
   ParseIntPipe,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { storageConfig } from '../../utils/storage.config';
@@ -39,7 +40,15 @@ export class MaterialsController {
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
         const allowed = ['application/pdf', 'image/png', 'image/jpeg'];
-        cb(null, allowed.includes(file.mimetype));
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Tipo de archivo no permitido. Solo se aceptan PDFs, PNGs y JPEGs.',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
       },
     }),
   )
