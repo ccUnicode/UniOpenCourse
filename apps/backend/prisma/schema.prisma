@@ -1,11 +1,9 @@
-/// Defines the Prisma Client generator configuration.
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
-/// Configures the PostgreSQL database connection.
 datasource db {
   provider = "postgresql"
 }
@@ -14,7 +12,6 @@ datasource db {
 // User & Authentication Module
 // ==========================================
 
-/// Represents a system role (e.g., Admin, Student).
 model Role {
   role_id   Int    @id @default(autoincrement())
   role_name String @unique @db.VarChar(50)
@@ -22,7 +19,6 @@ model Role {
   users User[]
 }
 
-/// Core user entity containing authentication and profile data.
 model User {
   user_id       Int      @id @default(autoincrement())
   email         String   @unique @db.VarChar(75)
@@ -37,7 +33,6 @@ model User {
   visited_courses LastCourseVisit[]
 }
 
-/// Represents an instructor.
 model Teacher {
   teacher_id Int      @id @default(autoincrement())
   name       String   @db.VarChar(50)
@@ -50,7 +45,6 @@ model Teacher {
 // Educational Module (Courses & Classes)
 // ==========================================
 
-/// Represents an educational course.
 model Course {
   course_id            Int      @id @default(autoincrement())
   name                 String   @db.VarChar(100)
@@ -66,7 +60,8 @@ model Course {
   visiting_users  LastCourseVisit[]
 }
 
-/// Tracks the last time a user visited a specific course.
+// Cascade Delete: Deleting a User or Course automatically removes their visit history.
+// Uniqueness: Restricts users to a single visit history record per course.
 model LastCourseVisit {
   user_course_id  Int      @id @default(autoincrement())
   user_id         Int
@@ -80,7 +75,6 @@ model LastCourseVisit {
   @@unique([user_id, course_id])
 }
 
-/// Represents a single lesson or module within a Course.
 model Class {
   class_id            Int      @id @default(autoincrement())
   course_id           Int
@@ -93,14 +87,13 @@ model Class {
   materials Material[]
 }
 
-/// Defines the possible types of supplementary materials.
 enum MaterialTypes {
   file
   link
   reference
 }
 
-/// Represents supplementary material (files, links, or text references) for a Class.
+// Cascade Delete: Deleting a Class automatically removes all its associated Material records.
 model Material {
   material_id            Int           @id @default(autoincrement())
   class_id               Int
@@ -113,4 +106,3 @@ model Material {
 
   class Class @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }
-
