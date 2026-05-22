@@ -98,12 +98,11 @@ model Material {
   material_id            Int           @id @default(autoincrement())
   class_id               Int
   material_type          MaterialTypes
-  /// [DEUDA TÉCNICA] Nombre original del archivo (tipo file) o título para mostrar (tipo link/reference).
   filename               String        @db.VarChar(150)
-  
-  /// [DEUDA TÉCNICA / CONTRATO TEMPORAL] Uso híbrido para evitar migraciones complejas y cambios en el Frontend:
-  /// - Si es tipo 'link': Guarda la URL web externa.
-  /// - Si es tipo 'file': Guarda el nombre físico del archivo generado localmente en el storage.
+
+/// Uso híbrido temporal:
+/// - link: URL externa
+/// - file: nombre del archivo en storage
   url_link               String?
   written_reference      String?
   material_creation_date DateTime      @default(now())
