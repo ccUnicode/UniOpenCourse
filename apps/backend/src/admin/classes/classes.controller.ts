@@ -1,7 +1,8 @@
-import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe, DefaultValuePipe, UseGuards } from '@nestjs/common';
+import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
+import { FindAllClassesDto } from './dto/find-all-classes.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -20,14 +21,9 @@ export class ClassesController {
 
   /** Retrieves a paginated list of classes, optionally filtered by search */
   @Get()
-  findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
-    @Query('search') search?: string,
-  ) {
-    const pageNum = page ? Math.max(page, 1) : 1;
-    const limitNum = limit ? Math.max(limit, 1) : 12;
-    return this.service.findAll(search, pageNum, limitNum);
+  findAll(@Query() query: FindAllClassesDto) {
+    const { page, limit, search } = query;
+    return this.service.findAll(search, page, limit);
   }
 
   /** Retrieves a specific class by its ID */
