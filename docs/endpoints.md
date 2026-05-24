@@ -6,6 +6,97 @@ Referencia de rutas, parámetros y respuestas de la API REST.
 
 ---
 
+## GET /courses
+
+### Descripción
+
+Lista cursos con paginación y búsqueda opcional por nombre o código.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de consulta (Query)
+
+| Parámetro | Tipo   | Requerido | Descripción                                              |
+| --------- | ------ | --------- | -------------------------------------------------------- |
+| page      | number | No        | Número de página (por defecto `1`, mínimo `1`).          |
+| limit     | number | No        | Tamaño de página (por defecto `6`, entre `1` y `50`).    |
+| q         | string | No        | Filtro por nombre o `course_code` (sin distinguir mayúsculas). |
+
+### Respuesta 200
+
+Objeto paginado con `data`, `total`, `page`, `limit` y `totalPages`. Orden: `course_creation_date` descendente.
+
+### Requerimientos relacionados
+
+- RF-03
+- RF-10
+
+---
+
+## GET /courses/carrusel
+
+### Descripción
+
+Devuelve hasta 5 cursos más populares según cantidad de visitas registradas.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Respuesta 200
+
+Arreglo de hasta 5 cursos ordenados por popularidad (más visitado primero).
+
+### Requerimientos relacionados
+
+- RF-11
+
+---
+
+## GET /courses/dashboard
+
+### Descripción
+
+Devuelve los cursos visitados por el usuario autenticado, ordenados por última visita (descendente).
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>`.
+
+### Roles permitidos
+
+Usuario autenticado (`USER` o `ADMIN`).
+
+### Parámetros de ruta
+
+Ninguno. El `userId` se obtiene del JWT (`sub`), no de la URL.
+
+### Respuesta 200
+
+Objeto con `userId`, `totalCourses` y arreglo `courses` (datos del curso más `start_date` y `last_visit_date`).
+
+### Errores
+
+| Código | Caso                    |
+| ------ | ----------------------- |
+| 401    | Token ausente o inválido |
+
+### Requerimientos relacionados
+
+- RF-12
+
+---
+
 ## GET /courses/:id
 
 ### Descripción
@@ -15,7 +106,6 @@ Obtiene el detalle de un curso.
 ### Autenticación
 
 No requiere autenticación.
-Directiva ID
 
 ### Roles permitidos
 
@@ -36,6 +126,85 @@ Ejemplo JSON.
 | Código | Caso                |
 | ------ | ------------------- |
 | 404    | Curso no encontrado |
+
+### Requerimientos relacionados
+
+- RF-12
+
+---
+
+## GET /courses/:id/visits
+
+### Descripción
+
+Devuelve el historial de visitas registradas para un curso, incluyendo el usuario asociado a cada visita.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Respuesta 200
+
+Objeto con `curso`, `total` y arreglo `detalle` de visitas ordenadas por `last_visit_date` descendente.
+
+### Errores
+
+| Código | Caso                |
+| ------ | ------------------- |
+| 404    | Curso no encontrado |
+| 400    | ID no numérico      |
+
+### Requerimientos relacionados
+
+- RF-12
+
+---
+
+## POST /courses/:id/visit
+
+### Descripción
+
+Registra o actualiza la visita del usuario autenticado a un curso (upsert por `user_id` + `course_id`).
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>`.
+
+### Roles permitidos
+
+Usuario autenticado (`USER` o `ADMIN`).
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Body
+
+No requiere body. El `userId` se obtiene del JWT (`sub`), no del cliente.
+
+### Respuesta 200
+
+Registro de visita creado o actualizado (`LastCourseVisit`).
+
+### Errores
+
+| Código | Caso                    |
+| ------ | ----------------------- |
+| 401    | Token ausente o inválido |
+| 404    | Curso no encontrado     |
+| 400    | ID no numérico          |
 
 ### Requerimientos relacionados
 

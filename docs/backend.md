@@ -52,15 +52,25 @@ Gestionar cursos, búsqueda, detalle, visitas y operaciones administrativas.
 
 ### Reglas de negocio
 
-Describir reglas no evidentes: paginación, docente, visitas, eliminación, etc.
+- El listado público (`GET /courses`) usa paginación con `page` y `limit` (máximo 50 por página) y búsqueda opcional por nombre o `course_code`.
+- El carrusel devuelve hasta 5 cursos ordenados por cantidad de visitas.
+- `POST /courses/:id/visit` hace upsert en `LastCourseVisit`: si ya existe visita para el par usuario-curso, actualiza `last_visit_date`; si no, crea el registro con `start_date` y `last_visit_date`.
+- `GET /courses/dashboard` y `POST /courses/:id/visit` extraen el `userId` exclusivamente del JWT (`sub`). No se acepta `userId` desde la URL ni el body (mitigación IDOR).
+- En el controlador, las rutas literales `carrusel` y `dashboard` se declaran antes de `GET /courses/:id` para evitar conflictos de enrutamiento en NestJS.
 
 ### Dependencias
 
-PrismaService, AuthModule, StorageModule, según aplique.
+- `PrismaService` (acceso a cursos y visitas).
+- `AuthModule` / `JwtAuthGuard` (endpoints de dashboard y registro de visita).
 
 ### Endpoints Relacionados
 
-Ver `endpoints.md`
+- `GET /courses`
+- `GET /courses/carrusel`
+- `GET /courses/dashboard`
+- `GET /courses/:id`
+- `GET /courses/:id/visits`
+- `POST /courses/:id/visit`
 
 ---
 
