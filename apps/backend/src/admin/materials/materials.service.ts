@@ -1,5 +1,5 @@
 import 'multer';
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -10,6 +10,8 @@ import * as path from 'path';
 
 @Injectable()
 export class MaterialsService {
+  private readonly logger = new Logger(MaterialsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -71,7 +73,10 @@ export class MaterialsService {
           await fs.promises.unlink(filePath);
         }
       } catch (error) {
-        console.error(`Error deleting physical file: ${filePath}`, error);
+        this.logger.error(
+          `Error deleting physical file: ${filePath}`,
+          error instanceof Error ? error.stack : undefined,
+        );
       }
     }
 
