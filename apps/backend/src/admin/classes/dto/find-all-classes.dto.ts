@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, IsString } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /** DTO for retrieving a paginated list of classes, optionally filtered by search */
@@ -13,6 +13,7 @@ export class FindAllClassesDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100)
   limit?: number = 12;
 
   @IsOptional()

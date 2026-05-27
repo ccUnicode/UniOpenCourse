@@ -15,6 +15,7 @@ const prisma = new PrismaClient({
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL;
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const adminUsername = process.env.SEED_ADMIN_USERNAME || 'admin';
 
   if (!adminEmail || !adminPassword) {
     throw new Error('SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD son requeridos para crear el admin inicial');
@@ -42,7 +43,7 @@ async function main() {
     await prisma.user.create({
       data: {
         email: adminEmail,
-        username: 'admin',
+        username: adminUsername,
         name: 'Admin',
         last_name: 'System',
         password: hashedPassword,
