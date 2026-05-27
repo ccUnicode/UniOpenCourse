@@ -100,9 +100,9 @@ model Material {
   material_type          MaterialTypes
   filename               String        @db.VarChar(150)
 
-/// Uso híbrido temporal:
-/// - link: URL externa
-/// - file: nombre del archivo en storage
+/// Temporal hybrid use:
+/// - link: External URL
+/// - file: File name in storage
   url_link               String?
   written_reference      String?
   material_creation_date DateTime      @default(now())
