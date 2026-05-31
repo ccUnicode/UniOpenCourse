@@ -22,7 +22,6 @@ export class CoursesController {
     return this.coursesService.findForCarousel();
   }
 
-  // FIX IDOR: eliminado @Param('userId'). El ID ahora proviene exclusivamente del token JWT.
   @UseGuards(JwtAuthGuard)
   @Get('dashboard')
   getUserDashboard(@Request() req) {
@@ -40,7 +39,6 @@ export class CoursesController {
     return this.coursesService.getVisitsByCourseId(id);
   }
 
-  // FIX IDOR: el userId ya no viene del cliente. Se extrae del token JWT validado.
   @UseGuards(JwtAuthGuard)
   @Post(':id/visit')
   registerVisit(

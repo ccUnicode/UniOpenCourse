@@ -55,20 +55,35 @@ describe('CoursesService', () => {
       mockPrisma.course.findMany.mockResolvedValue([]);
       mockPrisma.course.count.mockResolvedValue(0);
 
+      const searchWhere = {
+        OR: [
+          { name: { contains: 'algebra', mode: 'insensitive' } },
+          { course_code: { contains: 'algebra', mode: 'insensitive' } },
+        ],
+      };
+
       await service.findAll(2, 10, '  algebra  ');
 
       expect(mockPrisma.course.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: 10,
           take: 10,
-          where: {
-            OR: [
-              { name: { contains: 'algebra', mode: 'insensitive' } },
-              { course_code: { contains: 'algebra', mode: 'insensitive' } },
-            ],
-          },
+          where: searchWhere,
         }),
       );
+      expect(mockPrisma.course.count).toHaveBeenCalledWith({ where: searchWhere });
+    });
+
+    it.each(['', '   '])('does not apply search filter when q is %j', async (q) => {
+      mockPrisma.course.findMany.mockResolvedValue([]);
+      mockPrisma.course.count.mockResolvedValue(0);
+
+      await service.findAll(1, 6, q);
+
+      expect(mockPrisma.course.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 6, where: undefined }),
+      );
+      expect(mockPrisma.course.count).toHaveBeenCalledWith({ where: undefined });
     });
   });
 
@@ -100,8 +115,9 @@ describe('CoursesService', () => {
     it('throws NotFoundException when course does not exist', async () => {
       mockPrisma.course.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOneById(99)).rejects.toThrow(NotFoundException);
-      await expect(service.findOneById(99)).rejects.toThrow('Curso no encontrado');
+      const promise = service.findOneById(99);
+      await expect(promise).rejects.toThrow(NotFoundException);
+      await expect(promise).rejects.toThrow('Curso no encontrado');
     });
   });
 

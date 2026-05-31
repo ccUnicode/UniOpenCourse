@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
@@ -73,6 +74,14 @@ describe('CoursesController', () => {
 
       expect(mockCoursesService.findOneById).toHaveBeenCalledWith(1);
     });
+
+    it('propagates NotFoundException when course does not exist', async () => {
+      mockCoursesService.findOneById.mockRejectedValue(
+        new NotFoundException('Curso no encontrado'),
+      );
+
+      await expect(controller.findOne(99)).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('getVisits', () => {
@@ -82,6 +91,14 @@ describe('CoursesController', () => {
       controller.getVisits(3);
 
       expect(mockCoursesService.getVisitsByCourseId).toHaveBeenCalledWith(3);
+    });
+
+    it('propagates NotFoundException when course does not exist', async () => {
+      mockCoursesService.getVisitsByCourseId.mockRejectedValue(
+        new NotFoundException('Curso no encontrado'),
+      );
+
+      await expect(controller.getVisits(99)).rejects.toThrow(NotFoundException);
     });
   });
 
