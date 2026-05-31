@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SearchDto } from './dto/global-search.dto';
+import { GlobalSearchItem } from './interfaces/global-search.interface';
 
 @Injectable()
 export class GlobalSearcherService {
@@ -53,8 +54,8 @@ export class GlobalSearcherService {
     const totalResults = totalCourses + totalClasses;
     const totalPages = Math.ceil(totalResults / pageSize);
 
-    const data = [
-      ...courses.map((course) => ({
+    const data: GlobalSearchItem[] = [
+      ...courses.map<GlobalSearchItem>((course) => ({
         type: 'course',
         id: course.course_id,
         title: course.name,
@@ -62,7 +63,7 @@ export class GlobalSearcherService {
         image: course.url_image,
         meta: course.course_code,
       })),
-      ...classes.map((cls) => ({
+      ...classes.map<GlobalSearchItem>((cls) => ({
         type: 'class',
         id: cls.class_id,
         title: cls.title,
