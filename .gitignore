@@ -74,8 +74,4 @@ next-env.d.ts
 # Misc
 # =========================
 *.pem
-
-# =========================
-# Notas personales
-# =========================
-mi_diario_local.md
+

@@ -1,6 +1,10 @@
-import { IsString, IsNotEmpty, IsInt, IsUrl } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsUrl, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
+/** DTO for creating a new class */
 export class CreateClassDto {
+
+  @Type(() => Number)
   @IsInt()
   @IsNotEmpty() 
   course_id: number;
@@ -13,7 +17,7 @@ export class CreateClassDto {
   @IsNotEmpty()
   description: string;
 
+  @IsOptional()
   @IsUrl()
-  @IsNotEmpty()
-  url_youtube: string;
+  url_youtube?: string;
 }
