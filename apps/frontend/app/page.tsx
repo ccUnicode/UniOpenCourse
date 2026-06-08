@@ -1,19 +1,26 @@
 const baseUrl = 'http://localhost:3001';
+
 async function getCarouselData() {
   let response = await fetch(`${baseUrl}/courses/carrusel`);
   let courses = await response.json();
   return courses;
 }
-async function getCourseData() {
-  let response = await fetch(`${baseUrl}/courses`);
+async function getCourseData(busqueda: string) {
+  console.log(busqueda);
+  let response = await fetch(`${baseUrl}/courses?q=${busqueda}`);
   let courses = await response.json();
   console.log(courses);
   return courses;
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ busqueda: string }>;
+}) {
+  const { busqueda = '' } = await searchParams;
   const courses_carousel = await getCarouselData();
-  const courses = await getCourseData();
+  const courses = await getCourseData(busqueda);
 
   return (
     <>
