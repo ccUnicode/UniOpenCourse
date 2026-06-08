@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:3001';
+const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
 async function getCarouselData() {
   let response = await fetch(`${baseUrl}/courses/carrusel`);
