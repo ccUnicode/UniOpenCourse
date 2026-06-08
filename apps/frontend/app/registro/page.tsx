@@ -1,6 +1,8 @@
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
-const handleSubmit = async (event) => {
+const handleSubmit = async (
+  event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,
+) => {
   event.preventDefault();
   // Utilizar funcion fetch para enviar datos al backend
 };
