@@ -3,6 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import * as fs from 'fs';
+
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn(),
+  createReadStream: jest.fn(),
+}));
 
 describe('MaterialsService', () => {
   let service: MaterialsService;
@@ -147,6 +154,41 @@ describe('MaterialsService', () => {
       expect(prisma.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
+    });
+  });
+
+  describe('getDownloadableFile', () => {
+    it('should throw NotFoundException if material is not found', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue(null);
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if material is not a file', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({ material_type: 'link', url_link: 'abc' });
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if physical file does not exist', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({ material_type: 'file', url_link: 'file.pdf' });
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+      
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return a stream and filename if everything is correct', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({ 
+        material_type: 'file', 
+        url_link: 'file.pdf', 
+        filename: 'original.pdf' 
+      });
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      const mockStream = {} as any;
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+
+      const result = await service.getDownloadableFile(1);
+      
+      expect(result.stream).toBe(mockStream);
+      expect(result.filename).toBe('original.pdf');
     });
   });
 });

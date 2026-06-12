@@ -84,4 +84,30 @@ export class MaterialsService {
       where: { material_id: id },
     });
   }
+
+  /** Gets the read stream and original filename for a physical material file */
+  async getDownloadableFile(id: number) {
+    const material = await this.prisma.material.findUnique({
+      where: { material_id: id },
+    });
+
+    if (!material) {
+      throw new NotFoundException('Material no encontrado.');
+    }
+
+    if (material.material_type !== MaterialTypes.file || !material.url_link) {
+      throw new BadRequestException('Este material no es un archivo descargable.');
+    }
+
+    const filePath = path.join(process.cwd(), 'storage', material.url_link);
+
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
+    }
+
+    return {
+      stream: fs.createReadStream(filePath),
+      filename: material.filename || material.url_link,
+    };
+  }
 }
