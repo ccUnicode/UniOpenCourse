@@ -5,12 +5,17 @@ import { PrismaService } from '../prisma.service';
 // Mock prisma
 const mockPrismaService = {
   class: {
+    create: jest.fn(),
     findMany: jest.fn(),
+    count: jest.fn(),
     findUnique: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
   },
   material: {
     findMany: jest.fn(),
   },
+  $transaction: jest.fn(),
 };
 
 describe('ClassesService (Public)', () => {
@@ -69,6 +74,63 @@ describe('ClassesService (Public)', () => {
       const result = await service.getMaterialsByClass(10);
       expect(result).toEqual(expected);
       expect(prisma.material.findMany).toHaveBeenCalledWith({ where: { class_id: 10 } });
+    });
+  });
+
+  describe('create', () => {
+    it('should create a class', async () => {
+      const createDto = { title: 'Test Class', course_id: 1, description: 'Test', order: 1 };
+      const expected = { class_id: 1, ...createDto };
+      
+      mockPrismaService.class.create.mockResolvedValue(expected);
+
+      const result = await service.create(createDto as any);
+
+      expect(result).toEqual(expected);
+      expect(prisma.class.create).toHaveBeenCalledWith({ data: createDto });
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return paginated classes', async () => {
+      const filter = { search: '', page: 1 };
+      const expectedData = [{ class_id: 1, title: 'Test' }];
+
+      mockPrismaService.$transaction.mockResolvedValue([expectedData, 1]);
+
+      const result = await service.findAll(filter.search, filter.page);
+
+      expect(result.data).toEqual(expectedData);
+      expect(result.total).toBe(1);
+      expect(result.limit).toBe(12);
+      expect(result.totalPages).toBe(1);
+    });
+  });
+
+  describe('update', () => {
+    it('should update a class', async () => {
+      const updateDto = { title: 'Updated' };
+      const expected = { class_id: 1, title: 'Updated' };
+      mockPrismaService.class.update.mockResolvedValue(expected);
+
+      const result = await service.update(1, updateDto as any);
+
+      expect(result).toEqual(expected);
+      expect(prisma.class.update).toHaveBeenCalledWith({
+        where: { class_id: 1 },
+        data: updateDto,
+      });
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove a class', async () => {
+      const expected = { class_id: 1 };
+      mockPrismaService.class.delete.mockResolvedValue(expected);
+
+      const result = await service.remove(1);
+      expect(result).toEqual(expected);
+      expect(prisma.class.delete).toHaveBeenCalledWith({ where: { class_id: 1 } });
     });
   });
 });
