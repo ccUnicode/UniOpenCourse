@@ -1,8 +1,10 @@
-import { Controller, Get, Param, ParseIntPipe, Res, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { MaterialsService } from './materials.service';
 
 @Controller('materials')
+@UseGuards(ThrottlerGuard)
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 

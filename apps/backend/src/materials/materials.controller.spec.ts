@@ -3,6 +3,7 @@ import { MaterialsController } from './materials.controller';
 import { MaterialsService } from './materials.service';
 import { StreamableFile } from '@nestjs/common';
 import { Response } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('MaterialsController (Public)', () => {
   let controller: MaterialsController;
@@ -21,7 +22,10 @@ describe('MaterialsController (Public)', () => {
           useValue: mockMaterialsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<MaterialsController>(MaterialsController);
     service = module.get<MaterialsService>(MaterialsService);
