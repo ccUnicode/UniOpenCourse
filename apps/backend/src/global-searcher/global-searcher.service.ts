@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/prisma.service';
 import { SearchDto } from './dto/global-search.dto';
 import { GlobalSearchItem } from './interfaces/global-search.interface';
 
