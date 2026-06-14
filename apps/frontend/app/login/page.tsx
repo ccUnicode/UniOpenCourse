@@ -5,7 +5,7 @@ const handleSubmit = async (
   event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,
 ) => {
   event.preventDefault();
-  // Utilizar funcion fetch para enviar datos al backend
+  // Utilizar funcion fetch para enviar datos al backend (/auth/login)
 };
 
 export default function Login() {
