@@ -2,7 +2,7 @@ import { Post, Get, Patch, Delete, Body, Param, Query, Controller, ParseIntPipe,
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
-import { FindAllClassesDto } from './dto/find-all-classes.dto';
+import { PaginationSearchQueryDto } from '../../common/dto/pagination-search-query.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -21,7 +21,7 @@ export class ClassesController {
 
   /** Retrieves a paginated list of classes, optionally filtered by search */
   @Get()
-  findAll(@Query() query: FindAllClassesDto) {
+  findAll(@Query() query: PaginationSearchQueryDto) {
     const { page, limit, search } = query;
     return this.service.findAll(search, page, limit);
   }

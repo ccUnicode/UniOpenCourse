@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
+import { paginatedResponse } from '../common/helpers/pagination.helper';
 
 @Injectable()
 export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page = 1, limit = 6, q?: string) {
+  async findAll(page = 1, limit = 6, search?: string) {
     const skip = (page - 1) * limit;
-    const query = q?.trim();
+    const query = search?.trim();
     const where = query
       ? {
           OR: [
@@ -36,13 +37,7 @@ export class CoursesService {
       }),
       this.prisma.course.count({ where }),
     ]);
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return paginatedResponse(data, total, page, limit);
   }
 
   async findForCarousel(limit = 5) {
@@ -122,78 +117,88 @@ export class CoursesService {
     return visit;
   }
 
-  async getVisitsByCourseId(courseId: number) {
+  async getVisitsByCourseId(courseId: number, page = 1, limit = 6) {
     const course = await this.prisma.course.findUnique({
       where: { course_id: courseId },
-      select: { course_id: true, name: true },
+      select: { course_id: true },
     });
 
     if (!course) throw new NotFoundException('Curso no encontrado');
 
-    const visitas = await this.prisma.lastCourseVisit.findMany({
-      where: { course_id: courseId },
-      select: {
-        user_course_id: true,
-        user_id: true,
-        start_date: true,
-        last_visit_date: true,
-        user: {
-          select: {
-            user_id: true,
-            username: true,
-            name: true,
-            last_name: true,
+    const skip = (page - 1) * limit;
+    const where = { course_id: courseId };
+
+    const [data, total] = await Promise.all([
+      this.prisma.lastCourseVisit.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          user_course_id: true,
+          user_id: true,
+          start_date: true,
+          last_visit_date: true,
+          user: {
+            select: {
+              user_id: true,
+              username: true,
+              name: true,
+              last_name: true,
+            },
           },
         },
-      },
-      orderBy: { last_visit_date: 'desc' },
-    });
+        orderBy: { last_visit_date: 'desc' },
+      }),
+      this.prisma.lastCourseVisit.count({ where }),
+    ]);
 
-    return {
-      curso: { id_curso: course.course_id, nombre: course.name },
-      total: visitas.length,
-      detalle: visitas,
-    };
+    return paginatedResponse(data, total, page, limit);
   }
 
-  async getUserDashboard(userId: number) {
-    const visits = await this.prisma.lastCourseVisit.findMany({
-      where: { user_id: userId },
-      select: {
-        course_id: true,
-        start_date: true,
-        last_visit_date: true,
-        course: {
-          select: {
-            course_id: true,
-            name: true,
-            course_code: true,
-            url_image: true,
-            description: true,
-            teacher_id: true,
-            course_creation_date: true,
-            update_date: true,
+  async getUserDashboard(userId: number, page = 1, limit = 6) {
+    const skip = (page - 1) * limit;
+    const where = { user_id: userId };
+
+    const [visits, total] = await Promise.all([
+      this.prisma.lastCourseVisit.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          course_id: true,
+          start_date: true,
+          last_visit_date: true,
+          course: {
+            select: {
+              course_id: true,
+              name: true,
+              course_code: true,
+              url_image: true,
+              description: true,
+              teacher_id: true,
+              course_creation_date: true,
+              update_date: true,
+            },
           },
         },
-      },
-      orderBy: { last_visit_date: 'desc' },
-    });
+        orderBy: { last_visit_date: 'desc' },
+      }),
+      this.prisma.lastCourseVisit.count({ where }),
+    ]);
 
-    return {
-      userId,
-      totalCourses: visits.length,
-      courses: visits.map((v) => ({
-        course_id: v.course.course_id,
-        name: v.course.name,
-        course_code: v.course.course_code,
-        url_image: v.course.url_image,
-        description: v.course.description,
-        teacher_id: v.course.teacher_id,
-        course_creation_date: v.course.course_creation_date,
-        update_date: v.course.update_date,
-        start_date: v.start_date,
-        last_visit_date: v.last_visit_date,
-      })),
-    };
+    const data = visits.map((v) => ({
+      course_id: v.course.course_id,
+      name: v.course.name,
+      course_code: v.course.course_code,
+      url_image: v.course.url_image,
+      description: v.course.description,
+      teacher_id: v.course.teacher_id,
+      course_creation_date: v.course.course_creation_date,
+      update_date: v.course.update_date,
+      start_date: v.start_date,
+      last_visit_date: v.last_visit_date,
+    }));
+
+    return paginatedResponse(data, total, page, limit);
   }
 }

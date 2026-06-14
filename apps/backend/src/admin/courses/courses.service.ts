@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { paginatedResponse } from '../../common/helpers/pagination.helper';
 
 @Injectable()
 export class CoursesService {
@@ -57,9 +58,9 @@ export class CoursesService {
     });
   }
 
-  async findAll(page = 1, limit = 6, q?: string) {
+  async findAll(page = 1, limit = 6, search?: string) {
     const skip = (page - 1) * limit;
-    const query = q?.trim();
+    const query = search?.trim();
     const where = query
       ? {
           OR: [
@@ -83,13 +84,7 @@ export class CoursesService {
       }),
       this.prisma.course.count({ where }),
     ]);
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return paginatedResponse(data, total, page, limit);
   }
 
   findOne(id: string) {

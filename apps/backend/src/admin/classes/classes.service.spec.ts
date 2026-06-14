@@ -63,9 +63,9 @@ describe('ClassesService', () => {
       const result = await service.findAll(filter.search, filter.page);
 
       expect(result.data).toEqual(expectedData);
-      expect(result.total).toBe(1);
-      expect(result.limit).toBe(12);
-      expect(result.totalPages).toBe(1);
+      expect(result.meta.totalItems).toBe(1);
+      expect(result.meta.itemsPerPage).toBe(6);
+      expect(result.meta.totalPages).toBe(1);
     });
   });
 

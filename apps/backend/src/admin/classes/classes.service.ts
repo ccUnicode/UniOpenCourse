@@ -2,9 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
-
-const DEFAULT_PAGE_SIZE = 12;
-const MAX_PAGE_SIZE = 100;
+import { paginatedResponse } from '../../common/helpers/pagination.helper';
 
 @Injectable()
 export class ClassesService {
@@ -23,10 +21,8 @@ export class ClassesService {
    * @param page - The current page number for pagination (defaults to 1)
    * @returns A paginated object containing the data and metadata
    */
-  async findAll(search?: string, page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
-    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
-    const skip = (safePage - 1) * safeLimit;
+  async findAll(search?: string, page: number = 1, limit: number = 6) {
+    const skip = (page - 1) * limit;
 
     const where = search
       ? {
@@ -41,19 +37,13 @@ export class ClassesService {
       this.prisma.class.findMany({
         where,
         skip,
-        take: safeLimit,
+        take: limit,
         orderBy: { class_creation_date: 'desc' },
       }),
       this.prisma.class.count({ where }),
     ]);
 
-    return {
-      data,
-      total,
-      page: safePage,
-      limit: safeLimit,
-      totalPages: Math.ceil(total / safeLimit),
-    };
+    return paginatedResponse(data, total, page, limit);
   }
 
   /** Finds a class by ID */
