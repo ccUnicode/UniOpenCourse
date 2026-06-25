@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
+import { PrismaService } from '../prisma.service';
 
 // Mock service
 const mockClassesService = {
@@ -16,12 +17,16 @@ describe('ClassesController (Public)', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClassesController],
+<<<<<<< HEAD
       providers: [
         {
           provide: ClassesService,
           useValue: mockClassesService,
         },
       ],
+=======
+      providers: [ClassesService, PrismaService],
+>>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
     }).compile();
 
     controller = module.get<ClassesController>(ClassesController);

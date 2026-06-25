@@ -95,17 +95,13 @@ enum MaterialTypes {
 
 // Cascade Delete: Deleting a Class automatically removes all its associated Material records.
 model Material {
-  material_id            Int           @id @default(autoincrement())
-  class_id               Int
-  material_type          MaterialTypes
-  filename               String        @db.VarChar(150)
-
-/// Temporal hybrid use:
-/// - link: External URL
-/// - file: File name in storage
-  url_link               String?
-  written_reference      String?
-  material_creation_date DateTime      @default(now())
-
-  class Class @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
+  material_id        Int      @id @default(autoincrement())
+  class_id           Int
+  material_type      MaterialTypes
+  filename     String   @db.VarChar(150)
+  file_path    String?  @db.VarChar(255)
+  url_link         String?
+  written_reference String?
+  material_creation_date       DateTime @default(now())
+  class              Class    @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }

@@ -3,7 +3,7 @@ import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 
 @Controller()
 export class ClassesController {
-  constructor(private readonly classesService: ClassesService) {}
+  constructor( private readonly classesService: ClassesService) {}
 
   /** Retrieves all classes for a specific course */
   @Get('courses/:id/classes')

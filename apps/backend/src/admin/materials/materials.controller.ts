@@ -69,15 +69,13 @@ export class MaterialsController {
     return this.materialsService.createLink(createLinkDto);
   }
 
-  /** Creates a text reference material */
   @Post('reference')
   createReference(@Body() createReferenceDto: CreateReferenceDto) {
     return this.materialsService.createReference(createReferenceDto);
   }
 
-  /** Deletes a material by its ID */
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.materialsService.remove(id);
+  remove(@Param('id') id: string) {
+    return this.materialsService.remove(+id);
   }
 }

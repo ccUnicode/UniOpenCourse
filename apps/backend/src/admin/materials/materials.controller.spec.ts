@@ -7,7 +7,6 @@ describe('MaterialsController', () => {
   let controller: MaterialsController;
   let service: MaterialsService;
 
-  // Mock service
   const mockMaterialsService = {
     createFile: jest.fn(),
     createLink: jest.fn(),
@@ -47,9 +46,9 @@ describe('MaterialsController', () => {
     it('should call service.createFile', async () => {
       const dto = { class_id: 1 };
 
-      const mockFile = { 
-        originalname: 'test.pdf', 
-        filename: 'test-123.pdf' 
+      const mockFile = {
+        originalname: 'test.pdf',
+        filename: 'test-123.pdf',
       } as Express.Multer.File;
 
       const expectedResult = { material_id: 1, ...dto, material_type: 'file' };
