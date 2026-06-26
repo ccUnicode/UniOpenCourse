@@ -1,6 +1,5 @@
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-<<<<<<< HEAD
 import { existsSync, mkdirSync } from 'fs';
 
 const storageDir = './storage';
@@ -21,25 +20,10 @@ export const storageConfig = diskStorage({
       .replace(extname(file.originalname), '')
       .replace(/[^a-zA-Z0-9-_]/g, '-')
       .slice(0, 80);
-      
+
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = extname(file.originalname);
-    
+
     callback(null, `${safeBaseName}-${uniqueSuffix}${ext}`);
   },
 });
-
-=======
-
-export const storageConfig = diskStorage({
-  destination: './storage',
-  filename: (req, file, callback) => {
-    const baseName = file.originalname.split('.')[0].replace(/\s+/g, '-');
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = extname(file.originalname);
-    const finalName = `${baseName}-${uniqueSuffix}${ext}`;
-    
-    callback(null, finalName);
-  },
-});
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
