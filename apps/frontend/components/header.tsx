@@ -51,7 +51,9 @@ export default function Header() {
           </li>
           <li className="access-button">
             <Link href="/login">
-              <button className="h-8 rounded-full bg-accent px-6 pointer">Acceder</button>
+              <button className="h-8 rounded-full bg-accent px-6 cursor-pointer">
+                Iniciar Sesión
+              </button>
             </Link>
           </li>
         </ul>
