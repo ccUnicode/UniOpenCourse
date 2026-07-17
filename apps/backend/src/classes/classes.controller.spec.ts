@@ -17,16 +17,12 @@ describe('ClassesController (Public)', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClassesController],
-<<<<<<< HEAD
       providers: [
         {
           provide: ClassesService,
           useValue: mockClassesService,
         },
       ],
-=======
-      providers: [ClassesService, PrismaService],
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
     }).compile();
 
     controller = module.get<ClassesController>(ClassesController);
@@ -39,7 +35,6 @@ describe('ClassesController (Public)', () => {
 
   describe('findAllByCourse', () => {
     it('should call service findAllByCourse', async () => {
-
       await controller.findAllByCourse(1);
       expect(service.findAllByCourse).toHaveBeenCalledWith(1);
     });
