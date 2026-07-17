@@ -19,14 +19,10 @@ describe('ClassesService (Public)', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-<<<<<<< HEAD
       providers: [
         ClassesService,
         { provide: PrismaService, useValue: mockPrismaService },
       ],
-=======
-      providers: [ClassesService, PrismaService],
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
     }).compile();
 
     service = module.get<ClassesService>(ClassesService);
@@ -58,7 +54,7 @@ describe('ClassesService (Public)', () => {
       const result = await service.findOne(1);
 
       expect(result).toEqual(expected);
-      expect(prisma.class.findUnique).toHaveBeenCalledWith({ 
+      expect(prisma.class.findUnique).toHaveBeenCalledWith({
         where: { class_id: 1 },
         include: { materials: true },
       });
