@@ -1,31 +1,19 @@
-<<<<<<< HEAD
 import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-=======
-import { Test, TestingModule } from '@nestjs/testing';
-import { MaterialsService } from './materials.service';
-import { PrismaService } from '../../prisma.service';
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
 
 describe('MaterialsService', () => {
   let service: MaterialsService;
   let prisma: PrismaService;
 
-<<<<<<< HEAD
   // Mock prisma
-=======
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
   const mockPrismaService = {
     material: {
       create: jest.fn(),
       delete: jest.fn(),
-<<<<<<< HEAD
       findUnique: jest.fn(),
-=======
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
     },
   };
 
@@ -55,26 +43,17 @@ describe('MaterialsService', () => {
   describe('createFile', () => {
     it('should create a material of type "file" with real uploaded file data', async () => {
       const dto = { class_id: 1 };
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
-      const mockFile = { 
-        originalname: 'documento.pdf', 
-        filename: 'documento-123.pdf' 
+      const mockFile = {
+        originalname: 'documento.pdf',
+        filename: 'documento-123.pdf',
       } as Express.Multer.File;
 
-      const expectedResult = { 
-        material_id: 1, 
-        class_id: dto.class_id, 
+      const expectedResult = {
+        material_id: 1,
+        class_id: dto.class_id,
         material_type: 'file',
         filename: mockFile.originalname,
-<<<<<<< HEAD
-        url_link: mockFile.filename 
-=======
-        file_path: mockFile.filename 
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
+        url_link: mockFile.filename,
       };
 
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
@@ -87,7 +66,6 @@ describe('MaterialsService', () => {
           class_id: dto.class_id,
           material_type: 'file',
           filename: mockFile.originalname,
-<<<<<<< HEAD
           url_link: mockFile.filename,
         },
       });
@@ -99,19 +77,17 @@ describe('MaterialsService', () => {
         BadRequestException,
       );
     });
-=======
-          file_path: mockFile.filename,
-        },
-      });
-    });
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
   });
 
   describe('createLink', () => {
     it('should create a material of type "link"', async () => {
-      const dto = { class_id: 1, filename: 'Video de YouTube', url_link: 'https://youtube.com' };
+      const dto = {
+        class_id: 1,
+        filename: 'Video de YouTube',
+        url_link: 'https://youtube.com',
+      };
       const expectedResult = { material_id: 2, ...dto, material_type: 'link' };
-      
+
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
 
       const result = await service.createLink(dto);
@@ -128,9 +104,13 @@ describe('MaterialsService', () => {
 
   describe('createReference', () => {
     it('should create a material of type "reference"', async () => {
-      const dto = { class_id: 1, filename: 'Mi Libro', written_reference: 'Capítulo 4, página 20' };
+      const dto = {
+        class_id: 1,
+        filename: 'Mi Libro',
+        written_reference: 'Capítulo 4, página 20',
+      };
       const expectedResult = { material_id: 3, ...dto, material_type: 'reference' };
-      
+
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
 
       const result = await service.createReference(dto);
@@ -148,41 +128,30 @@ describe('MaterialsService', () => {
   describe('remove', () => {
     it('should delete a material by its ID', async () => {
       const materialId = 10;
-      const expectedResult = { material_id: materialId, filename: 'test.pdf', material_type: 'file' };
-      
-<<<<<<< HEAD
-      mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
-=======
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
+      const expectedResult = {
+        material_id: materialId,
+        filename: 'test.pdf',
+        material_type: 'file',
+      };
+
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
 
       const result = await service.remove(materialId);
 
       expect(result).toEqual(expectedResult);
-<<<<<<< HEAD
-      expect(prisma.material.findUnique).toHaveBeenCalledWith({
-        where: { material_id: materialId },
-      });
-=======
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
       expect(prisma.material.delete).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
     });
-<<<<<<< HEAD
 
     it('should throw NotFoundException if material does not exist', async () => {
       const materialId = 999;
       mockPrismaService.material.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(materialId)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.remove(materialId)).rejects.toThrow(NotFoundException);
       expect(prisma.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
     });
-=======
->>>>>>> 7679e1de544fb866a1f24f672d2168b09315a29b
   });
 });
