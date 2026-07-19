@@ -33,20 +33,34 @@ export default async function Home({
             completamente gratuita.
           </h3>
           <div className="flex gap-4">
-            <button className="flex items-center text-sm h-10 bg-accent rounded-full px-8 py-3">
+            <button className="flex items-center text-sm h-10 bg-accent rounded-full px-8 py-3 cursor-pointer">
               Iniciar sesión
             </button>
-            <button className="flex items-center text-sm h-10 text-button-border border-button-border border rounded-full px-8 py-3">
+            <button className="cursor-pointer flex items-center text-sm h-10 text-button-border border-button-border border rounded-full px-8 py-3">
               Registrarme
             </button>
           </div>
         </div>
-        <div className="flex overflow-x-scroll w-128 flex-nowrap no-scrollbar">
+        <div className="flex overflow-x-scroll w-128 flex-nowrap no-scrollbar cursor-pointer">
           {courses_carousel.map((course: any) => (
             <div
-              className="overflow-hidden min-w-128 w-full rounded-2xl border-border bg-background-secondary"
+              className="group relative overflow-hidden min-w-128 w-full rounded-2xl border-border bg-background-secondary"
               key={course.course_id}
             >
+              <div className="flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 7 8"
+                  className="mt-0.5 w-0 group-hover:w-2 h-2 transition-all duration-300 ease-in-out overflow-hidden"
+                >
+                  <path
+                    fill="#fff"
+                    d="M0 .494C0 .41.02.328.058.254a.448.448 0 0 1 .63-.192L6.262 3.36a.51.51 0 0 1 0 .863L.688 7.521a.433.433 0 0 1-.225.062C.207 7.583 0 7.363 0 7.09V.494Z"
+                  />
+                </svg>
+                <p>Ir al curso</p>
+              </div>
               <figure>
                 <img
                   src={course.url_image}
@@ -54,7 +68,7 @@ export default async function Home({
                   className="h-64 object-cover w-full"
                 />
               </figure>
-              <div className="p-6 w-full flex flex-col gap-2">
+              <div className="p-6 w-full flex flex-col gap-2 border-border border rounded-b-2xl">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-semibold">{course.name}</h2>
                   <span className="px-4 py-1 bg-accent rounded-full text-xs">
