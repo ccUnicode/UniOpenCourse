@@ -12,16 +12,18 @@ export default function Header() {
     <header
       className={`${plusJakartaSans.variable} flex h-18 items-center justify-between bg-header-bg px-10 text-primary`}
     >
-      <div className="flex items-center">
-        <figure className="bg-white p-2 rounded-lg">
-          <img
-            className="h-8 mb-[-3px]"
-            src="/logo.png"
-            alt="Logo de Uni Open Course Ware"
-          />
-        </figure>
-        <span className="text-2xl font-bold ml-4">UniOpenCourseWare</span>
-      </div>
+      <Link href="/">
+        <div className="flex items-center">
+          <figure className="bg-white p-2 rounded-lg">
+            <img
+              className="h-8 mb-[-3px]"
+              src="/logo.png"
+              alt="Logo de Uni Open Course Ware"
+            />
+          </figure>
+          <span className="text-2xl font-bold ml-4">UniOpenCourseWare</span>
+        </div>
+      </Link>
       <div className="searchContainer h-10 bg-black/10 border-border border rounded-full flex items-center px-4 w-7/20">
         <svg
           xmlns="http://www.w3.org/2000/svg"
