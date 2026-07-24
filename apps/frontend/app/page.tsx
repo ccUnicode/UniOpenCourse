@@ -36,8 +36,13 @@ export default async function Home({
         </div>
         <Carousel data={courses_carousel} />
       </div>
-      <section className="courses">
-        <h1>Courses</h1>
+      <section className="courses px-16">
+        <h2 className=" mb-2 text-md font-bold text-muted uppercase font-semibold">
+          Descubre contenido universitario gratuito
+        </h2>
+        <h1 className="text-2xl font-bold text-primary uppercase">
+          Empieza ahora buscando tu curso
+        </h1>
         <input type="text" placeholder="Search courses..." />
         {courses.data.map((course: any) => (
           <div key={course.course_id}>
