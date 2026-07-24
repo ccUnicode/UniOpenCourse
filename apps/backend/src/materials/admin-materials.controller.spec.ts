@@ -1,10 +1,10 @@
 import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MaterialsController } from './materials.controller';
+import { AdminMaterialsController } from './admin-materials.controller';
 import { MaterialsService } from './materials.service';
 
-describe('MaterialsController', () => {
-  let controller: MaterialsController;
+describe('AdminMaterialsController', () => {
+  let controller: AdminMaterialsController;
   let service: MaterialsService;
 
   // Mock service
@@ -17,7 +17,7 @@ describe('MaterialsController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [MaterialsController],
+      controllers: [AdminMaterialsController],
       providers: [
         {
           provide: MaterialsService,
@@ -26,7 +26,7 @@ describe('MaterialsController', () => {
       ],
     }).compile();
 
-    controller = module.get<MaterialsController>(MaterialsController);
+    controller = module.get<AdminMaterialsController>(AdminMaterialsController);
     service = module.get<MaterialsService>(MaterialsService);
   });
 
@@ -39,7 +39,7 @@ describe('MaterialsController', () => {
   });
 
   it('should require ADMIN role', () => {
-    const roles = Reflect.getMetadata('roles', MaterialsController);
+    const roles = Reflect.getMetadata('roles', AdminMaterialsController);
     expect(roles).toContain('ADMIN');
   });
 

@@ -1,10 +1,10 @@
 import 'multer';
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
-import { MaterialTypes } from '../../generated/prisma/client';
+import { MaterialTypes } from '../generated/prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
