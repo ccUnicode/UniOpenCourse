@@ -1,26 +1,23 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AdminModule } from './admin/admin.module';
-import { AuthModule } from './auth/auth.module';
-import { ClassesModule } from './classes/classes.module';
 import { CoursesModule } from './courses/courses.module';
-import { ConfigModule } from '@nestjs/config';
-import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
-import { MaterialsModule } from './materials/materials.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ConfigModule } from '@nestjs/config';
+import { ClassesModule } from './classes/classes.module';
+import { AuthModule } from './auth/auth.module';
+import { MaterialsModule } from './materials/materials.module';
+
 @Module({
   imports: [
-    PrismaModule,
-    AdminModule,
-    AuthModule,
-    ClassesModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PrismaModule,
     CoursesModule,
-    GlobalSearcherModule,
+    ClassesModule,
     MaterialsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

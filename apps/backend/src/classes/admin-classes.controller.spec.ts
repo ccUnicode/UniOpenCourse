@@ -1,6 +1,6 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { ClassesController } from './classes.controller';
+import { AdminClassesController } from './admin-classes.controller';
 import { ClassesService } from './classes.service';
 
 // Mock service
@@ -12,13 +12,13 @@ const mockClassesService = {
   remove: jest.fn(),
 };
 
-describe('ClassesController', () => {
-  let controller: ClassesController;
+describe('AdminClassesController', () => {
+  let controller: AdminClassesController;
   let service: ClassesService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ClassesController],
+      controllers: [AdminClassesController],
       providers: [
         {
           provide: ClassesService,
@@ -27,7 +27,7 @@ describe('ClassesController', () => {
       ],
     }).compile();
 
-    controller = module.get<ClassesController>(ClassesController);
+    controller = module.get<AdminClassesController>(AdminClassesController);
     service = module.get<ClassesService>(ClassesService);
   });
 
@@ -40,7 +40,7 @@ describe('ClassesController', () => {
   });
 
   it('should require ADMIN role', () => {
-    const roles = Reflect.getMetadata('roles', ClassesController);
+    const roles = Reflect.getMetadata('roles', AdminClassesController);
     expect(roles).toContain('ADMIN');
   });
 
