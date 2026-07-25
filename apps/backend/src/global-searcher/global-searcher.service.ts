@@ -53,9 +53,9 @@ export class GlobalSearcherService {
       }),
     ]);
 
-    const totalResults = totalCourses + totalClasses;
-    const totalPages = Math.ceil(totalResults / RESULTS_PER_PAGE);
-
+    const coursePages = Math.ceil(totalCourses / RESULT_PER_TYPE);
+    const classPages = Math.ceil(totalClasses / RESULT_PER_TYPE);
+    const totalPages = Math.max(coursePages, classPages);
     const data: GlobalSearchItem[] = [
       ...courses.map<GlobalSearchItem>((course) => ({
         type: 'course',
