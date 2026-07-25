@@ -1,16 +1,4 @@
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
-
-async function getClassesFromCourse(course_id: string) {
-  let response = await fetch(`${baseUrl}/courses/${course_id}/classes`);
-  let classes = await response.json();
-  return classes;
-}
-
-async function getCourse(course_id: string) {
-  let response = await fetch(`${baseUrl}/courses/${course_id}`);
-  let course = await response.json();
-  return course;
-}
+import { redirect } from 'next/navigation';
 
 export default async function Curso({
   params,
@@ -18,23 +6,8 @@ export default async function Curso({
   params: Promise<{ course_id: string }>;
 }) {
   const { course_id } = await params;
-  const course = await getCourse(course_id);
-  const classes = await getClassesFromCourse(course_id);
-
-  return (
-    <>
-      <h1>{course.name}</h1>
-      <h2>{course.course_code}</h2>
-      <p>{course.description}</p>
-      <img src={course.url_image} alt={course.name} className="h-50" />
-      {classes.map((clase: any) => {
-        return (
-          <div key={clase.class_id}>
-            <h3>{clase.title}</h3>
-            <p>{clase.description}</p>
-          </div>
-        );
-      })}
-    </>
-  );
+  
+  // En lugar de tener una vista del curso vacía, enviamos al usuario 
+  // directamente a la Clase 1 de ese curso, tal como sugirió el equipo.
+  redirect(`/cursos/${course_id}/clases/1`);
 }
