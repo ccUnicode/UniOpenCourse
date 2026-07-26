@@ -1,4 +1,5 @@
 import CourseHero from '@/features/courses/components/CourseHero';
+import CourseMaterials from '@/features/courses/components/CourseMaterials';
 import { mockCourse, mockClassesData, mockMaterials } from '@/features/courses/mocks/course.mocks';
 
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
@@ -35,10 +36,10 @@ export default async function Clase({
   // Mocks de fallback
   if (course.statusCode === 404 || course.error || !course.name) course = mockCourse;
   if (clase.statusCode === 404 || clase.error || !clase.title) clase = mockClassesData[class_id] || mockClassesData["1"];
-  if (materials.statusCode === 404 || materials.error || !Array.isArray(materials)) materials = mockMaterials;
+  if (materials.statusCode === 404 || materials.error || !Array.isArray(materials) || materials.length === 0) materials = mockMaterials;
 
   return (
-    <div className="flex flex-col w-full h-full overflow-y-auto no-scrollbar bg-[#0f1714]">
+    <div className="flex flex-col w-full h-full overflow-y-auto custom-scrollbar overscroll-none bg-[#0f1714]">
       {/* 1. Cabecera (Hero) del Curso */}
       <CourseHero 
         courseName={course.name}
@@ -49,7 +50,7 @@ export default async function Clase({
       />
 
       {/* Línea divisoria verde oscuro (estilo minecraft) */}
-      <div className="relative w-full z-20">
+      <div id="reproductor" className="relative w-full z-20">
         <div className="w-full h-[1px] bg-[#01392a]"></div>
         <div className="absolute top-[1px] left-0 w-full h-12 bg-gradient-to-b from-[#01392a]/60 to-transparent pointer-events-none"></div>
       </div>
@@ -72,12 +73,7 @@ export default async function Clase({
 
       {/* 3. Materiales */}
       <div className="px-12 pb-12">
-        <h2 className="text-2xl text-white font-bold mt-12 mb-4">Materiales</h2>
-        <ul className="text-gray-300">
-          {materials.map((material: any) => (
-            <li key={material.material_id} className="py-2">{material.filename}</li>
-          ))}
-        </ul>
+        <CourseMaterials materials={materials} />
       </div>
     </div>
   );

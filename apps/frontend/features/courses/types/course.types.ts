@@ -26,4 +26,8 @@ export interface Class {
 export interface Material {
   material_id: string | number;
   filename: string;
+  material_type: 'file' | 'link' | 'reference';
+  file_path?: string;
+  url_link?: string;
+  written_reference?: string;
 }

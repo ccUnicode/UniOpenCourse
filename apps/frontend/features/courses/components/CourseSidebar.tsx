@@ -13,7 +13,7 @@ export default function CourseSidebar({ courseId, courseName, classes }: CourseS
   const pathname = usePathname();
 
   return (
-    <aside className="w-72 flex-shrink-0 bg-background-secondary border-r border-border flex flex-col min-h-[calc(100vh-72px)]">
+    <aside className="w-72 flex-shrink-0 bg-background-secondary border-r border-border flex flex-col h-[calc(100vh-72px)] overflow-y-auto custom-scrollbar overscroll-none">
       <div className="p-6 border-b border-border">
         <h2 className="text-xl font-bold text-primary">Curso: {courseName}</h2>
       </div>

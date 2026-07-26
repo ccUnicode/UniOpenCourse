@@ -15,7 +15,7 @@ interface CourseHeroProps {
 
 export default function CourseHero({ courseName, courseCode, description, imageUrl, teacher }: CourseHeroProps) {
   return (
-    <section className="relative w-full h-[380px] overflow-hidden bg-[#0d1311] flex border-b border-[#13221c]">
+    <section className="relative w-full h-[380px] flex-shrink-0 overflow-hidden bg-[#0d1311] flex border-b border-[#13221c]">
       
       {/* Lado Izquierdo: Información del curso (Mitad exacta) */}
       <div className="w-1/2 h-full flex flex-col justify-center pl-10 pr-6 z-10">

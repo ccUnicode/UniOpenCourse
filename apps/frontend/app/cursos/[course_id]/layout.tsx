@@ -12,19 +12,18 @@ export default async function CourseLayout({
   const { course_id } = await params;
 
   return (
-    <div className="flex flex-col bg-background">
+    // Limitamos la altura exacta a lo que sobra de la pantalla (100vh - 4.5rem del header)
+    // Esto hace que el Sidebar se quede fijo y solo la parte derecha haga scroll
+    <div className="flex h-[calc(100vh-4.5rem)] bg-background">
+      <CourseSidebar 
+        courseId={course_id} 
+        courseName="Álgebra Lineal"
+        classes={mockClassesList} 
+      />
       
-      <div className="flex flex-1">
-        <CourseSidebar 
-          courseId={course_id} 
-          courseName="Álgebra Lineal"
-          classes={mockClassesList} 
-        />
-        
-        <main className="flex-1 w-full overflow-hidden">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 w-full overflow-hidden">
+        {children}
+      </main>
     </div>
   );
 }
