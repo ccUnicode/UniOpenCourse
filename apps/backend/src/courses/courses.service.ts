@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-=======
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
->>>>>>> 7dd5610c4718ad891d8355e0e58a19751d2da828
 
 @Injectable()
 export class CoursesService {
@@ -17,7 +12,9 @@ export class CoursesService {
       let docenteId = data.teacher_id;
       if (!docenteId) {
         if (!data.teacher_name || !data.teacher_last_name) {
-          throw new Error('Debe proporcionar el teacher_id o el nombre_docente y apellido_docente');
+          throw new Error(
+            'Debe proporcionar el teacher_id o el nombre_docente y apellido_docente',
+          );
         }
         const docenteExistente = await tx.teacher.findFirst({
           where: { name: data.teacher_name, last_name: data.teacher_last_name },
@@ -87,7 +84,9 @@ export class CoursesService {
         throw new NotFoundException(`El curso con ID ${id} no existe.`);
       }
       if (error.code === 'P2003') {
-        throw new BadRequestException('No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.');
+        throw new BadRequestException(
+          'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
+        );
       }
       throw error;
     }

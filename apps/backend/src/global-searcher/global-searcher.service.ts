@@ -78,7 +78,6 @@ export class GlobalSearcherService {
       data: data,
       page: safePage,
       totalPages,
-      totalResults,
     };
   }
 }
