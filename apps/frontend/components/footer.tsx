@@ -14,8 +14,7 @@ export default function Footer() {
       <div className="flex justify-between items-center gap-2 py-4 w-full">
         <p className="text-2xl font-bold ml-4">UniOpenCourseWare</p>
         <p className="text-sm text-muted">
-          © 2026 <Link href="https://www.ccunicode.org/">Unicode</Link>. Todos los
-          derechos reservados.
+          © 2026 <Link href="/login/admin">Unicode</Link>. Todos los derechos reservados.
         </p>
         <nav className="w-50">
           <ul className="flex gap-10 text-m font-semibold items-center text-sm w-full">
