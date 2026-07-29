@@ -28,9 +28,12 @@ export class CoursesService {
           course_code: true,
           url_image: true,
           description: true,
-          teacher_id: true,
-          course_creation_date: true,
-          update_date: true,
+          teacher: {
+            select: {
+              name: true,
+              last_name: true,
+            },
+          },
         },
         orderBy: { course_creation_date: 'desc' },
       }),
@@ -55,8 +58,6 @@ export class CoursesService {
         url_image: true,
         description: true,
         teacher_id: true,
-        course_creation_date: true,
-        update_date: true,
       },
       orderBy: { visiting_users: { _count: 'desc' } },
     });

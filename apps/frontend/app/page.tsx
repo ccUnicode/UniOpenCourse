@@ -1,15 +1,10 @@
 import Link from 'next/link';
 import { getCarouselData, getCourseData } from '@/services/courses.service';
 import Carousel from '@/components/carousel';
+import { CourseSection } from '@/components/course-section';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ busqueda: string }>;
-}) {
-  const { busqueda = '' } = await searchParams;
+export default async function Home() {
   const courses_carousel = await getCarouselData();
-  const courses = await getCourseData(busqueda);
 
   return (
     <>
@@ -36,23 +31,7 @@ export default async function Home({
         </div>
         <Carousel data={courses_carousel} />
       </div>
-      <section className="courses px-16">
-        <h2 className=" mb-2 text-md font-bold text-muted uppercase font-semibold">
-          Descubre contenido universitario gratuito
-        </h2>
-        <h1 className="text-2xl font-bold text-primary uppercase">
-          Empieza ahora buscando tu curso
-        </h1>
-        <input type="text" placeholder="Search courses..." />
-        {courses.data.map((course: any) => (
-          <div key={course.course_id}>
-            <h2>{course.name}</h2>
-            <h3>{course.course_code}</h3>
-            <p>{course.description}</p>
-            <img src={course.url_image} alt={course.name} className="h-50" />
-          </div>
-        ))}
-      </section>
+      <CourseSection />
     </>
   );
 }
