@@ -15,7 +15,7 @@ export function CourseSection() {
   }, [busqueda, page]);
 
   return (
-    <section className="courses px-16">
+    <section className="courses px-16 mb-8">
       <div className="mb-4">
         <h2 className=" mb-2 text-md font-bold text-muted uppercase font-semibold">
           Descubre contenido universitario gratuito
@@ -54,8 +54,12 @@ export function CourseSection() {
           <CourseCard course={course} key={course.course_id} />
         ))}
       </div>
-      <div>
-        <button onClick={() => setPage(page - 1)} disabled={page === 1}>
+      <div className="flex gap-4 mt-4 justify-center items-center">
+        <button
+          onClick={() => setPage(page - 1)}
+          disabled={page === 1}
+          className={`${page === 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="8"
@@ -74,8 +78,8 @@ export function CourseSection() {
               key={pageNumber}
               className={`w-10 h-10 rounded border transition ${
                 page === pageNumber
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'hover:bg-gray-100'
+                  ? 'bg-accent text-white border-accent'
+                  : 'hover:bg-background-secondary border-border text-text-muted'
               }`}
               onClick={() => setPage(pageNumber)}
             >
@@ -83,7 +87,15 @@ export function CourseSection() {
             </button>
           );
         })}
-        <button onClick={() => setPage(page + 1)} disabled={page === courses.totalPages}>
+        <button
+          className={`${
+            page === courses.totalPages
+              ? 'opacity-50 cursor-not-allowed'
+              : 'cursor-pointer'
+          }`}
+          onClick={() => setPage(page + 1)}
+          disabled={page === courses.totalPages}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="8"
