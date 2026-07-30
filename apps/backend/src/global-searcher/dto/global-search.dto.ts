@@ -10,13 +10,20 @@ import {
 import { Transform, Type } from 'class-transformer';
 
 export class SearchDto {
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toLowerCase() : value,
-  )
+  @Transform(({ value }): string | undefined => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    return value
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  })
   @IsString()
   @MinLength(2)
   @MaxLength(150)
-  search_query!: string;
+  q!: string;
 
   @IsOptional()
   @Type(() => Number)
