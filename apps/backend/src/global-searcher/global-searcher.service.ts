@@ -11,13 +11,13 @@ export class GlobalSearcherService {
     const RESULTS_PER_PAGE = 6;
     const RESULT_PER_TYPE = Math.ceil(RESULTS_PER_PAGE / 2);
 
-    const { search_query, page = 1 } = query;
+    const { q, page = 1 } = query;
 
     const safePage = Math.max(1, Math.min(MAX_PAGE, page));
     const offset = (safePage - 1) * RESULT_PER_TYPE;
 
     const searchFilter = {
-      contains: search_query,
+      contains: q,
       mode: 'insensitive' as const,
     };
 
@@ -35,7 +35,7 @@ export class GlobalSearcherService {
         where: {
           OR: [{ name: searchFilter }, { course_code: searchFilter }],
         },
-        orderBy: { course_creation_date: 'desc' },
+        orderBy: { course_creation_date: 'desc', course_id: 'desc' },
         skip: offset,
         take: RESULT_PER_TYPE,
         include: {
@@ -44,7 +44,7 @@ export class GlobalSearcherService {
       }),
       this.prisma.class.findMany({
         where: { title: searchFilter },
-        orderBy: { class_creation_date: 'desc' },
+        orderBy: { class_creation_date: 'desc', class_id: 'desc' },
         skip: offset,
         take: RESULT_PER_TYPE,
         include: {
@@ -56,12 +56,13 @@ export class GlobalSearcherService {
     const coursePages = Math.ceil(totalCourses / RESULT_PER_TYPE);
     const classPages = Math.ceil(totalClasses / RESULT_PER_TYPE);
     const totalPages = Math.max(coursePages, classPages);
+    const totalResults = totalCourses + totalClasses;
     const data: GlobalSearchItem[] = [
       ...courses.map<GlobalSearchItem>((course) => ({
         type: 'course',
         id: course.course_id,
         title: course.name,
-        subtitle: course.teacher.name,
+        subtitle: course.teacher.name + ' ' + course.teacher.last_name,
         image: course.url_image,
         meta: course.course_code,
       })),
@@ -78,6 +79,7 @@ export class GlobalSearcherService {
       data: data,
       page: safePage,
       totalPages,
+      totalResults,
     };
   }
 }
