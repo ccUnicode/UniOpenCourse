@@ -49,6 +49,7 @@ describe('GlobalSearcherService', () => {
           url_image: 'course.png',
           teacher: {
             name: 'John Doe',
+            last_name: 'Smith',
           },
         },
       ]);
@@ -66,7 +67,7 @@ describe('GlobalSearcherService', () => {
       ]);
 
       const result = await service.search({
-        search_query: 'algo',
+        q: 'algo',
         page: 1,
       });
 
@@ -76,7 +77,7 @@ describe('GlobalSearcherService', () => {
             type: 'course',
             id: 1,
             title: 'Algorithms',
-            subtitle: 'John Doe',
+            subtitle: 'John Doe Smith',
             image: 'course.png',
             meta: 'CS101',
           },
@@ -91,6 +92,7 @@ describe('GlobalSearcherService', () => {
         ],
         page: 1,
         totalPages: 2,
+        totalResults: 9,
       });
     });
 
@@ -102,7 +104,7 @@ describe('GlobalSearcherService', () => {
       prismaMock.class.findMany.mockResolvedValue([]);
 
       const result = await service.search({
-        search_query: 'nothing',
+        q: 'nothing',
         page: 1,
       });
 
@@ -110,6 +112,7 @@ describe('GlobalSearcherService', () => {
         data: [],
         page: 1,
         totalPages: 0,
+        totalResults: 0,
       });
     });
 
@@ -121,7 +124,7 @@ describe('GlobalSearcherService', () => {
       prismaMock.class.findMany.mockResolvedValue([]);
 
       await service.search({
-        search_query: 'test',
+        q: 'test',
         page: -5,
       });
 
@@ -146,7 +149,7 @@ describe('GlobalSearcherService', () => {
       prismaMock.class.findMany.mockResolvedValue([]);
 
       await service.search({
-        search_query: 'test',
+        q: 'test',
         page: 5000,
       });
 
@@ -165,7 +168,7 @@ describe('GlobalSearcherService', () => {
       prismaMock.class.findMany.mockResolvedValue([]);
 
       await service.search({
-        search_query: 'algo',
+        q: 'algo',
       });
 
       expect(prismaMock.course.count).toHaveBeenCalledWith({
@@ -195,6 +198,20 @@ describe('GlobalSearcherService', () => {
           },
         },
       });
+    });
+    it('should calculate total pages correctly when only courses span multiple pages', async () => {
+      prismaMock.course.count.mockResolvedValue(5);
+      prismaMock.class.count.mockResolvedValue(0);
+
+      prismaMock.course.findMany.mockResolvedValue([]);
+      prismaMock.class.findMany.mockResolvedValue([]);
+
+      const result = await service.search({
+        q: 'algo',
+        page: 1,
+      });
+
+      expect(result.totalPages).toBe(2);
     });
   });
 });
