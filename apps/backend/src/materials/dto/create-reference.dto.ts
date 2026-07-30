@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 
 /** DTO for creating a text reference */
 export class CreateReferenceDto {
-
   @Type(() => Number)
   @IsInt()
   @IsNotEmpty()

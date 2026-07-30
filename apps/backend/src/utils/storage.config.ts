@@ -20,11 +20,10 @@ export const storageConfig = diskStorage({
       .replace(extname(file.originalname), '')
       .replace(/[^a-zA-Z0-9-_]/g, '-')
       .slice(0, 80);
-      
+
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = extname(file.originalname);
-    
+
     callback(null, `${safeBaseName}-${uniqueSuffix}${ext}`);
   },
 });
-

@@ -59,7 +59,7 @@ describe('ClassesService (Public)', () => {
       const result = await service.findOne(1);
 
       expect(result).toEqual(expected);
-      expect(prisma.class.findUnique).toHaveBeenCalledWith({ 
+      expect(prisma.class.findUnique).toHaveBeenCalledWith({
         where: { class_id: 1 },
         include: { materials: true },
       });

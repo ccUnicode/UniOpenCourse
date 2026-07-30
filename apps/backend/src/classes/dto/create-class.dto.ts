@@ -3,10 +3,9 @@ import { Type } from 'class-transformer';
 
 /** DTO for creating a new class */
 export class CreateClassDto {
-
   @Type(() => Number)
   @IsInt()
-  @IsNotEmpty() 
+  @IsNotEmpty()
   course_id: number;
 
   @IsString()
@@ -19,5 +18,5 @@ export class CreateClassDto {
 
   @IsOptional()
   @IsUrl()
-  url_youtube?: string;
+  url_youtube: string;
 }

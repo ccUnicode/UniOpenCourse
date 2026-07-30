@@ -34,7 +34,6 @@ describe('ClassesController (Public)', () => {
 
   describe('findAllByCourse', () => {
     it('should call service findAllByCourse', async () => {
-
       await controller.findAllByCourse(1);
       expect(service.findAllByCourse).toHaveBeenCalledWith(1);
     });

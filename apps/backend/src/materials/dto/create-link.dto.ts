@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 
 /** DTO for creating an external link */
 export class CreateLinkDto {
-
   @Type(() => Number)
   @IsInt()
   @IsNotEmpty()
