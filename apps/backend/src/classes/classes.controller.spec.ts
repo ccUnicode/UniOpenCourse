@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
-import { PrismaService } from '../prisma.service';
 
 // Mock service
 const mockClassesService = {

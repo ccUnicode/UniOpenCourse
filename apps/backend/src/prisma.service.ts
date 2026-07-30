@@ -31,7 +31,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       adapter,
     });
   }
-  
+
   /**
    * Inicialización de Conexión
    * Se dispara automáticamente al arrancar el servidor NestJS.

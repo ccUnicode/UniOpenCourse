@@ -1,7 +1,7 @@
 import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('MaterialsService', () => {
@@ -134,6 +134,7 @@ describe('MaterialsService', () => {
         material_type: 'file',
       };
 
+      mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
 
       const result = await service.remove(materialId);
