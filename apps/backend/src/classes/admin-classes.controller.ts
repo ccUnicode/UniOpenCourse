@@ -14,14 +14,14 @@ import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
 import { FindAllClassesDto } from './dto/find-all-classes.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('admin/classes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
-export class ClassesController {
+export class AdminClassesController {
   constructor(private readonly service: ClassesService) {}
 
   /** Creates a new class */
