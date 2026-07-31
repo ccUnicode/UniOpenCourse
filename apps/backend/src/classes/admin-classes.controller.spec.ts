@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AdminClassesController } from './admin-classes.controller';
 import { ClassesService } from './classes.service';
+import { CreateClassDto } from './dto/create-class.dto';
 
 // Mock service
 const mockClassesService = {
@@ -45,9 +46,14 @@ describe('AdminClassesController', () => {
 
   describe('create', () => {
     it('should call service create', async () => {
-      const createDto = { title: 'Test', course_id: 1, description: 'Desc', order: 1 };
+      const createDto: CreateClassDto = {
+        title: 'Test',
+        course_id: 1,
+        description: 'Desc',
+        url_youtube: 'https://youtube.com/test',
+      };
 
-      await controller.create(createDto as any);
+      await controller.create(createDto);
 
       expect(service.create).toHaveBeenCalledWith(createDto);
     });
