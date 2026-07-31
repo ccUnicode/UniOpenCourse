@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminClassesController } from './admin-classes.controller';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
+import { UpdateClassDto } from './dto/update-class.dto';
 
 // Mock service
 const mockClassesService = {
@@ -54,42 +55,48 @@ describe('AdminClassesController', () => {
       };
 
       await controller.create(createDto);
+      const createSpy = jest.spyOn(service, 'create');
 
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(createSpy).toHaveBeenCalledWith(createDto);
     });
   });
 
   describe('findAll', () => {
     it('should call service findAll with parsed page and limit', async () => {
       await controller.findAll({ page: 2, limit: 12, search: 'query' });
-      expect(service.findAll).toHaveBeenCalledWith('query', 2, 12);
+      const findAllSpy = jest.spyOn(service, 'findAll');
+      expect(findAllSpy).toHaveBeenCalledWith('query', 2, 12);
     });
 
     it('should default to page 1 and limit 12', async () => {
       await controller.findAll({ search: 'query' });
-      expect(service.findAll).toHaveBeenCalledWith('query', undefined, undefined);
+      const findAllSpy = jest.spyOn(service, 'findAll');
+      expect(findAllSpy).toHaveBeenCalledWith('query', undefined, undefined);
     });
   });
 
   describe('findOne', () => {
     it('should call service findOne', async () => {
       await controller.findOne(1);
-      expect(service.findOne).toHaveBeenCalledWith(1);
+      const findOneSpy = jest.spyOn(service, 'findOne');
+      expect(findOneSpy).toHaveBeenCalledWith(1);
     });
   });
 
   describe('update', () => {
     it('should call service update', async () => {
-      const updateDto = { title: 'Test' };
-      await controller.update(1, updateDto as any);
-      expect(service.update).toHaveBeenCalledWith(1, updateDto);
+      const updateDto: UpdateClassDto = { title: 'Test' };
+      await controller.update(1, updateDto);
+      const updateSpy = jest.spyOn(service, 'update');
+      expect(updateSpy).toHaveBeenCalledWith(1, updateDto);
     });
   });
 
   describe('remove', () => {
     it('should call service remove', async () => {
       await controller.remove(1);
-      expect(service.remove).toHaveBeenCalledWith(1);
+      const removeSpy = jest.spyOn(service, 'remove');
+      expect(removeSpy).toHaveBeenCalledWith(1);
     });
   });
 });
