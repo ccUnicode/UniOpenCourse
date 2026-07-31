@@ -39,7 +39,7 @@ describe('AdminClassesController', () => {
   });
 
   it('should require ADMIN role', () => {
-    const roles = Reflect.getMetadata('roles', AdminClassesController);
+    const roles = Reflect.getMetadata('roles', AdminClassesController) as string[];
     expect(roles).toContain('ADMIN');
   });
 
