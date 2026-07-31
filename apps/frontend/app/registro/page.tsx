@@ -1,5 +1,4 @@
 'use client';
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
 const handleSubmit = async (
   event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,

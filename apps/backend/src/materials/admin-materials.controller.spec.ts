@@ -5,7 +5,6 @@ import { MaterialsService } from './materials.service';
 
 describe('AdminMaterialsController', () => {
   let controller: AdminMaterialsController;
-  let service: MaterialsService;
 
   // Mock service
   const mockMaterialsService = {
@@ -27,7 +26,6 @@ describe('AdminMaterialsController', () => {
     }).compile();
 
     controller = module.get<AdminMaterialsController>(AdminMaterialsController);
-    service = module.get<MaterialsService>(MaterialsService);
   });
 
   afterEach(() => {
@@ -39,7 +37,7 @@ describe('AdminMaterialsController', () => {
   });
 
   it('should require ADMIN role', () => {
-    const roles = Reflect.getMetadata('roles', AdminMaterialsController);
+    const roles = Reflect.getMetadata('roles', AdminMaterialsController) as string[];
     expect(roles).toContain('ADMIN');
   });
 

@@ -1,9 +1,11 @@
+import { Course } from '../../interfaces/course.interface';
+import Image from 'next/image';
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
 async function getCourseData(busqueda: string) {
   console.log(busqueda);
-  let response = await fetch(`${baseUrl}/courses?q=${busqueda}`);
-  let courses = await response.json();
+  const response = await fetch(`${baseUrl}/courses?q=${busqueda}`);
+  const courses = await response.json();
   console.log(courses);
   return courses;
 }
@@ -18,12 +20,18 @@ export default async function Cursos({
     <section className="courses">
       <h1>Courses</h1>
       <input type="text" placeholder="Search courses..." />
-      {courses.data.map((course: any) => (
+      {courses.data.map((course: Course) => (
         <div key={course.course_id}>
           <h2>{course.name}</h2>
           <h3>{course.course_code}</h3>
           <p>{course.description}</p>
-          <img src={course.url_image} alt={course.name} className="h-50" />
+          <Image
+            src={course.url_image}
+            alt={course.name}
+            width={200}
+            height={150}
+            className="h-50"
+          />
         </div>
       ))}
     </section>
