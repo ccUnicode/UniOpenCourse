@@ -22,7 +22,6 @@ const mockPrismaService = {
 
 describe('ClassesService (Public)', () => {
   let service: ClassesService;
-  let prisma: PrismaService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -47,23 +46,24 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.class.findMany.mockResolvedValue(expected);
 
       const result = await service.findAllByCourse(5);
-      const findManyMock = prisma.class.findMany as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(findManyMock).toHaveBeenCalledWith({ where: { course_id: 5 } });
+      expect(mockPrismaService.class.findMany).toHaveBeenCalledWith({
+        where: { course_id: 5 },
+      });
     });
   });
 
   describe('findOne', () => {
     it('should return a class by id with its materials', async () => {
       const expected = { class_id: 1, title: 'Class 1', materials: [] };
+
       mockPrismaService.class.findUnique.mockResolvedValue(expected);
 
       const result = await service.findOne(1);
-      const findUniqueMock = prisma.class.findUnique as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(findUniqueMock).toHaveBeenCalledWith({
+      expect(mockPrismaService.class.findUnique).toHaveBeenCalledWith({
         where: { class_id: 1 },
         include: { materials: true },
       });
@@ -76,9 +76,10 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.material.findMany.mockResolvedValue(expected);
 
       const result = await service.getMaterialsByClass(10);
-      const findManyMock = prisma.material.findMany as jest.Mock;
       expect(result).toEqual(expected);
-      expect(findManyMock).toHaveBeenCalledWith({ where: { class_id: 10 } });
+      expect(mockPrismaService.material.findMany).toHaveBeenCalledWith({
+        where: { class_id: 10 },
+      });
     });
   });
 
@@ -95,10 +96,9 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.class.create.mockResolvedValue(expected);
 
       const result = await service.create(createDto);
-      const createMock = prisma.class.create as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(createMock).toHaveBeenCalledWith({ data: createDto });
+      expect(mockPrismaService.class.create).toHaveBeenCalledWith({ data: createDto });
     });
   });
 
@@ -127,7 +127,7 @@ describe('ClassesService (Public)', () => {
       const result = await service.update(1, updateDto);
 
       expect(result).toEqual(expected);
-      expect(prisma.class.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.class.update).toHaveBeenCalledWith({
         where: { class_id: 1 },
         data: updateDto,
       });
@@ -141,7 +141,9 @@ describe('ClassesService (Public)', () => {
 
       const result = await service.remove(1);
       expect(result).toEqual(expected);
-      expect(prisma.class.delete).toHaveBeenCalledWith({ where: { class_id: 1 } });
+      expect(mockPrismaService.class.delete).toHaveBeenCalledWith({
+        where: { class_id: 1 },
+      });
     });
   });
 });
