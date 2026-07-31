@@ -1,4 +1,4 @@
-import type { CourseDashboard } from '@/interfaces/course.interface';
+import type { CourseDashboardAdmin } from '@/interfaces/course.interface';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const createCourse = async (
@@ -29,7 +29,7 @@ export default async function DashboardAdmin({
         <input type="text" name="teacher_name" placeholder="Teacher Name" required />
         <button type="submit">Create Course</button>
       </form>
-      {courseData.data.map((course: CourseDashboard) => (
+      {courseData.data.map((course: CourseDashboardAdmin) => (
         <div key={course.course_id}>
           <h2>{course.name}</h2>
           <h3>{course.course_code}</h3>

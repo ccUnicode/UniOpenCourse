@@ -1,4 +1,4 @@
-export interface CourseDashboard {
+export interface CourseDashboardAdmin {
   course_id: number;
   name: string;
   course_code: string;
@@ -13,4 +13,8 @@ export interface Course {
     name: string;
     last_name: string;
   };
+}
+export interface CourseDashboard extends Course {
+  start_date: Date;
+  last_visit_date: Date;
 }
