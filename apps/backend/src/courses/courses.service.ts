@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class CoursesService {
@@ -79,14 +80,16 @@ export class CoursesService {
       return await this.prisma.course.delete({
         where: { course_id: Number(id) },
       });
-    } catch (error: any) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException(`El curso con ID ${id} no existe.`);
-      }
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
-        );
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`El curso con ID ${id} no existe.`);
+        }
+        if (error.code === 'P2003') {
+          throw new BadRequestException(
+            'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
+          );
+        }
       }
       throw error;
     }

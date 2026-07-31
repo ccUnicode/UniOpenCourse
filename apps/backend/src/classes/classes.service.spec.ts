@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClassesService } from './classes.service';
 import { PrismaService } from '../prisma.service';
+import { CreateClassDto } from './dto/create-class.dto';
+import { UpdateClassDto } from './dto/update-class.dto';
 
 // Mock prisma
 const mockPrismaService = {
@@ -45,9 +47,10 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.class.findMany.mockResolvedValue(expected);
 
       const result = await service.findAllByCourse(5);
+      const findManyMock = prisma.class.findMany as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(prisma.class.findMany).toHaveBeenCalledWith({ where: { course_id: 5 } });
+      expect(findManyMock).toHaveBeenCalledWith({ where: { course_id: 5 } });
     });
   });
 
@@ -57,9 +60,10 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.class.findUnique.mockResolvedValue(expected);
 
       const result = await service.findOne(1);
+      const findUniqueMock = prisma.class.findUnique as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(prisma.class.findUnique).toHaveBeenCalledWith({
+      expect(findUniqueMock).toHaveBeenCalledWith({
         where: { class_id: 1 },
         include: { materials: true },
       });
@@ -72,27 +76,29 @@ describe('ClassesService (Public)', () => {
       mockPrismaService.material.findMany.mockResolvedValue(expected);
 
       const result = await service.getMaterialsByClass(10);
+      const findManyMock = prisma.material.findMany as jest.Mock;
       expect(result).toEqual(expected);
-      expect(prisma.material.findMany).toHaveBeenCalledWith({ where: { class_id: 10 } });
+      expect(findManyMock).toHaveBeenCalledWith({ where: { class_id: 10 } });
     });
   });
 
   describe('create', () => {
     it('should create a class', async () => {
-      const createDto = {
+      const createDto: CreateClassDto = {
         title: 'Test Class',
         course_id: 1,
         description: 'Test',
-        order: 1,
+        url_youtube: 'https://youtube.com/test',
       };
       const expected = { class_id: 1, ...createDto };
 
       mockPrismaService.class.create.mockResolvedValue(expected);
 
-      const result = await service.create(createDto as any);
+      const result = await service.create(createDto);
+      const createMock = prisma.class.create as jest.Mock;
 
       expect(result).toEqual(expected);
-      expect(prisma.class.create).toHaveBeenCalledWith({ data: createDto });
+      expect(createMock).toHaveBeenCalledWith({ data: createDto });
     });
   });
 
@@ -114,11 +120,11 @@ describe('ClassesService (Public)', () => {
 
   describe('update', () => {
     it('should update a class', async () => {
-      const updateDto = { title: 'Updated' };
+      const updateDto: UpdateClassDto = { title: 'Updated' };
       const expected = { class_id: 1, title: 'Updated' };
       mockPrismaService.class.update.mockResolvedValue(expected);
 
-      const result = await service.update(1, updateDto as any);
+      const result = await service.update(1, updateDto);
 
       expect(result).toEqual(expected);
       expect(prisma.class.update).toHaveBeenCalledWith({

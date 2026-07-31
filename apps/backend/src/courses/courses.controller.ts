@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { RequestWithUser } from '../auth/interfaces/request.interface';
 
 @Controller('courses')
 export class CoursesController {
@@ -33,7 +34,7 @@ export class CoursesController {
 
   @UseGuards(JwtAuthGuard)
   @Get('dashboard')
-  getUserDashboard(@Request() req) {
+  getUserDashboard(@Request() req: RequestWithUser) {
     const userId = Number(req.user.sub);
     return this.coursesService.getUserDashboard(userId);
   }
@@ -50,7 +51,7 @@ export class CoursesController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/visit')
-  registerVisit(@Param('id', ParseIntPipe) id: number, @Request() req) {
+  registerVisit(@Param('id', ParseIntPipe) id: number, @Request() req: RequestWithUser) {
     const userId = Number(req.user.sub);
     return this.coursesService.registerVisit(id, userId);
   }
