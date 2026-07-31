@@ -1,5 +1,7 @@
+import { Course } from '@/interfaces/course.interface';
+import Image from 'next/image';
 import Link from 'next/link';
-export default function CourseCard({ course }: { course: any }) {
+export default function CourseCard({ course }: { course: Course }) {
   return (
     <Link href={`/cursos/${course.course_id}`} key={course.course_id}>
       <div className="group relative overflow-hidden max-w-110 w-full rounded-2xl border-border bg-background-secondary">
@@ -17,12 +19,8 @@ export default function CourseCard({ course }: { course: any }) {
           </svg>
           <p>Ir al curso</p>
         </div>
-        <figure>
-          <img
-            src={course.url_image}
-            alt={course.name}
-            className="h-64 object-cover w-full"
-          />
+        <figure className="h-64 w-full relative">
+          <Image src={course.url_image} alt={course.name} className="object-cover" fill />
         </figure>
         <div className="p-6 w-full flex flex-col gap-2 border-border border rounded-b-2xl">
           <div className="flex items-center justify-between">

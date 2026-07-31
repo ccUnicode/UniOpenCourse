@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import Image from 'next/image';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: '--font-plus-jakarta-sans',
@@ -15,9 +16,11 @@ export default function Header() {
       <Link href="/">
         <div className="flex items-center">
           <figure className="bg-white p-2 rounded-lg">
-            <img
-              className="h-8 mb-[-3px]"
+            <Image
+              className="mb-[-3px]"
               src="/logo.png"
+              height={32}
+              width={32}
               alt="Logo de Uni Open Course Ware"
             />
           </figure>

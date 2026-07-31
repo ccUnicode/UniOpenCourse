@@ -1,5 +1,6 @@
 'use client';
 import CourseCard from '@/components/course-card';
+import { Course } from '@/interfaces/course.interface';
 import { getCourseData } from '@/services/courses.service';
 import { useEffect, useState } from 'react';
 export function CourseSection() {
@@ -50,7 +51,7 @@ export function CourseSection() {
         />
       </div>
       <div className="flex flex-wrap gap-8">
-        {courses.data.map((course: any) => (
+        {courses.data.map((course: Course) => (
           <CourseCard course={course} key={course.course_id} />
         ))}
       </div>

@@ -1,8 +1,10 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Course } from '../interfaces/course.interface';
 import { useEffect, useState } from 'react';
 
-export default function Carousel({ data }: { data: any }) {
+export default function Carousel({ data }: { data: Course[] }) {
   const courses_carousel = data;
   const courses_length = courses_carousel.length;
   const [current, setCurrent] = useState(0);
@@ -22,14 +24,14 @@ export default function Carousel({ data }: { data: any }) {
   const prev = () => {
     setCurrent((prev) => (prev - 1 + courses_length) % courses_length);
   };
-
+  console.log(courses_carousel);
   return (
     <div className="overflow-hidden w-128">
       <div
         style={{ transform: `translateX(-${current * 100}%)` }}
         className="flex transition-transform duration-600 ease-in-out w-full flex-nowrap cursor-pointer"
       >
-        {courses_carousel.map((course: any) => (
+        {courses_carousel.map((course: Course) => (
           <Link href={`/cursos/${course.course_id}`} key={course.course_id}>
             <div className="group relative overflow-hidden min-w-128 w-full rounded-2xl border-border bg-background-secondary">
               <div className="flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
@@ -46,11 +48,12 @@ export default function Carousel({ data }: { data: any }) {
                 </svg>
                 <p>Ir al curso</p>
               </div>
-              <figure>
-                <img
+              <figure className="relative h-64 w-full">
+                <Image
                   src={course.url_image}
                   alt={course.name}
-                  className="h-64 object-cover w-full"
+                  className="object-cover"
+                  fill
                 />
               </figure>
               <div className="p-6 w-full flex flex-col gap-2 border-border border rounded-b-2xl">

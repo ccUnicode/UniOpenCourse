@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getCarouselData, getCourseData } from '@/services/courses.service';
+import { getCarouselData } from '@/services/courses.service';
 import Carousel from '@/components/carousel';
 import { CourseSection } from '@/components/course-section';
 

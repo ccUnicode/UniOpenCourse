@@ -1,14 +1,16 @@
+import { Material } from '@/interfaces/material.interface';
+
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
 async function getMaterialData(class_id: string) {
-  let response = await fetch(`${baseUrl}/classes/${class_id}/materials`);
-  let materials = await response.json();
+  const response = await fetch(`${baseUrl}/classes/${class_id}/materials`);
+  const materials = await response.json();
   return materials;
 }
 
 async function getClassData(class_id: string) {
-  let response = await fetch(`${baseUrl}/classes/${class_id}`);
-  let clase = await response.json();
+  const response = await fetch(`${baseUrl}/classes/${class_id}`);
+  const clase = await response.json();
   return clase;
 }
 export default async function Clase({
@@ -32,8 +34,8 @@ export default async function Clase({
       ></iframe>
       <h2>Materials</h2>
       <ul>
-        {materials.map((material: any) => (
-          <li key={material.material_id}>{material.filename} </li>
+        {materials.map((material: Material) => (
+          <li key={material.material_id}>{material.class_id} </li>
         ))}
       </ul>
     </>
