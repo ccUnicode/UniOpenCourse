@@ -177,9 +177,10 @@ describe('CoursesService', () => {
             course_code: 'CC101',
             url_image: 'img.png',
             description: 'Desc',
-            teacher_id: 1,
-            course_creation_date: new Date('2025-01-01'),
-            update_date: new Date('2025-06-01'),
+            teacher: {
+              name: 'Juan',
+              last_name: 'Perez',
+            },
           },
         },
       ]);
