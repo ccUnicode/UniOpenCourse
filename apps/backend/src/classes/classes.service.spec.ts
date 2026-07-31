@@ -32,7 +32,6 @@ describe('ClassesService (Public)', () => {
     }).compile();
 
     service = module.get<ClassesService>(ClassesService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   it('should be defined', () => {
