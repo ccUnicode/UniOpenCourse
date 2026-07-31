@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UnauthorizedException } from '@nestjs/common';
+import { User } from './interfaces/user.interface';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +33,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
+      include: { role: true },
     });
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     const isMatch = await bcrypt.compare(dto.password, user.password);
@@ -54,7 +56,7 @@ export class AuthService {
 
     return this.generateToken(user);
   }
-  generateToken(user: any) {
+  generateToken(user: User) {
     const payload = { sub: user.user_id, email: user.email, role: user.role.role_name };
     return {
       access_token: this.jwtService.sign(payload),
