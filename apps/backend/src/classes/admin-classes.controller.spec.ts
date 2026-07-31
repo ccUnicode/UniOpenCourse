@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { AdminClassesController } from './admin-classes.controller';
 import { ClassesService } from './classes.service';
@@ -49,7 +48,7 @@ describe('AdminClassesController', () => {
       const createDto = { title: 'Test', course_id: 1, description: 'Desc', order: 1 };
 
       await controller.create(createDto as any);
-      
+
       expect(service.create).toHaveBeenCalledWith(createDto);
     });
   });
@@ -59,7 +58,7 @@ describe('AdminClassesController', () => {
       await controller.findAll({ page: 2, limit: 12, search: 'query' });
       expect(service.findAll).toHaveBeenCalledWith('query', 2, 12);
     });
-    
+
     it('should default to page 1 and limit 12', async () => {
       await controller.findAll({ search: 'query' });
       expect(service.findAll).toHaveBeenCalledWith('query', undefined, undefined);

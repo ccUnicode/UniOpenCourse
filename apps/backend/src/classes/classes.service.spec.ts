@@ -79,9 +79,14 @@ describe('ClassesService (Public)', () => {
 
   describe('create', () => {
     it('should create a class', async () => {
-      const createDto = { title: 'Test Class', course_id: 1, description: 'Test', order: 1 };
+      const createDto = {
+        title: 'Test Class',
+        course_id: 1,
+        description: 'Test',
+        order: 1,
+      };
       const expected = { class_id: 1, ...createDto };
-      
+
       mockPrismaService.class.create.mockResolvedValue(expected);
 
       const result = await service.create(createDto as any);
