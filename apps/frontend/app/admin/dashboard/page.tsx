@@ -1,5 +1,5 @@
 import type { CourseDashboardAdmin } from '@/interfaces/course.interface';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 const createCourse = async (
   event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,
