@@ -27,7 +27,14 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
                 <span className="text-xs text-gray-400">Documento PDF</span>
               )}
               {material.material_type === 'link' && (
-                <span className="text-xs text-blue-400">{material.url_link}</span>
+                <a 
+                  href={material.url_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:underline hover:text-blue-300 transition-colors"
+                >
+                  {material.url_link}
+                </a>
               )}
               {material.material_type === 'reference' && (
                 <span className="text-xs text-gray-400">{material.written_reference}</span>
@@ -37,12 +44,13 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
             <div className="flex items-center">
               {material.material_type === 'file' && (
                 <a 
-                  href={`http://localhost:3001/storage/${material.file_path}`} 
+                  href={`http://localhost:3001/materials/${material.material_id}/download`} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-[#01392a] text-white text-sm px-4 py-1.5 rounded-full hover:bg-opacity-80 transition-colors font-semibold"
+                  className="bg-[#01392a] text-white p-2 rounded-full hover:bg-opacity-80 transition-colors flex items-center justify-center"
+                  title="Descargar archivo"
                 >
-                  Descargar
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </a>
               )}
               
@@ -51,16 +59,20 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
                   href={material.url_link} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="bg-[#01392a] text-white text-sm px-4 py-1.5 rounded-full hover:bg-opacity-80 transition-colors font-semibold"
+                  className="bg-[#01392a] text-white p-2 rounded-full hover:bg-opacity-80 transition-colors flex items-center justify-center"
+                  title="Visitar enlace"
                 >
-                  Visitar
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </a>
               )}
 
               {material.material_type === 'reference' && (
-                <span className="text-sm text-gray-400 font-medium">
-                  Referencia
-                </span>
+                <div 
+                  className="text-gray-400 p-2 flex items-center justify-center"
+                  title="Referencia de lectura"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                </div>
               )}
             </div>
           </div>
