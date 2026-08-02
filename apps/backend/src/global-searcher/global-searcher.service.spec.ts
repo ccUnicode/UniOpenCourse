@@ -47,6 +47,7 @@ describe('GlobalSearcherService', () => {
           name: 'Algorithms',
           course_code: 'CS101',
           url_image: 'course.png',
+          description: 'description',
           teacher: {
             name: 'John Doe',
             last_name: 'Smith',
@@ -58,7 +59,9 @@ describe('GlobalSearcherService', () => {
         {
           class_id: 10,
           title: 'Sorting',
+          description: 'description',
           course: {
+            course_id: 1,
             name: 'Algorithms',
             course_code: 'CS101',
             url_image: 'course.png',
@@ -76,14 +79,18 @@ describe('GlobalSearcherService', () => {
           {
             type: 'course',
             id: 1,
+            secondary_id: 1,
             title: 'Algorithms',
             subtitle: 'John Doe Smith',
             image: 'course.png',
+            description: 'description',
             meta: 'CS101',
           },
           {
             type: 'class',
             id: 10,
+            secondary_id: 1,
+            description: 'description',
             title: 'Sorting',
             subtitle: 'Algorithms',
             image: 'course.png',
