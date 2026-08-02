@@ -14,7 +14,7 @@ export default async function DashboardAdmin({
     return redirect('/admin/login');
   }
   const { busqueda = '' } = await searchParams;
-  const courseData = await getAdminCourseData(busqueda);
+  const courseData = await getAdminCourseData(busqueda, token);
   return (
     <>
       <CreateCourse />
