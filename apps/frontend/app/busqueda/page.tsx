@@ -1,6 +1,14 @@
 import { SearchResult } from '@/interfaces/search.interface';
 import { Search } from '@/services/search.service';
 
+function showMessage(message: string) {
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <span className="text-muted">{message}</span>
+    </div>
+  );
+}
+
 export default async function Busqueda({
   searchParams,
 }: {
@@ -9,9 +17,12 @@ export default async function Busqueda({
   const { q = '' } = await searchParams;
   const resultados = await Search(q);
   const data = resultados.data;
-  return (
+  return resultados.error ? (
+    showMessage(resultados.message)
+  ) : resultados.data.length === 0 ? (
+    showMessage('No se encontraron resultados')
+  ) : (
     <>
-      {resultados.error ? <span>{resultados.message}</span> : null}
       <h1>Resultados de búsqueda</h1>
       {data.map((resultado: SearchResult) => {
         return (
