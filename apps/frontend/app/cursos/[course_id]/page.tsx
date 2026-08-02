@@ -28,7 +28,13 @@ export default async function Curso({
       <h1>{course.name}</h1>
       <h2>{course.course_code}</h2>
       <p>{course.description}</p>
-      <Image src={course.url_image} alt={course.name} className="h-50" />
+      <Image
+        width={375}
+        height={36}
+        src={course.url_image}
+        alt={course.name}
+        className="h-50"
+      />
       {classes.map((clase: ClassInterface) => {
         return (
           <div key={clase.class_id}>
