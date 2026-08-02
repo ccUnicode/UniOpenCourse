@@ -1,23 +1,17 @@
 import { SearchResult } from '@/interfaces/search.interface';
-const API_URL = process.env.API_URL || 'http://localhost:3001';
-async function getBusqueda(busqueda: string) {
-  {
-    const response = await fetch(`${API_URL}/search?q=${busqueda}`);
-    const resultados = await response.json();
-    return resultados;
-  }
-}
+import { Search } from '@/services/search.service';
 
 export default async function Busqueda({
   searchParams,
 }: {
-  searchParams: Promise<{ busqueda: string }>;
+  searchParams: Promise<{ q: string }>;
 }) {
-  const { busqueda = '' } = await searchParams;
-  const resultados = await getBusqueda(busqueda);
+  const { q = '' } = await searchParams;
+  const resultados = await Search(q);
   const data = resultados.data;
   return (
     <>
+      {resultados.error ? <span>{resultados.message}</span> : null}
       <h1>Resultados de búsqueda</h1>
       {data.map((resultado: SearchResult) => {
         return (
