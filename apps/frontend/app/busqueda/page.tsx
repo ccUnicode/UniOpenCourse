@@ -2,6 +2,7 @@ import SearchResultCard from '@/components/search-result-card';
 import { Search } from '@/services/search.service';
 import { SearchResult } from '@/interfaces/search.interface';
 import { SearchPagination } from '@/components/search-pagination';
+import { Suspense } from 'react';
 
 function showMessage(message: string) {
   return (
@@ -34,7 +35,9 @@ export default async function Busqueda({
           />
         );
       })}
-      <SearchPagination page={Number(page)} totalPages={resultados.totalPages} />
+      <Suspense fallback={null}>
+        <SearchPagination page={Number(page)} totalPages={resultados.totalPages} />
+      </Suspense>
     </div>
   );
 }

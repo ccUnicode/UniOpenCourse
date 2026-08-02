@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import Image from 'next/image';
 import GlobalSearcher from './global-searcher';
+import { Suspense } from 'react';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: '--font-plus-jakarta-sans',
@@ -28,7 +29,9 @@ export default function Header() {
           <span className="text-2xl font-bold ml-4">UniOpenCourseWare</span>
         </div>
       </Link>
-      <GlobalSearcher />
+      <Suspense fallback={null}>
+        <GlobalSearcher />
+      </Suspense>
       <nav className="w-1/4">
         <ul className="flex justify-between text-m font-semibold items-center text-sm w-full">
           <li>
