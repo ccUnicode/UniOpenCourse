@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -13,26 +13,19 @@ import {
 
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
-// --- Types & Mock Data ---
+// --- Types ---
 type CourseStatus = "published" | "draft" | "archived";
 
 interface Course {
-  id: number;
+  course_id: number;
   name: string;
-  code: string;
-  teacher: string;
+  course_code: string;
+  teacher_name?: string;
   description: string;
-  tags: string[];
-  status: CourseStatus;
-  updatedAt: string;
+  url_image?: string;
+  status?: CourseStatus;
+  updated_at?: string;
 }
-
-const initialCourses: Course[] = [
-  { id: 1, name: "Introducción a Python", code: "CS-101", teacher: "Elena García", description: "Curso introductorio de programación con Python.", tags: [], status: "published", updatedAt: "20 Jul 2026" },
-  { id: 2, name: "Matemática Discreta", code: "MATH-201", teacher: "Carlos Ruiz", description: "Fundamentos matemáticos para ciencias de la computación.", tags: [], status: "published", updatedAt: "22 Jul 2026" },
-  { id: 3, name: "Diseño de Interfaces", code: "UI-301", teacher: "Sofía Mendoza", description: "Principios de diseño de interfaces de usuario.", tags: [], status: "draft", updatedAt: "25 Jul 2026" },
-  { id: 4, name: "Redes de Computadoras", code: "NET-401", teacher: "Carlos Ruiz", description: "Arquitectura y protocolos de redes.", tags: [], status: "archived", updatedAt: "10 Ago 2026" },
-];
 
 // --- Components ---
 
@@ -54,10 +47,94 @@ const StatusBadge = ({ status }: { status: CourseStatus }) => {
   );
 };
 
+// --- API Functions ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+const fetchCourses = async (search: string = ''): Promise<Course[]> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/courses?q=${search}`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al obtener cursos');
+    }
+    
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return [];
+  }
+};
+
+const createCourse = async (courseData: any): Promise<Course> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/courses`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(courseData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al crear curso');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating course:', error);
+    throw error;
+  }
+};
+
+const updateCourse = async (id: number, courseData: any): Promise<Course> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(courseData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al actualizar curso');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating course:', error);
+    throw error;
+  }
+};
+
+const deleteCourse = async (id: number): Promise<void> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al eliminar curso');
+    }
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    throw error;
+  }
+};
+
 // --- Main Page ---
 
 export default function AdminCoursesPage() {
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('Todos los profesores');
   const [statusFilter, setStatusFilter] = useState('Todos los estados');
@@ -68,20 +145,33 @@ export default function AdminCoursesPage() {
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({ name: '', code: '', description: '', teacher: '', status: 'draft' as CourseStatus });
+  const [formData, setFormData] = useState({ name: '', course_code: '', description: '', teacher_name: '', url_image: '', status: 'draft' as CourseStatus });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load courses on mount
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    setIsLoading(true);
+    const data = await fetchCourses(searchQuery);
+    setCourses(data);
+    setIsLoading(false);
+  };
 
   // Memoized unique teachers
   const teachers = useMemo(() => {
-    const all = courses.map(c => c.teacher);
+    const all = courses.map(c => c.teacher_name).filter(Boolean);
     return ['Todos los profesores', ...Array.from(new Set(all))];
   }, [courses]);
 
   // Filtering
   const filteredCourses = useMemo(() => {
     return courses.filter(course => {
-      const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) || course.code.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTeacher = teacherFilter === 'Todos los profesores' || course.teacher === teacherFilter;
+      const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) || course.course_code.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTeacher = teacherFilter === 'Todos los profesores' || course.teacher_name === teacherFilter;
       
       let matchesStatus = true;
       if (statusFilter === 'Publicado') matchesStatus = course.status === 'published';
@@ -98,35 +188,41 @@ export default function AdminCoursesPage() {
     setStatusFilter('Todos los estados');
   };
 
-  const handleCreateCourse = (e: React.FormEvent) => {
+  const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) errors.name = 'Requerido';
-    if (!formData.code.trim()) errors.code = 'Requerido';
-    if (!formData.teacher.trim()) errors.teacher = 'Requerido';
+    if (!formData.course_code.trim()) errors.course_code = 'Requerido';
+    if (!formData.teacher_name.trim()) errors.teacher_name = 'Requerido';
     
     // Check duplicates
-    if (courses.some(c => c.code.toUpperCase() === formData.code.toUpperCase())) {
-      errors.code = 'Este código ya existe';
+    if (courses.some(c => c.course_code.toUpperCase() === formData.course_code.toUpperCase())) {
+      errors.course_code = 'Este código ya existe';
     }
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const newCourse: Course = {
-      id: Date.now(),
-      name: formData.name,
-      code: formData.code.toUpperCase(),
-      teacher: formData.teacher,
-      description: formData.description,
-      tags: [],
-      status: formData.status,
-      updatedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-    };
-    
-    setCourses([...courses, newCourse]);
-    setIsCreateModalOpen(false);
-    setFormData({ name: '', code: '', description: '', teacher: '', status: 'draft' });
+    setIsSubmitting(true);
+    try {
+      const newCourse = await createCourse({
+        name: formData.name,
+        course_code: formData.course_code.toUpperCase(),
+        description: formData.description,
+        teacher_name: formData.teacher_name,
+        url_image: formData.url_image || undefined,
+      });
+      
+      setCourses([...courses, newCourse]);
+      setIsCreateModalOpen(false);
+      setFormData({ name: '', course_code: '', description: '', teacher_name: '', url_image: '', status: 'draft' });
+    } catch (error) {
+      console.error('Error creating course:', error);
+      errors.name = 'Error al crear el curso';
+      setFormErrors(errors);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const confirmDelete = (course: Course) => {
@@ -134,11 +230,16 @@ export default function AdminCoursesPage() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (courseToDelete) {
-      setCourses(courses.filter(c => c.id !== courseToDelete.id));
-      setIsDeleteModalOpen(false);
-      setCourseToDelete(null);
+      try {
+        await deleteCourse(courseToDelete.course_id);
+        setCourses(courses.filter(c => c.course_id !== courseToDelete.course_id));
+        setIsDeleteModalOpen(false);
+        setCourseToDelete(null);
+      } catch (error) {
+        console.error('Error deleting course:', error);
+      }
     }
   };
 
@@ -190,6 +291,13 @@ export default function AdminCoursesPage() {
                 />
               </div>
               
+              <button 
+                onClick={loadCourses}
+                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors"
+              >
+                {isLoading ? 'Cargando...' : 'Recargar'}
+              </button>
+              
               <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
                 <select 
                   value={teacherFilter}
@@ -235,29 +343,26 @@ export default function AdminCoursesPage() {
                   </thead>
                   <tbody>
                     {filteredCourses.map((course) => (
-                      <tr key={course.id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
+                      <tr key={course.course_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{course.name}</p>
-                          <p className="mt-1 text-xs text-white/35">{course.code}</p>
+                          <p className="mt-1 text-xs text-white/35">{course.course_code}</p>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/75">{course.teacher}</span>
+                          <span className="text-sm text-white/75">{course.teacher_name || 'Sin asignar'}</span>
                         </td>
                         <td className="px-5 py-4">
                           {/* Las etiquetas se implementarán posteriormente */}
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{course.updatedAt}</span>
+                          <span className="text-sm text-white/55">{course.updated_at || 'N/A'}</span>
                         </td>
                         <td className="px-5 py-4">
-                          <StatusBadge status={course.status} />
+                          <StatusBadge status={course.status || 'draft'} />
                         </td>
                         <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button type="button" aria-label="Ver curso" title="Ver curso" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <Link href={`/admin/cursos/${course.id}`} aria-label="Administrar curso" title="Administrar curso" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200">
+                              <Link href={`/admin/cursos/${course.course_id}`} aria-label="Administrar curso" title="Administrar curso (clases)" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200">
                                 <SquarePen className="w-4 h-4" />
                               </Link>
                               <button onClick={() => confirmDelete(course)} type="button" aria-label="Eliminar curso" title="Eliminar curso" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-200">
@@ -324,21 +429,26 @@ export default function AdminCoursesPage() {
                   {formErrors.name && <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>}
                 </div>
                 <div>
-                  <label htmlFor="code" className="mb-1.5 block text-sm font-normal text-white/85">Código</label>
-                  <input type="text" id="code" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})} placeholder="CS-101" className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-                  {formErrors.code && <p className="mt-1 text-xs text-red-400">{formErrors.code}</p>}
+                  <label htmlFor="course_code" className="mb-1.5 block text-sm font-normal text-white/85">Código</label>
+                  <input type="text" id="course_code" value={formData.course_code} onChange={(e) => setFormData({...formData, course_code: e.target.value.toUpperCase()})} placeholder="CS-101" className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
+                  {formErrors.course_code && <p className="mt-1 text-xs text-red-400">{formErrors.course_code}</p>}
                 </div>
               </div>
 
               <div>
-                <label htmlFor="teacher" className="mb-1.5 block text-sm font-normal text-white/85">Profesor</label>
-                <input type="text" id="teacher" value={formData.teacher} onChange={(e) => setFormData({...formData, teacher: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-                {formErrors.teacher && <p className="mt-1 text-xs text-red-400">{formErrors.teacher}</p>}
+                <label htmlFor="teacher_name" className="mb-1.5 block text-sm font-normal text-white/85">Profesor</label>
+                <input type="text" id="teacher_name" value={formData.teacher_name} onChange={(e) => setFormData({...formData, teacher_name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
+                {formErrors.teacher_name && <p className="mt-1 text-xs text-red-400">{formErrors.teacher_name}</p>}
               </div>
 
               <div>
                 <label htmlFor="description" className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
                 <textarea id="description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"></textarea>
+              </div>
+
+              <div>
+                <label htmlFor="url_image" className="mb-1.5 block text-sm font-normal text-white/85">URL de imagen (opcional)</label>
+                <input type="text" id="url_image" value={formData.url_image} onChange={(e) => setFormData({...formData, url_image: e.target.value})} placeholder="https://ejemplo.com/imagen.jpg" className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
               </div>
 
               <div>
@@ -354,8 +464,8 @@ export default function AdminCoursesPage() {
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors">
-                  Crear curso
+                <button type="submit" disabled={isSubmitting} className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Creando...' : 'Crear curso'}
                 </button>
               </div>
             </form>

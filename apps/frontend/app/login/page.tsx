@@ -42,20 +42,47 @@ export default function Login() {
     if (hasErrors) return;
 
     setIsLoading(true);
-    // Simular conexión al backend
-    console.log('Enviando datos al backend:', { identifier, password, rememberMe });
     
-    setTimeout(() => {
-      setIsLoading(false);
-      // Lógica de validación mock: si dice "admin", entra al panel. Si no, va al dashboard general.
-      if (identifier.toLowerCase().includes('admin')) {
-        document.cookie = "role=admin; path=/";
-        router.push('/admin/cursos');
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: identifier, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Guardar token en localStorage
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+        }
+        
+        // Redirigir según el rol del usuario
+        if (data.user && data.user.role === 'ADMIN') {
+          window.location.replace('/admin/cursos');
+        } else {
+          window.location.replace('/dashboard');
+        }
       } else {
-        document.cookie = "role=user; path=/";
-        router.push('/dashboard');
+        // Manejar errores del backend
+        if (data.message) {
+          newErrors.identifier = data.message;
+        } else {
+          newErrors.identifier = 'Error al iniciar sesión. Verifica tus credenciales.';
+        }
+        setErrors(newErrors);
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error en login:', error);
+      newErrors.identifier = 'Error de conexión con el servidor.';
+      setErrors(newErrors);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

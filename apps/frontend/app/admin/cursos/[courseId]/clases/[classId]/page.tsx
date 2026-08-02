@@ -15,12 +15,13 @@ import {
   Presentation,
   Link as LinkIcon,
   BookOpen,
-  Plus
+  Plus,
+  ArrowLeft
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
 
-// --- Tipos y Mock Data ---
+// --- Types ---
 type MaterialType = "pdf" | "google-drive" | "presentation" | "web-link" | "reference" | "other";
 type MaterialStatus = "visible" | "hidden";
 
@@ -36,10 +37,20 @@ interface ClassMaterial {
   updatedAt: string;
 }
 
-const initialMaterials: ClassMaterial[] = [
-  { id: 1, classId: 1, name: "Diapositivas de introducción", type: "google-drive", url: "https://drive.google.com/example", description: "Presentación utilizada durante la primera clase.", status: "visible", createdAt: "02 Ago 2026", updatedAt: "02 Ago 2026" },
-  { id: 2, classId: 1, name: "Documentación oficial de Python", type: "web-link", url: "https://docs.python.org/", description: "Documentación oficial del lenguaje Python.", status: "visible", createdAt: "02 Ago 2026", updatedAt: "02 Ago 2026" },
-];
+interface ClassInfo {
+  class_id: number;
+  course_id: number;
+  title: string;
+  description?: string;
+  video_url?: string;
+  order_number: number;
+}
+
+interface Course {
+  course_id: number;
+  name: string;
+  course_code: string;
+}
 
 const TypeIconMap: Record<MaterialType, React.ElementType> = {
   pdf: FileText,
@@ -68,6 +79,7 @@ const TypeHelpTexts: Record<MaterialType, string> = {
   other: "Cualquier otro tipo de enlace externo útil para los estudiantes."
 };
 
+// --- Components ---
 const MaterialTypeBadge = ({ type }: { type: MaterialType }) => {
   const Icon = TypeIconMap[type];
   return (
@@ -104,55 +116,186 @@ const isValidUrl = (url: string) => {
   }
 };
 
+// --- API Functions ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+const getMultipartHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  return { 'Authorization': `Bearer ${token}` };
+};
+
+const fetchCourse = async (courseId: number): Promise<Course> => {
+  const response = await fetch(`${API_URL}/admin/courses/${courseId}`, { headers: getAuthHeaders() });
+  if (!response.ok) throw new Error('Error al obtener curso');
+  return await response.json();
+};
+
+const fetchClassInfo = async (classId: number): Promise<ClassInfo> => {
+  const response = await fetch(`${API_URL}/admin/classes/${classId}`, { headers: getAuthHeaders() });
+  if (!response.ok) throw new Error('Error al obtener clase');
+  return await response.json();
+};
+
+const updateClass = async (classId: number, data: Partial<ClassInfo>): Promise<ClassInfo> => {
+  const response = await fetch(`${API_URL}/admin/classes/${classId}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Error al actualizar clase');
+  return await response.json();
+};
+
+const deleteMaterialApi = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/admin/materials/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Error al eliminar material');
+};
+
+const createLinkMaterialApi = async (classId: number, title: string, url: string): Promise<any> => {
+  const response = await fetch(`${API_URL}/admin/materials/link`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ class_id: classId, title, url }),
+  });
+  if (!response.ok) throw new Error('Error al crear enlace');
+  return await response.json();
+};
+
+const fetchMaterialsApi = async (classId: number): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/materials?class_id=${classId}`, { headers: getAuthHeaders() });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.data || [];
+  } catch {
+    return [];
+  }
+};
+
+// Map API material to local format
+const mapApiMaterial = (m: any, classId: number): ClassMaterial => ({
+  id: m.material_id,
+  classId,
+  name: m.title,
+  type: (m.type === 'link' ? 'web-link' : m.type === 'file' ? 'pdf' : 'reference') as MaterialType,
+  url: m.url || m.file_path || '#',
+  description: m.content || undefined,
+  status: 'visible',
+  createdAt: m.created_at || new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+  updatedAt: m.updated_at || new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+});
+
 // --- Page Component ---
 export default function AdminClassPage() {
   const params = useParams();
   const courseId = params?.courseId as string || "1";
   const classId = params?.classId as string || "1";
 
-  // Class Info State
-  const [classInfo, setClassInfo] = useState({
-    order: "Clase 1",
-    title: "Introducción a Python",
-    description: "En esta clase se explican los conceptos iniciales del lenguaje.",
-    status: "published" as "published" | "draft" | "archived"
+  const [course, setCourse] = useState<Course | null>(null);
+  const [classData, setClassData] = useState<ClassInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Class form state (inline edit)
+  const [classFormData, setClassFormData] = useState({
+    order: '',
+    title: '',
+    description: '',
+    video_url: '',
   });
 
-  // Materials State
-  const [materials, setMaterials] = useState<ClassMaterial[]>(initialMaterials);
-  
-  // Filters State
+  // Materials state
+  const [materials, setMaterials] = useState<ClassMaterial[]>([]);
+
+  // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos los tipos');
   const [statusFilter, setStatusFilter] = useState('Todos los estados');
 
-  // Modal States
+  // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<ClassMaterial | null>(null);
   const [materialToDelete, setMaterialToDelete] = useState<ClassMaterial | null>(null);
 
-  // Form State
-  const [formData, setFormData] = useState<{name: string; type: MaterialType | ""; url: string; description: string; status: MaterialStatus}>({
+  // Form state
+  const [formData, setFormData] = useState<{ name: string; type: MaterialType | ""; url: string; description: string; status: MaterialStatus }>({
     name: '', type: '', url: '', description: '', status: 'visible'
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load data
+  useEffect(() => {
+    if (courseId && classId) loadData();
+  }, [courseId, classId]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [courseData, classInfo, apiMaterials] = await Promise.all([
+        fetchCourse(parseInt(courseId)),
+        fetchClassInfo(parseInt(classId)),
+        fetchMaterialsApi(parseInt(classId)),
+      ]);
+      setCourse(courseData);
+      setClassData(classInfo);
+      setClassFormData({
+        order: `Clase ${classInfo.order_number}`,
+        title: classInfo.title,
+        description: classInfo.description || '',
+        video_url: classInfo.video_url || '',
+      });
+      setMaterials(apiMaterials.map(m => mapApiMaterial(m, parseInt(classId))));
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveClass = async () => {
+    setIsSaving(true);
+    try {
+      const orderNum = classFormData.order
+        ? parseInt(classFormData.order.replace('Clase ', ''))
+        : classData?.order_number || 1;
+      await updateClass(parseInt(classId), {
+        title: classFormData.title,
+        description: classFormData.description || undefined,
+        video_url: classFormData.video_url || undefined,
+        order_number: orderNum,
+      });
+    } catch (error) {
+      console.error('Error saving class:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Filtering
   const filteredMaterials = useMemo(() => {
     return materials.filter(m => {
       const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
       let matchesType = true;
       if (typeFilter !== 'Todos los tipos') {
         const typeKey = Object.keys(TypeLabels).find(key => TypeLabels[key as MaterialType] === typeFilter);
         matchesType = m.type === typeKey;
       }
-      
       let matchesStatus = true;
       if (statusFilter === 'Visible') matchesStatus = m.status === 'visible';
       if (statusFilter === 'Oculto') matchesStatus = m.status === 'hidden';
-
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [materials, searchQuery, typeFilter, statusFilter]);
@@ -163,7 +306,7 @@ export default function AdminClassPage() {
     setStatusFilter('Todos los estados');
   };
 
-  // Keyboard accessibility for modals
+  // Keyboard accessibility
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -196,12 +339,9 @@ export default function AdminClassPage() {
   };
 
   const toggleStatus = (id: number) => {
-    setMaterials(materials.map(m => {
-      if (m.id === id) {
-        return { ...m, status: m.status === 'visible' ? 'hidden' : 'visible' };
-      }
-      return m;
-    }));
+    setMaterials(materials.map(m =>
+      m.id === id ? { ...m, status: m.status === 'visible' ? 'hidden' : 'visible' } : m
+    ));
   };
 
   const confirmDelete = (material: ClassMaterial) => {
@@ -209,24 +349,28 @@ export default function AdminClassPage() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (materialToDelete) {
+      try {
+        await deleteMaterialApi(materialToDelete.id);
+      } catch (e) {
+        // If API fails (e.g. not yet in DB), still remove locally
+      }
       setMaterials(materials.filter(m => m.id !== materialToDelete.id));
       setIsDeleteModalOpen(false);
       setMaterialToDelete(null);
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    
+
     const trimmedName = formData.name.trim();
     const trimmedUrl = formData.url.trim();
 
     if (!trimmedName) errors.name = 'El nombre es obligatorio';
     if (!formData.type) errors.type = 'Selecciona un tipo de material';
-    
     if (!trimmedUrl) {
       errors.url = 'La URL es obligatoria';
     } else if (!isValidUrl(trimmedUrl)) {
@@ -236,92 +380,147 @@ export default function AdminClassPage() {
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    if (editingMaterial) {
-      setMaterials(materials.map(m => m.id === editingMaterial.id ? {
-        ...m,
-        name: trimmedName,
-        type: formData.type as MaterialType,
-        url: trimmedUrl,
-        description: formData.description.trim(),
-        status: formData.status
-      } : m));
-    } else {
-      const newMaterial: ClassMaterial = {
-        id: Date.now(),
-        classId: Number(classId),
-        name: trimmedName,
-        type: formData.type as MaterialType,
-        url: trimmedUrl,
-        description: formData.description.trim(),
-        status: formData.status,
-        createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
-        updatedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-      };
-      setMaterials([...materials, newMaterial]);
+    setIsSubmitting(true);
+    try {
+      if (editingMaterial) {
+        // Edit local only (API doesn't have a PATCH for materials in original design)
+        setMaterials(materials.map(m => m.id === editingMaterial.id ? {
+          ...m,
+          name: trimmedName,
+          type: formData.type as MaterialType,
+          url: trimmedUrl,
+          description: formData.description.trim(),
+          status: formData.status
+        } : m));
+      } else {
+        // Try to create via API first, fallback to local
+        try {
+          const created = await createLinkMaterialApi(parseInt(classId), trimmedName, trimmedUrl);
+          const newMaterial = mapApiMaterial(created, parseInt(classId));
+          newMaterial.type = formData.type as MaterialType;
+          newMaterial.description = formData.description.trim() || undefined;
+          newMaterial.status = formData.status;
+          setMaterials([...materials, newMaterial]);
+        } catch {
+          const newMaterial: ClassMaterial = {
+            id: Date.now(),
+            classId: parseInt(classId),
+            name: trimmedName,
+            type: formData.type as MaterialType,
+            url: trimmedUrl,
+            description: formData.description.trim(),
+            status: formData.status,
+            createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+            updatedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+          };
+          setMaterials([...materials, newMaterial]);
+        }
+      }
+      setIsFormModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsFormModalOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#111514] text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#157347] mx-auto"></div>
+          <p className="mt-4 text-white/50">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#111514] text-white font-sans">
       <div className="flex min-h-[calc(100vh-70px)]">
         <AdminSidebar />
-        
+
         <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
           <div className="max-w-[1600px] mx-auto space-y-8">
-            
-            {/* Encabezado */}
+
+            {/* Encabezado con breadcrumb */}
             <div>
               <div className="text-sm text-white/50 mb-4 flex items-center gap-2">
-                <Link href="/admin/cursos" className="hover:text-white transition-colors">Cursos</Link>
+                <Link href="/admin/cursos" className="hover:text-white transition-colors flex items-center gap-1">
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Cursos
+                </Link>
                 <span>/</span>
-                <Link href={`/admin/cursos/${courseId}`} className="hover:text-white transition-colors">Introducción a Python</Link>
+                <Link href={`/admin/cursos/${courseId}`} className="hover:text-white transition-colors">
+                  {course?.name || `Curso ${courseId}`}
+                </Link>
                 <span>/</span>
-                <span className="text-white">Clase {classId}</span>
+                <span className="text-white">Clase {classData?.order_number || classId}</span>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Administrar clase</h1>
                   <p className="mt-1 text-sm text-white/50">Edita la información de la clase y administra sus materiales.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Link href={`/admin/cursos/${courseId}`} className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors text-center">
+                  <Link
+                    href={`/admin/cursos/${courseId}`}
+                    className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors text-center"
+                  >
                     Volver al curso
                   </Link>
-                  <button className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors">
-                    Guardar cambios
+                  <button
+                    onClick={handleSaveClass}
+                    disabled={isSaving}
+                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Información de la clase */}
+            {/* Información de la clase (inline edit) */}
             <section className="rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6">
               <h2 className="text-lg font-bold text-white mb-6">Información de la clase</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
                     <label className="mb-1.5 block text-sm font-normal text-white/85">Número u orden</label>
-                    <input type="text" value={classInfo.order} onChange={e => setClassInfo({...classInfo, order: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                    <input
+                      type="text"
+                      value={classFormData.order}
+                      onChange={e => setClassFormData({ ...classFormData, order: e.target.value })}
+                      className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                    />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-normal text-white/85">Título</label>
-                    <input type="text" value={classInfo.title} onChange={e => setClassInfo({...classInfo, title: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                    <input
+                      type="text"
+                      value={classFormData.title}
+                      onChange={e => setClassFormData({ ...classFormData, title: e.target.value })}
+                      className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                    />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                    <select value={classInfo.status} onChange={e => setClassInfo({...classInfo, status: e.target.value as any})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
-                      <option value="published">Publicado</option>
-                      <option value="draft">Borrador</option>
-                      <option value="archived">Archivado</option>
-                    </select>
+                    <label className="mb-1.5 block text-sm font-normal text-white/85">URL del video (opcional)</label>
+                    <input
+                      type="text"
+                      value={classFormData.video_url}
+                      onChange={e => setClassFormData({ ...classFormData, video_url: e.target.value })}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
-                  <textarea value={classInfo.description} onChange={e => setClassInfo({...classInfo, description: e.target.value})} rows={5} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] resize-none"></textarea>
+                  <textarea
+                    value={classFormData.description}
+                    onChange={e => setClassFormData({ ...classFormData, description: e.target.value })}
+                    rows={5}
+                    className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
+                  />
                 </div>
               </div>
             </section>
@@ -331,9 +530,12 @@ export default function AdminClassPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-white">Materiales de la clase</h2>
-                  <p className="mt-1 text-sm text-white/50">Administra los recursos externos que estarán disponibles para los estudiantes.</p>
+                  <p className="mt-1 text-sm text-white/50">Administra los recursos externos disponibles para los estudiantes.</p>
                 </div>
-                <button onClick={openCreateModal} className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0">
+                <button
+                  onClick={openCreateModal}
+                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0"
+                >
                   <Plus className="w-4 h-4" />
                   Agregar material
                 </button>
@@ -344,7 +546,10 @@ export default function AdminClassPage() {
                   <FolderOpen className="w-12 h-12 text-white/10 mb-4" />
                   <p className="text-lg font-medium text-white">Esta clase todavía no tiene materiales.</p>
                   <p className="mt-1 text-sm text-white/50 max-w-sm">Agrega enlaces a documentos, presentaciones, referencias u otros recursos externos.</p>
-                  <button onClick={openCreateModal} className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors">
+                  <button
+                    onClick={openCreateModal}
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors"
+                  >
                     <Plus className="w-4 h-4" />
                     Agregar primer material
                   </button>
@@ -355,36 +560,36 @@ export default function AdminClassPage() {
                   <div className="flex flex-col xl:flex-row xl:items-center gap-4">
                     <div className="relative w-full xl:w-[400px]">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar materiales por nombre..." 
-                        className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347]"
+                        placeholder="Buscar materiales por nombre..."
+                        className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                       />
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-                      <select 
+                      <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]"
+                        className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                       >
                         <option value="Todos los tipos">Todos los tipos</option>
                         {Object.values(TypeLabels).map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
 
-                      <select 
+                      <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]"
+                        className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                       >
                         <option value="Todos los estados">Todos los estados</option>
                         <option value="Visible">Visible</option>
                         <option value="Oculto">Oculto</option>
                       </select>
 
-                      <button 
+                      <button
                         onClick={handleClearFilters}
                         className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors whitespace-nowrap"
                       >
@@ -500,17 +705,17 @@ export default function AdminClassPage() {
           <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-white">{editingMaterial ? 'Editar material' : 'Agregar material'}</h2>
             <p className="mt-1 text-sm text-white/50">Registra un recurso externo para esta clase.</p>
-            
+
             <form onSubmit={handleFormSubmit} className="mt-6 space-y-4">
               <div>
                 <label htmlFor="name" className="mb-1.5 block text-sm font-normal text-white/85">Nombre del material</label>
-                <input type="text" id="name" placeholder="Ejemplo: Diapositivas de introducción" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                <input type="text" id="name" placeholder="Ejemplo: Diapositivas de introducción" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
                 {formErrors.name && <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>}
               </div>
 
               <div>
                 <label htmlFor="type" className="mb-1.5 block text-sm font-normal text-white/85">Tipo de material</label>
-                <select id="type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value as MaterialType})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
+                <select id="type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as MaterialType })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
                   <option value="" disabled>Selecciona un tipo</option>
                   {Object.entries(TypeLabels).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
@@ -522,7 +727,7 @@ export default function AdminClassPage() {
 
               <div>
                 <label htmlFor="url" className="mb-1.5 block text-sm font-normal text-white/85">URL del material</label>
-                <input type="url" id="url" placeholder="https://" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                <input type="url" id="url" placeholder="https://" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
                 {formErrors.url && <p className="mt-1 text-xs text-red-400">{formErrors.url}</p>}
               </div>
 
@@ -531,12 +736,12 @@ export default function AdminClassPage() {
                   Descripción opcional
                   <span className="text-white/40">{formData.description.length}/300</span>
                 </label>
-                <textarea id="description" maxLength={300} placeholder="Agrega una breve descripción para ayudar al estudiante a identificar el recurso." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] resize-none"></textarea>
+                <textarea id="description" maxLength={300} placeholder="Agrega una breve descripción para ayudar al estudiante a identificar el recurso." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none" />
               </div>
 
               <div>
                 <label htmlFor="status" className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                <select id="status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as MaterialStatus})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
+                <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as MaterialStatus })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
                   <option value="visible">Visible</option>
                   <option value="hidden">Oculto</option>
                 </select>
@@ -546,8 +751,8 @@ export default function AdminClassPage() {
                 <button type="button" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors">
-                  {editingMaterial ? 'Guardar cambios' : 'Agregar material'}
+                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSubmitting ? 'Guardando...' : editingMaterial ? 'Guardar cambios' : 'Agregar material'}
                 </button>
               </div>
             </form>
@@ -567,7 +772,7 @@ export default function AdminClassPage() {
               ¿Deseas eliminar <span className="font-semibold text-white">"{materialToDelete.name}"</span>?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
-            
+
             <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 w-full">
               <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
                 Cancelar

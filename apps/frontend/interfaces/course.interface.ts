@@ -2,6 +2,7 @@ export interface CourseDashboard {
   course_id: number;
   name: string;
   course_code: string;
+  description?: string;
 }
 export interface Course {
   course_id: number;

@@ -1,17 +1,23 @@
 import type { CourseDashboard } from '@/interfaces/course.interface';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const createCourse = async (
-  event: React.SyntheticEvent<HTMLFormElement, SubmitEvent>,
-) => {
-  event.preventDefault();
-  // Utilizar funcion fetch para enviar datos al backend (/admin/courses  )
-};
 async function getCourseData(search: string) {
-  const response = await fetch(`${API_URL}/admin/courses?q=${search}`);
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  const response = await fetch(`${API_URL}/admin/courses?q=${search}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Error al obtener cursos');
+  }
+  
   const data = await response.json();
   return data;
 }
+
 export default async function DashboardAdmin({
   searchParams,
 }: {
@@ -21,20 +27,24 @@ export default async function DashboardAdmin({
   const courseData = await getCourseData(busqueda);
   return (
     <>
-      <form onSubmit={createCourse}>
-        <input type="text" name="name" placeholder="Course Name" required />
-        <input type="text" name="course_code" placeholder="Course Code" required />
-        <input type="text" name="description" placeholder="Description" required />
-        <input type="file" name="url_image" placeholder="Image URL" required />
-        <input type="text" name="teacher_name" placeholder="Teacher Name" required />
-        <button type="submit">Create Course</button>
-      </form>
-      {courseData.data.map((course: CourseDashboard) => (
-        <div key={course.course_id}>
-          <h2>{course.name}</h2>
-          <h3>{course.course_code}</h3>
-        </div>
-      ))}
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Dashboard Admin</h1>
+        <p className="text-gray-400 mb-6">Gestión de cursos, clases y materiales</p>
+        
+        {courseData.data && courseData.data.length > 0 ? (
+          <div className="grid gap-4">
+            {courseData.data.map((course: CourseDashboard) => (
+              <div key={course.course_id} className="bg-[#1A201D] border border-white/10 rounded-lg p-4">
+                <h2 className="text-lg font-semibold">{course.name}</h2>
+                <h3 className="text-sm text-gray-400">{course.course_code}</h3>
+                {course.description && <p className="text-sm mt-2">{course.description}</p>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400">No hay cursos disponibles</p>
+        )}
+      </div>
     </>
   );
 }

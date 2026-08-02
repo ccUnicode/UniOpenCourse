@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const EyeIcon = ({ className = "w-5 h-5" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
@@ -11,10 +12,11 @@ const EyeOffIcon = ({ className = "w-5 h-5" }) => (
 );
 
 export default function Registro() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    lastName: '',
+    last_name: '',
     username: '',
     password: ''
   });
@@ -38,7 +40,7 @@ export default function Registro() {
 
     if (!formData.email.trim()) { newErrors.email = 'Requerido'; hasErrors = true; }
     if (!formData.name.trim()) { newErrors.name = 'Requerido'; hasErrors = true; }
-    if (!formData.lastName.trim()) { newErrors.lastName = 'Requerido'; hasErrors = true; }
+    if (!formData.last_name.trim()) { newErrors.last_name = 'Requerido'; hasErrors = true; }
     if (!formData.username.trim()) { newErrors.username = 'Requerido'; hasErrors = true; }
     if (!formData.password) { newErrors.password = 'Requerido'; hasErrors = true; }
 
@@ -46,12 +48,44 @@ export default function Registro() {
     if (hasErrors) return;
 
     setIsLoading(true);
-    // TODO: Connect to backend (/auth/register)
-    console.log('Registering:', formData);
     
-    setTimeout(() => {
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          last_name: formData.last_name,
+          username: formData.username,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Registro exitoso, redirigir a login
+        router.push('/login');
+      } else {
+        // Manejar errores del backend
+        if (data.message) {
+          newErrors.email = data.message;
+        } else {
+          newErrors.email = 'Error al registrar. Intenta con otros datos.';
+        }
+        setErrors(newErrors);
+      }
+    } catch (error) {
+      console.error('Error en registro:', error);
+      newErrors.email = 'Error de conexión con el servidor.';
+      setErrors(newErrors);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -98,18 +132,18 @@ export default function Registro() {
                 {errors.name && <p className="mt-1.5 text-xs text-red-400">{errors.name}</p>}
               </div>
               <div>
-                <label htmlFor="lastName" className="mb-2 block text-sm font-normal text-white/85">
+                <label htmlFor="last_name" className="mb-2 block text-sm font-normal text-white/85">
                   Apellido
                 </label>
                 <input
                   type="text"
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
+                  id="last_name"
+                  name="last_name"
+                  value={formData.last_name}
                   onChange={handleChange}
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none transition-colors duration-200 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
-                {errors.lastName && <p className="mt-1.5 text-xs text-red-400">{errors.lastName}</p>}
+                {errors.last_name && <p className="mt-1.5 text-xs text-red-400">{errors.last_name}</p>}
               </div>
             </div>
 

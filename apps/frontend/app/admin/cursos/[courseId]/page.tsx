@@ -1,17 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   SquarePen,
   Trash2,
   Plus,
-  BookOpen
+  BookOpen,
+  ArrowLeft
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
+// --- Types ---
 type CourseStatus = "published" | "draft" | "archived";
+
+interface Class {
+  class_id: number;
+  course_id: number;
+  title: string;
+  description?: string;
+  video_url?: string;
+  order_number: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Course {
+  course_id: number;
+  name: string;
+  course_code: string;
+  description: string;
+  teacher_name?: string;
+  url_image?: string;
+  status?: CourseStatus;
+}
+
+// --- Components ---
 
 const StatusBadge = ({ status }: { status: CourseStatus }) => {
   const styles = {
@@ -31,120 +56,307 @@ const StatusBadge = ({ status }: { status: CourseStatus }) => {
   );
 };
 
+// --- API Functions ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+const fetchCourse = async (courseId: number): Promise<Course> => {
+  const response = await fetch(`${API_URL}/admin/courses/${courseId}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Error al obtener curso');
+  return await response.json();
+};
+
+const fetchClasses = async (courseId: number): Promise<Class[]> => {
+  try {
+    const response = await fetch(`${API_URL}/admin/classes?course_id=${courseId}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al obtener clases');
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('Error fetching classes:', error);
+    return [];
+  }
+};
+
+const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Course> => {
+  const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(courseData),
+  });
+  if (!response.ok) throw new Error('Error al actualizar curso');
+  return await response.json();
+};
+
+const createClass = async (classData: any): Promise<Class> => {
+  const response = await fetch(`${API_URL}/admin/classes`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(classData),
+  });
+  if (!response.ok) throw new Error('Error al crear clase');
+  return await response.json();
+};
+
+const deleteClass = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/admin/classes/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Error al eliminar clase');
+};
+
+// --- Main Page ---
+
 export default function AdminCourseDetailPage() {
   const params = useParams();
-  const courseId = params?.courseId as string || "1";
+  const router = useRouter();
+  const courseId = parseInt(params.courseId as string);
 
-  // Mock course data
-  const [courseInfo, setCourseInfo] = useState({
-    name: "Introducción a Python",
-    code: "CS-101",
-    teacher: "Elena García",
-    description: "Curso introductorio de programación con Python.",
-    status: "published"
+  const [courseInfo, setCourseInfo] = useState<Course | null>(null);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  // Course form state (for inline editing)
+  const [courseFormData, setCourseFormData] = useState({
+    name: '',
+    course_code: '',
+    description: '',
+    teacher_name: '',
+    url_image: '',
+    status: 'draft' as CourseStatus,
   });
 
-  // Mock classes data
-  const [classes, setClasses] = useState([
-    { id: 1, order: "Clase 1", title: "Introducción a Python", status: "published" as CourseStatus, updatedAt: "02 Ago 2026" },
-    { id: 2, order: "Clase 2", title: "Tipos de datos y variables", status: "draft" as CourseStatus, updatedAt: "05 Ago 2026" }
-  ]);
-
+  // Delete modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [classToDelete, setClassToDelete] = useState<any>(null);
+  const [classToDelete, setClassToDelete] = useState<Class | null>(null);
 
+  // Create modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newClass, setNewClass] = useState({ order: '', title: '', status: 'draft' as CourseStatus });
+  const [isCreating, setIsCreating] = useState(false);
 
-  const confirmDelete = (cls: any) => {
+  useEffect(() => {
+    if (courseId) loadData();
+  }, [courseId]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [courseData, classesData] = await Promise.all([
+        fetchCourse(courseId),
+        fetchClasses(courseId),
+      ]);
+      setCourseInfo(courseData);
+      setCourseFormData({
+        name: courseData.name,
+        course_code: courseData.course_code,
+        description: courseData.description || '',
+        teacher_name: courseData.teacher_name || '',
+        url_image: courseData.url_image || '',
+        status: courseData.status || 'draft',
+      });
+      setClasses(classesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveCourse = async () => {
+    setIsSaving(true);
+    setSaveError('');
+    try {
+      const updated = await updateCourse(courseId, {
+        name: courseFormData.name,
+        course_code: courseFormData.course_code,
+        description: courseFormData.description,
+        teacher_name: courseFormData.teacher_name,
+        url_image: courseFormData.url_image || undefined,
+        status: courseFormData.status,
+      });
+      setCourseInfo(updated);
+    } catch (error) {
+      setSaveError('Error al guardar los cambios.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmDelete = (cls: Class) => {
     setClassToDelete(cls);
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (classToDelete) {
-      setClasses(classes.filter(c => c.id !== classToDelete.id));
-      setIsDeleteModalOpen(false);
-      setClassToDelete(null);
+      try {
+        await deleteClass(classToDelete.class_id);
+        setClasses(classes.filter(c => c.class_id !== classToDelete.class_id));
+        setIsDeleteModalOpen(false);
+        setClassToDelete(null);
+      } catch (error) {
+        console.error('Error deleting class:', error);
+      }
     }
   };
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClass.title.trim() || !newClass.order.trim()) return;
-    
-    const newId = Date.now();
-    setClasses([...classes, {
-      id: newId,
-      order: newClass.order,
-      title: newClass.title,
-      status: newClass.status,
-      updatedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-    }]);
-    
-    setIsCreateModalOpen(false);
-    setNewClass({ order: '', title: '', status: 'draft' as CourseStatus });
+    if (!newClass.title.trim()) return;
+
+    setIsCreating(true);
+    try {
+      const orderNumber = newClass.order
+        ? parseInt(newClass.order.replace('Clase ', ''))
+        : classes.length + 1;
+
+      const created = await createClass({
+        course_id: courseId,
+        title: newClass.title,
+        order_number: orderNumber,
+      });
+
+      setClasses([...classes, created]);
+      setIsCreateModalOpen(false);
+      setNewClass({ order: '', title: '', status: 'draft' });
+      loadData();
+    } catch (error) {
+      console.error('Error creating class:', error);
+    } finally {
+      setIsCreating(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#111514] text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#157347] mx-auto"></div>
+          <p className="mt-4 text-white/50">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#111514] text-white font-sans">
       <div className="flex min-h-[calc(100vh-70px)]">
         <AdminSidebar />
-        
+
         <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
           <div className="max-w-[1600px] mx-auto space-y-8">
-            
-            {/* Encabezado */}
+
+            {/* Encabezado con breadcrumb */}
             <div>
               <div className="text-sm text-white/50 mb-4 flex items-center gap-2">
-                <Link href="/admin/cursos" className="hover:text-white transition-colors">Cursos</Link>
+                <Link href="/admin/cursos" className="hover:text-white transition-colors flex items-center gap-1">
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Cursos
+                </Link>
                 <span>/</span>
-                <span className="text-white">{courseInfo.name}</span>
+                <span className="text-white">{courseInfo?.name}</span>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Administrar curso</h1>
                   <p className="mt-1 text-sm text-white/50">Edita la información general y gestiona las clases del curso.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Link href="/admin/cursos" className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors text-center">
+                  <Link
+                    href="/admin/cursos"
+                    className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white hover:bg-white/5 transition-colors text-center"
+                  >
                     Volver a cursos
                   </Link>
-                  <button className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors">
-                    Guardar cambios
+                  <button
+                    onClick={handleSaveCourse}
+                    disabled={isSaving}
+                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
                 </div>
               </div>
+              {saveError && <p className="mt-2 text-sm text-red-400">{saveError}</p>}
             </div>
 
-            {/* Información del Curso */}
+            {/* Información del Curso (inline edit) */}
             <section className="rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6">
               <h2 className="text-lg font-bold text-white mb-6">Información general</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Nombre del curso</label>
-                  <input type="text" value={courseInfo.name} onChange={e => setCourseInfo({...courseInfo, name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                  <input
+                    type="text"
+                    value={courseFormData.name}
+                    onChange={e => setCourseFormData({ ...courseFormData, name: e.target.value })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Código</label>
-                  <input type="text" value={courseInfo.code} onChange={e => setCourseInfo({...courseInfo, code: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                  <input
+                    type="text"
+                    value={courseFormData.course_code}
+                    onChange={e => setCourseFormData({ ...courseFormData, course_code: e.target.value.toUpperCase() })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Profesor</label>
-                  <input type="text" value={courseInfo.teacher} onChange={e => setCourseInfo({...courseInfo, teacher: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
+                  <input
+                    type="text"
+                    value={courseFormData.teacher_name}
+                    onChange={e => setCourseFormData({ ...courseFormData, teacher_name: e.target.value })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                  <select value={courseInfo.status} onChange={e => setCourseInfo({...courseInfo, status: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
+                  <select
+                    value={courseFormData.status}
+                    onChange={e => setCourseFormData({ ...courseFormData, status: e.target.value as CourseStatus })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  >
                     <option value="published">Publicado</option>
                     <option value="draft">Borrador</option>
                     <option value="archived">Archivado</option>
                   </select>
                 </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">URL de imagen (opcional)</label>
+                  <input
+                    type="text"
+                    value={courseFormData.url_image}
+                    onChange={e => setCourseFormData({ ...courseFormData, url_image: e.target.value })}
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
+                </div>
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
-                  <textarea value={courseInfo.description} onChange={e => setCourseInfo({...courseInfo, description: e.target.value})} rows={3} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] resize-none"></textarea>
+                  <textarea
+                    value={courseFormData.description}
+                    onChange={e => setCourseFormData({ ...courseFormData, description: e.target.value })}
+                    rows={3}
+                    className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
+                  />
                 </div>
               </div>
             </section>
@@ -156,7 +368,10 @@ export default function AdminCourseDetailPage() {
                   <h2 className="text-lg font-bold text-white">Clases del curso</h2>
                   <p className="mt-1 text-sm text-white/50">Administra las clases y su contenido.</p>
                 </div>
-                <button onClick={() => setIsCreateModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0"
+                >
                   <Plus className="w-4 h-4" />
                   Crear clase
                 </button>
@@ -175,24 +390,33 @@ export default function AdminCourseDetailPage() {
                       <tr className="bg-[#151A17] border-b border-[#2B332F]">
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Orden</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título de la clase</th>
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Estado</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Última actualización</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {classes.map((cls) => (
-                        <tr key={cls.id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
-                          <td className="px-5 py-4 text-sm text-white/75">{cls.order}</td>
+                        <tr key={cls.class_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
+                          <td className="px-5 py-4 text-sm text-white/75">Clase {cls.order_number}</td>
                           <td className="px-5 py-4 text-sm font-semibold text-white">{cls.title}</td>
-                          <td className="px-5 py-4 text-sm"><StatusBadge status={cls.status} /></td>
-                          <td className="px-5 py-4 text-sm text-white/50">{cls.updatedAt}</td>
+                          <td className="px-5 py-4 text-sm text-white/50">{cls.updated_at || cls.created_at || 'N/A'}</td>
                           <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Link href={`/admin/cursos/${courseId}/clases/${cls.id}`} aria-label="Administrar clase" title="Administrar clase y materiales" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
+                              <Link
+                                href={`/admin/cursos/${courseId}/clases/${cls.class_id}`}
+                                aria-label="Administrar clase"
+                                title="Administrar clase y materiales"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors"
+                              >
                                 <SquarePen className="w-4 h-4" />
                               </Link>
-                              <button onClick={() => confirmDelete(cls)} type="button" aria-label="Eliminar clase" title="Eliminar clase" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                              <button
+                                onClick={() => confirmDelete(cls)}
+                                type="button"
+                                aria-label="Eliminar clase"
+                                title="Eliminar clase"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -204,6 +428,7 @@ export default function AdminCourseDetailPage() {
                 </div>
               )}
             </section>
+
           </div>
         </main>
       </div>
@@ -220,12 +445,20 @@ export default function AdminCourseDetailPage() {
               ¿Deseas eliminar <span className="font-semibold text-white">"{classToDelete.title}"</span>?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
-            
+
             <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 w-full">
-              <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+              >
                 Cancelar
               </button>
-              <button onClick={handleDelete} type="button" className="w-full sm:w-auto rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors">
+              <button
+                onClick={handleDelete}
+                type="button"
+                className="w-full sm:w-auto rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors"
+              >
                 Eliminar clase
               </button>
             </div>
@@ -239,14 +472,19 @@ export default function AdminCourseDetailPage() {
           <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear nueva clase</h2>
             <p className="mt-1 text-sm text-white/50">Agrega una clase al temario del curso.</p>
-            
+
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-normal text-white/85">Número u orden</label>
-                <select value={newClass.order} onChange={(e) => setNewClass({...newClass, order: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
+                <select
+                  value={newClass.order}
+                  onChange={(e) => setNewClass({ ...newClass, order: e.target.value })}
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                >
                   <option value="" disabled>Selecciona el orden de la clase</option>
                   {Array.from({ length: 16 }, (_, i) => `Clase ${i + 1}`).map(opt => {
-                    const exists = classes.some(c => c.order === opt);
+                    const orderNum = parseInt(opt.replace('Clase ', ''));
+                    const exists = classes.some(c => c.order_number === orderNum);
                     return (
                       <option key={opt} value={opt} disabled={exists} className={exists ? "text-white/30" : "text-white"}>
                         {opt} {exists ? '(Ya registrada)' : ''}
@@ -257,24 +495,29 @@ export default function AdminCourseDetailPage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-normal text-white/85">Título de la clase</label>
-                <input type="text" placeholder="Ej: Estructuras de control" value={newClass.title} onChange={(e) => setNewClass({...newClass, title: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]" />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Estado inicial</label>
-                <select value={newClass.status} onChange={(e) => setNewClass({...newClass, status: e.target.value as CourseStatus})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347]">
-                  <option value="published">Publicado</option>
-                  <option value="draft">Borrador</option>
-                  <option value="archived">Archivado</option>
-                </select>
+                <input
+                  type="text"
+                  placeholder="Ej: Estructuras de control"
+                  value={newClass.title}
+                  onChange={(e) => setNewClass({ ...newClass, title: e.target.value })}
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                />
               </div>
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+                >
                   Cancelar
                 </button>
-                <button type="submit" className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors">
-                  Crear clase
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreating ? 'Creando...' : 'Crear clase'}
                 </button>
               </div>
             </form>

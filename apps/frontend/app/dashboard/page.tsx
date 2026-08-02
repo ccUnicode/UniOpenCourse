@@ -8,12 +8,12 @@ async function getCourseData() {
   return courses;
 }
 
-export default function Dashboard() {
-  const courses = getCourseData();
+export default async function Dashboard() {
+  const courses = await getCourseData();
   return (
     <div>
       <h1>User Dashboard</h1>
-      {courses.data.map((course: Course) => (
+      {courses?.data?.map((course: Course) => (
         <div key={course.course_id}>
           <h2>{course.name}</h2>
         </div>

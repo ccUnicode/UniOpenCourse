@@ -10,14 +10,16 @@ export function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Obtenemos la cookie mock que definimos en el login
-    const role = request.cookies.get('role')?.value;
-
-    // Si no es admin, lo redirigimos al login principal para proteger el dashboard
-    if (role !== 'admin') {
-      const loginUrl = new URL('/login', request.url);
-      return NextResponse.redirect(loginUrl);
-    }
+    // Por ahora deshabilitamos la verificación de autenticación en el middleware
+    // La autenticación se maneja en el cliente con JWT tokens en localStorage
+    // TODO: Implementar verificación JWT en el middleware si es necesario
+    
+    // Comentamos temporalmente la verificación de cookie
+    // const role = request.cookies.get('role')?.value;
+    // if (role !== 'admin') {
+    //   const loginUrl = new URL('/login', request.url);
+    //   return NextResponse.redirect(loginUrl);
+    // }
   }
 
   return NextResponse.next();

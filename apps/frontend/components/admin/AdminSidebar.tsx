@@ -4,8 +4,8 @@ import { LayoutDashboard, BookOpen, Route, Tags, Users, Settings, LogOut } from 
 
 export const AdminSidebar = () => {
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "#", active: false },
-    { icon: BookOpen, label: "Cursos", href: "/admin/cursos", active: true },
+    { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard", active: false },
+    { icon: BookOpen, label: "Cursos", href: "/admin/cursos", active: false },
     { icon: Route, label: "Rutas", href: "#", active: false },
     { icon: Tags, label: "Etiquetas", href: "#", active: false },
     { icon: Users, label: "Usuarios", href: "#", active: false },
