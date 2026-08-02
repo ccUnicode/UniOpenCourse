@@ -1,8 +1,9 @@
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
 export async function Search(busqueda: string) {
   {
-    console.log(`${baseUrl}/search?q=${busqueda}`);
-    const response = await fetch(`${baseUrl}/search?q=${busqueda}`);
+    const params = new URLSearchParams({ q: busqueda });
+    const url = `${baseUrl}/search?${params.toString()}`;
+    const response = await fetch(url);
     const resultados = await response.json();
     console.log(resultados);
     if (resultados.error) {
