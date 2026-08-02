@@ -50,9 +50,7 @@ export default async function Clase({
       />
 
       {/* Línea divisoria verde oscuro (estilo minecraft) */}
-      <div id="reproductor" className="relative w-full z-20">
-        <div className="w-full h-[1px] bg-[#01392a]"></div>
-        <div className="absolute top-[1px] left-0 w-full h-12 bg-gradient-to-b from-[#01392a]/60 to-transparent pointer-events-none"></div>
+      <div id="reproductor" className="relative w-full z-20 pt-8">
       </div>
 
       {/* 2. Reproductor de Video */}
