@@ -15,7 +15,7 @@ interface CourseHeroProps {
 
 export default function CourseHero({ courseName, courseCode, description, imageUrl, teacher }: CourseHeroProps) {
   return (
-    <section className="relative w-full h-[380px] flex-shrink-0 overflow-hidden bg-[#0d1311] flex border-b border-[#13221c]">
+    <section className="relative w-full h-[380px] flex-shrink-0 overflow-hidden bg-[#0f1714] flex">
       
       {/* Lado Izquierdo: Información del curso (Mitad exacta) */}
       <div className="w-1/2 h-full flex flex-col justify-center pl-10 pr-6 z-10">
@@ -42,7 +42,7 @@ export default function CourseHero({ courseName, courseCode, description, imageU
       {/* Lado Derecho: Imagen de fondo (Mitad exacta) */}
       <div className="absolute top-0 right-0 w-1/2 h-full">
         {/* Difuminado corto (w-40) solo en el borde izquierdo de la imagen */}
-        <div className="absolute inset-y-0 left-0 w-48 bg-gradient-to-r from-[#0d1311] to-transparent z-10" />
+        <div className="absolute inset-y-0 left-0 w-48 bg-gradient-to-r from-[#0f1714] to-transparent z-10" />
         
         <img 
           src={imageUrl} 
