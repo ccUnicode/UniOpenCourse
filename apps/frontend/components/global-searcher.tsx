@@ -11,7 +11,9 @@ export default function GlobalSearcher({}) {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    setQuery(searchParams.get('q') ?? '');
+    const q = searchParams.get('q') ?? '';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuery((prev) => (prev === q ? prev : q));
   }, [searchParams]);
 
   const handleSearch = () => {

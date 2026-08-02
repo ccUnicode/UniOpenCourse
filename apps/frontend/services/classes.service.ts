@@ -22,7 +22,7 @@ function getEmbedUrl(youtubeUrl: string) {
       return url.href;
     }
     return '';
-  } catch (error) {
+  } catch {
     return '';
   }
 }
