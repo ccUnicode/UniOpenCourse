@@ -19,5 +19,8 @@ export async function getAdminCourseData(search: string, token: string) {
     },
   });
   const data = await response.json();
+  if (data.error) {
+    return { data: [], error: true, message: data.message };
+  }
   return data;
 }
