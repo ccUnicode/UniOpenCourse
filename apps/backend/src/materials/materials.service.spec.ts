@@ -53,7 +53,7 @@ describe('MaterialsService', () => {
         class_id: dto.class_id,
         material_type: 'file',
         filename: mockFile.originalname,
-        url_link: mockFile.filename,
+        file_path: mockFile.filename,
       };
 
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
@@ -66,7 +66,7 @@ describe('MaterialsService', () => {
           class_id: dto.class_id,
           material_type: 'file',
           filename: mockFile.originalname,
-          url_link: mockFile.filename,
+          file_path: mockFile.filename,
         },
       });
     });
@@ -153,6 +153,29 @@ describe('MaterialsService', () => {
       expect(prisma.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
+    });
+  });
+
+  describe('getDownloadableFile', () => {
+    it('should throw NotFoundException if material does not exist', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue(null);
+      await expect(service.getDownloadableFile(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if material is not a file', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'link',
+        file_path: 'test.pdf'
+      });
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if material file_path is empty', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: null
+      });
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
     });
   });
 });
