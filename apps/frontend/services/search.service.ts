@@ -13,7 +13,9 @@ export function formatType(type: string) {
 
 export async function Search(busqueda: string, page: number) {
   {
-    const response = await fetch(`${baseUrl}/search?q=${busqueda}&page=${page}`);
+    const params = new URLSearchParams({ q: busqueda, page: page.toString() });
+    const url = `${baseUrl}/search?${params.toString()}`;
+    const response = await fetch(url);
     const resultados = await response.json();
     console.log(resultados);
     if (resultados.error) {
