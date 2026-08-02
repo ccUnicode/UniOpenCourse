@@ -12,7 +12,7 @@ export default async function Clase({
     notFound();
   }
   const clase = await getClassData(class_id);
-  if (clase.error) {
+  if (clase.error === 'Not Found') {
     notFound();
   }
   const materials = await getMaterialData(class_id);
