@@ -1,6 +1,7 @@
 import SearchResultCard from '@/components/search-result-card';
-import { SearchResult } from '@/interfaces/search.interface';
 import { Search } from '@/services/search.service';
+import { SearchResult } from '@/interfaces/search.interface';
+import { SearchPagination } from '@/components/search-pagination';
 
 function showMessage(message: string) {
   return (
@@ -13,10 +14,10 @@ function showMessage(message: string) {
 export default async function Busqueda({
   searchParams,
 }: {
-  searchParams: Promise<{ q: string }>;
+  searchParams: Promise<{ q: string; page: string }>;
 }) {
-  const { q = '' } = await searchParams;
-  const resultados = await Search(q);
+  const { q = '', page = '1' } = await searchParams;
+  const resultados = await Search(q, Number(page));
   const data = resultados.data;
   return resultados.error ? (
     showMessage(resultados.message)
@@ -33,6 +34,7 @@ export default async function Busqueda({
           />
         );
       })}
+      <SearchPagination page={Number(page)} totalPages={resultados.totalPages} />
     </div>
   );
 }

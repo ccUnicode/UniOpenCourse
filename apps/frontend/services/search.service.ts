@@ -11,10 +11,9 @@ export function formatType(type: string) {
   }
 }
 
-export async function Search(busqueda: string) {
+export async function Search(busqueda: string, page: number) {
   {
-    console.log(`${baseUrl}/search?q=${busqueda}`);
-    const response = await fetch(`${baseUrl}/search?q=${busqueda}`);
+    const response = await fetch(`${baseUrl}/search?q=${busqueda}&page=${page}`);
     const resultados = await response.json();
     console.log(resultados);
     if (resultados.error) {
