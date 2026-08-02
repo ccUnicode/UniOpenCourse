@@ -3,7 +3,6 @@ import { getAdminCourseData } from '@/services/courses.service';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { CreateCourse } from '@/components/create-course';
-const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 export default async function DashboardAdmin({
   searchParams,

@@ -13,7 +13,7 @@ export async function getCourseData(busqueda: string, page: number = 1) {
 }
 
 export async function getAdminCourseData(search: string) {
-  const response = await fetch(`${API_URL}/admin/courses?q=${search}`);
+  const response = await fetch(`${baseUrl}/admin/courses?q=${search}`);
   const data = await response.json();
   return data;
 }
