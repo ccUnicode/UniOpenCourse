@@ -25,7 +25,10 @@ export class ClassesService {
    */
   async findAll(search?: string, page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
     const safePage = Number.isInteger(page) && page > 0 ? page : 1;
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0
+        ? Math.min(limit, MAX_PAGE_SIZE)
+        : DEFAULT_PAGE_SIZE;
     const skip = (safePage - 1) * safeLimit;
 
     const where = search

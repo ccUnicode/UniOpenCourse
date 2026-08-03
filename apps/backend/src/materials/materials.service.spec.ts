@@ -6,7 +6,6 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('MaterialsService', () => {
   let service: MaterialsService;
-  let prisma: PrismaService;
 
   // Mock prisma
   const mockPrismaService = {
@@ -29,7 +28,6 @@ describe('MaterialsService', () => {
     }).compile();
 
     service = module.get<MaterialsService>(MaterialsService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -61,7 +59,7 @@ describe('MaterialsService', () => {
       const result = await service.createFile(dto, mockFile);
 
       expect(result).toEqual(expectedResult);
-      expect(prisma.material.create).toHaveBeenCalledWith({
+      expect(mockPrismaService.material.create).toHaveBeenCalledWith({
         data: {
           class_id: dto.class_id,
           material_type: 'file',
@@ -93,7 +91,7 @@ describe('MaterialsService', () => {
       const result = await service.createLink(dto);
 
       expect(result).toEqual(expectedResult);
-      expect(prisma.material.create).toHaveBeenCalledWith({
+      expect(mockPrismaService.material.create).toHaveBeenCalledWith({
         data: {
           ...dto,
           material_type: 'link',
@@ -116,7 +114,7 @@ describe('MaterialsService', () => {
       const result = await service.createReference(dto);
 
       expect(result).toEqual(expectedResult);
-      expect(prisma.material.create).toHaveBeenCalledWith({
+      expect(mockPrismaService.material.create).toHaveBeenCalledWith({
         data: {
           ...dto,
           material_type: 'reference',
@@ -140,7 +138,7 @@ describe('MaterialsService', () => {
       const result = await service.remove(materialId);
 
       expect(result).toEqual(expectedResult);
-      expect(prisma.material.delete).toHaveBeenCalledWith({
+      expect(mockPrismaService.material.delete).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
     });
@@ -150,7 +148,7 @@ describe('MaterialsService', () => {
       mockPrismaService.material.findUnique.mockResolvedValue(null);
 
       await expect(service.remove(materialId)).rejects.toThrow(NotFoundException);
-      expect(prisma.material.findUnique).toHaveBeenCalledWith({
+      expect(mockPrismaService.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
     });

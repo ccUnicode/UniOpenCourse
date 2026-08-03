@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class CoursesService {
@@ -79,14 +80,16 @@ export class CoursesService {
       return await this.prisma.course.delete({
         where: { course_id: Number(id) },
       });
-    } catch (error: any) {
-      if (error.code === 'P2025') {
-        throw new NotFoundException(`El curso con ID ${id} no existe.`);
-      }
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
-        );
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`El curso con ID ${id} no existe.`);
+        }
+        if (error.code === 'P2003') {
+          throw new BadRequestException(
+            'No se puede eliminar el curso porque tiene clases o registros asociados. Elimina primero sus dependencias.',
+          );
+        }
       }
       throw error;
     }
@@ -131,9 +134,12 @@ export class CoursesService {
           course_code: true,
           url_image: true,
           description: true,
-          teacher_id: true,
-          course_creation_date: true,
-          update_date: true,
+          teacher: {
+            select: {
+              name: true,
+              last_name: true,
+            },
+          },
         },
         orderBy: { course_creation_date: 'desc' },
       }),
@@ -158,8 +164,6 @@ export class CoursesService {
         url_image: true,
         description: true,
         teacher_id: true,
-        course_creation_date: true,
-        update_date: true,
       },
       orderBy: { visiting_users: { _count: 'desc' } },
     });
@@ -253,9 +257,12 @@ export class CoursesService {
             course_code: true,
             url_image: true,
             description: true,
-            teacher_id: true,
-            course_creation_date: true,
-            update_date: true,
+            teacher: {
+              select: {
+                name: true,
+                last_name: true,
+              },
+            },
           },
         },
       },
@@ -271,11 +278,12 @@ export class CoursesService {
         course_code: v.course.course_code,
         url_image: v.course.url_image,
         description: v.course.description,
-        teacher_id: v.course.teacher_id,
-        course_creation_date: v.course.course_creation_date,
-        update_date: v.course.update_date,
         start_date: v.start_date,
         last_visit_date: v.last_visit_date,
+        teacher: {
+          name: v.course.teacher.name,
+          last_name: v.course.teacher.last_name,
+        },
       })),
     };
   }
