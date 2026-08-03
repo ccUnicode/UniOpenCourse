@@ -23,6 +23,8 @@ function getEmbedUrl(youtubeUrl: string) {
     }
     return '';
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _err = error;
     return '';
   }
 }

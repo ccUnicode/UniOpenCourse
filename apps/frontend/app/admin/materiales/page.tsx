@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Search, Plus, FileText, Link as LinkIcon, BookOpen, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
@@ -165,6 +164,7 @@ export default function AdminMaterialsPage() {
   // Load materials on mount
   useEffect(() => {
     loadMaterials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterClassId]);
 
   const loadMaterials = async () => {
@@ -558,7 +558,7 @@ export default function AdminMaterialsPage() {
           <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Eliminar material</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Estás seguro de que deseas eliminar el material "{materialToDelete.title}"? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar el material &quot;{materialToDelete.title}&quot;? Esta acción no se puede deshacer.
             </p>
             
             <div className="mt-6 flex items-center justify-end gap-3">

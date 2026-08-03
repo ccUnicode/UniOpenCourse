@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -23,6 +23,18 @@ export default function Registro() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const role = localStorage.getItem('user_role');
+    if (token) {
+      if (role === 'ADMIN') {
+        router.replace('/admin/cursos');
+      } else {
+        router.replace('/dashboard');
+      }
+    }
+  }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -69,7 +81,7 @@ export default function Registro() {
 
       if (response.ok) {
         // Registro exitoso, redirigir a login
-        router.push('/login');
+        router.push('/login?registered=true');
       } else {
         // Manejar errores del backend
         if (data.message) {
@@ -89,11 +101,11 @@ export default function Registro() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-[#111514] text-white font-sans flex flex-col items-center justify-center px-4 py-10 md:py-14">
+    <div className="flex-1 bg-[#111514] text-white font-sans flex flex-col items-center justify-center px-4 py-6 md:py-8">
       <div className="w-full max-w-[480px]">
         {/* Tarjeta del registro */}
-        <div className="rounded-[20px] bg-[#1A201D] border border-white/10 px-6 py-8 md:px-10 md:py-10 shadow-[0_10px_35px_rgba(0,0,0,0.15)]">
-          <h1 className="mb-8 text-center text-2xl md:text-[28px] font-bold tracking-tight text-white">
+        <div className="rounded-[20px] bg-[#1A201D] border border-white/10 px-6 py-6 md:px-10 md:py-8 shadow-[0_10px_35px_rgba(0,0,0,0.15)]">
+          <h1 className="mb-6 text-center text-2xl md:text-[28px] font-bold tracking-tight text-white">
             Crear cuenta
           </h1>
 

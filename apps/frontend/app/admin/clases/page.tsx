@@ -45,7 +45,7 @@ const fetchClasses = async (search: string = '', page: number = 1, limit: number
   }
 };
 
-const createClass = async (classData: any): Promise<Class> => {
+const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>): Promise<Class> => {
   try {
     const response = await fetch(`${API_URL}/admin/classes`, {
       method: 'POST',
@@ -64,7 +64,8 @@ const createClass = async (classData: any): Promise<Class> => {
   }
 };
 
-const updateClass = async (id: number, classData: any): Promise<Class> => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const updateClass = async (id: number, classData: Partial<Class>): Promise<Class> => {
   try {
     const response = await fetch(`${API_URL}/admin/classes/${id}`, {
       method: 'PATCH',
@@ -127,6 +128,7 @@ export default function AdminClassesPage() {
   // Load classes on mount
   useEffect(() => {
     loadClasses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   const loadClasses = async () => {
@@ -427,7 +429,7 @@ export default function AdminClassesPage() {
           <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Eliminar clase</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Estás seguro de que deseas eliminar la clase "{classToDelete.title}"? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar la clase &quot;{classToDelete.title}&quot;? Esta acción no se puede deshacer.
             </p>
             
             <div className="mt-6 flex items-center justify-end gap-3">

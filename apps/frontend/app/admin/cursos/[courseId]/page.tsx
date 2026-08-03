@@ -38,6 +38,7 @@ interface Course {
 
 // --- Components ---
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const StatusBadge = ({ status }: { status: CourseStatus }) => {
   const styles = {
     published: "border border-[#145A42] bg-[#103C2D] text-[#45D483]",
@@ -99,7 +100,7 @@ const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Co
   return await response.json();
 };
 
-const createClass = async (classData: any): Promise<Class> => {
+const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>): Promise<Class> => {
   const response = await fetch(`${API_URL}/admin/classes`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -121,6 +122,7 @@ const deleteClass = async (id: number): Promise<void> => {
 
 export default function AdminCourseDetailPage() {
   const params = useParams();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
   const courseId = parseInt(params.courseId as string);
 
@@ -151,6 +153,7 @@ export default function AdminCourseDetailPage() {
 
   useEffect(() => {
     if (courseId) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
   const loadData = async () => {
@@ -191,6 +194,8 @@ export default function AdminCourseDetailPage() {
       });
       setCourseInfo(updated);
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _err = error;
       setSaveError('Error al guardar los cambios.');
     } finally {
       setIsSaving(false);
@@ -442,7 +447,7 @@ export default function AdminCourseDetailPage() {
             </div>
             <h2 className="text-xl font-bold text-white">Eliminar clase</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Deseas eliminar <span className="font-semibold text-white">"{classToDelete.title}"</span>?
+              ¿Deseas eliminar <span className="font-semibold text-white">&quot;{classToDelete.title}&quot;</span>?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
 

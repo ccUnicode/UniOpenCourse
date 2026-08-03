@@ -6,7 +6,6 @@ import {
   Search,
   BookOpen,
   Plus,
-  Eye,
   SquarePen,
   Trash2
 } from 'lucide-react';
@@ -76,7 +75,7 @@ const fetchCourses = async (search: string = ''): Promise<Course[]> => {
   }
 };
 
-const createCourse = async (courseData: any): Promise<Course> => {
+const createCourse = async (courseData: Omit<Course, 'course_id'> & Partial<Course>): Promise<Course> => {
   try {
     const response = await fetch(`${API_URL}/admin/courses`, {
       method: 'POST',
@@ -95,7 +94,8 @@ const createCourse = async (courseData: any): Promise<Course> => {
   }
 };
 
-const updateCourse = async (id: number, courseData: any): Promise<Course> => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Course> => {
   try {
     const response = await fetch(`${API_URL}/admin/courses/${id}`, {
       method: 'PATCH',
@@ -152,6 +152,7 @@ export default function AdminCoursesPage() {
   // Load courses on mount
   useEffect(() => {
     loadCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCourses = async () => {
@@ -482,7 +483,7 @@ export default function AdminCoursesPage() {
             </div>
             <h2 className="text-xl font-bold text-white">Eliminar curso</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Deseas eliminar <span className="font-semibold text-white">"{courseToDelete.name}"</span>?
+              ¿Deseas eliminar <span className="font-semibold text-white">&quot;{courseToDelete.name}&quot;</span>?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
             

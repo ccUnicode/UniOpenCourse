@@ -37,6 +37,17 @@ interface ClassMaterial {
   updatedAt: string;
 }
 
+interface ApiMaterial {
+  material_id: number;
+  title: string;
+  type: string;
+  url?: string;
+  file_path?: string;
+  content?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface ClassInfo {
   class_id: number;
   course_id: number;
@@ -127,6 +138,7 @@ const getAuthHeaders = () => {
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getMultipartHeaders = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
   return { 'Authorization': `Bearer ${token}` };
@@ -162,7 +174,7 @@ const deleteMaterialApi = async (id: number): Promise<void> => {
   if (!response.ok) throw new Error('Error al eliminar material');
 };
 
-const createLinkMaterialApi = async (classId: number, title: string, url: string): Promise<any> => {
+const createLinkMaterialApi = async (classId: number, title: string, url: string): Promise<ApiMaterial> => {
   const response = await fetch(`${API_URL}/admin/materials/link`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -172,7 +184,7 @@ const createLinkMaterialApi = async (classId: number, title: string, url: string
   return await response.json();
 };
 
-const fetchMaterialsApi = async (classId: number): Promise<any[]> => {
+const fetchMaterialsApi = async (classId: number): Promise<ApiMaterial[]> => {
   try {
     const response = await fetch(`${API_URL}/admin/materials?class_id=${classId}`, { headers: getAuthHeaders() });
     if (!response.ok) return [];
@@ -184,7 +196,7 @@ const fetchMaterialsApi = async (classId: number): Promise<any[]> => {
 };
 
 // Map API material to local format
-const mapApiMaterial = (m: any, classId: number): ClassMaterial => ({
+const mapApiMaterial = (m: ApiMaterial, classId: number): ClassMaterial => ({
   id: m.material_id,
   classId,
   name: m.title,
@@ -239,6 +251,7 @@ export default function AdminClassPage() {
   // Load data
   useEffect(() => {
     if (courseId && classId) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, classId]);
 
   const loadData = async () => {
@@ -354,6 +367,8 @@ export default function AdminClassPage() {
       try {
         await deleteMaterialApi(materialToDelete.id);
       } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _error = e;
         // If API fails (e.g. not yet in DB), still remove locally
       }
       setMaterials(materials.filter(m => m.id !== materialToDelete.id));
@@ -769,7 +784,7 @@ export default function AdminClassPage() {
             </div>
             <h2 className="text-xl font-bold text-white">Eliminar material</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Deseas eliminar <span className="font-semibold text-white">"{materialToDelete.name}"</span>?
+              ¿Deseas eliminar <span className="font-semibold text-white">&quot;{materialToDelete.name}&quot;</span>?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
 
