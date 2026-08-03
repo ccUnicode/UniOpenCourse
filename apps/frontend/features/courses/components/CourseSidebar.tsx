@@ -6,14 +6,14 @@ import { usePathname } from 'next/navigation';
 interface CourseSidebarProps {
   courseId: string;
   courseName: string;
-  classes: { id: number; title: string }[];
+  classes: any[];
 }
 
 export default function CourseSidebar({ courseId, courseName, classes }: CourseSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-72 flex-shrink-0 bg-background-secondary border-r border-border flex flex-col h-[calc(100vh-72px)] overflow-y-auto custom-scrollbar overscroll-none">
+    <aside className="w-72 flex-shrink-0 bg-background-secondary border-r border-border flex flex-col h-[calc(100vh-72px)] overflow-y-auto custom-scrollbar overscroll-none sticky top-0">
       <div className="p-6 border-b border-border">
         <h2 className="text-xl font-bold text-primary">Curso: {courseName}</h2>
       </div>
@@ -31,12 +31,13 @@ export default function CourseSidebar({ courseId, courseName, classes }: CourseS
         <h3 className="text-lg font-bold text-primary mb-4">Clases</h3>
         <ul className="space-y-1">
           {classes.map((cls, index) => {
-            const isActive = pathname === `/cursos/${courseId}/clases/${cls.id}`;
+            const currentId = cls.class_id || cls.id;
+            const isActive = pathname === `/cursos/${courseId}/clases/${currentId}`;
             
             return (
-              <li key={cls.id}>
+              <li key={currentId}>
                 <Link
-                  href={`/cursos/${courseId}/clases/${cls.id}#reproductor`}
+                  href={`/cursos/${courseId}/clases/${currentId}#reproductor`}
                   className={`block px-4 py-3 rounded-lg transition-colors flex justify-between items-center ${
                     isActive 
                       ? 'bg-[#0f1714] text-gray-300' 

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getClassesByCourse } from '@/services/classes.service';
 
 export default async function Curso({
   params,
@@ -6,8 +7,12 @@ export default async function Curso({
   params: Promise<{ course_id: string }>;
 }) {
   const { course_id } = await params;
-  
-  // En lugar de tener una vista del curso vacía, enviamos al usuario 
-  // directamente a la Clase 1 de ese curso, tal como sugirió el equipo.
-  redirect(`/cursos/${course_id}/clases/1`);
+  const classes = await getClassesByCourse(course_id);
+
+  if (Array.isArray(classes) && classes.length > 0) {
+    const firstClassId = classes[0].class_id || classes[0].id;
+    redirect(`/cursos/${course_id}/clases/${firstClassId}`);
+  }
+
+  redirect(`/cursos/${course_id}/evaluaciones`);
 }

@@ -1,6 +1,6 @@
 import CourseSidebar from '@/features/courses/components/CourseSidebar';
-
-import { mockClassesList } from '@/features/courses/mocks/course.mocks';
+import { getClassesByCourse, getCourse } from '@/services/classes.service';
+import { notFound } from 'next/navigation';
 
 export default async function CourseLayout({
   children,
@@ -11,17 +11,24 @@ export default async function CourseLayout({
 }) {
   const { course_id } = await params;
 
+  const course = await getCourse(course_id);
+  const classes = await getClassesByCourse(course_id);
+
+  if (course.error === 'Not Found' || course.statusCode === 404) {
+    notFound();
+  }
+
+  const safeClasses = Array.isArray(classes) ? classes : [];
+
   return (
-    // Limitamos la altura exacta a lo que sobra de la pantalla (100vh - 4.5rem del header)
-    // Esto hace que el Sidebar se quede fijo y solo la parte derecha haga scroll
-    <div className="flex h-[calc(100vh-4.5rem)] bg-background">
+    <div className="flex min-h-[calc(100vh-4.5rem)] bg-background items-start">
       <CourseSidebar 
         courseId={course_id} 
-        courseName="Álgebra Lineal"
-        classes={mockClassesList} 
+        courseName={course.name}
+        classes={safeClasses} 
       />
       
-      <main className="flex-1 w-full overflow-hidden">
+      <main className="flex-1 w-full">
         {children}
       </main>
     </div>

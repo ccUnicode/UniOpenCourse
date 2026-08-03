@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
+import { RequestWithUser } from 'src/auth/interfaces/request.interface';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
@@ -31,46 +32,46 @@ describe('CoursesController', () => {
   });
 
   describe('findAll', () => {
-    it('delegates to service with default pagination', () => {
+    it('delegates to service with default pagination', async () => {
       mockCoursesService.findAll.mockReturnValue({ data: [], total: 0 });
 
-      controller.findAll();
+      await controller.findAll();
 
       expect(mockCoursesService.findAll).toHaveBeenCalledWith(1, 6, undefined);
     });
 
-    it('parses page and limit query params', () => {
+    it('parses page and limit query params', async () => {
       mockCoursesService.findAll.mockReturnValue({ data: [], total: 0 });
 
-      controller.findAll('2', '10', 'math');
+      await controller.findAll('2', '10', 'math');
 
       expect(mockCoursesService.findAll).toHaveBeenCalledWith(2, 10, 'math');
     });
 
-    it('clamps invalid page to 1 and limit between 1 and 50', () => {
+    it('clamps invalid page to 1 and limit between 1 and 50', async () => {
       mockCoursesService.findAll.mockReturnValue({ data: [], total: 0 });
 
-      controller.findAll('0', '100', undefined);
+      await controller.findAll('0', '100', undefined);
 
       expect(mockCoursesService.findAll).toHaveBeenCalledWith(1, 50, undefined);
     });
   });
 
   describe('findForCarousel', () => {
-    it('delegates to service', () => {
+    it('delegates to service', async () => {
       mockCoursesService.findForCarousel.mockReturnValue([]);
 
-      controller.findForCarousel();
+      await controller.findForCarousel();
 
       expect(mockCoursesService.findForCarousel).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
-    it('delegates to service with course id', () => {
+    it('delegates to service with course id', async () => {
       mockCoursesService.findOneById.mockReturnValue({ course_id: 1 });
 
-      controller.findOne(1);
+      await controller.findOne(1);
 
       expect(mockCoursesService.findOneById).toHaveBeenCalledWith(1);
     });
@@ -85,10 +86,10 @@ describe('CoursesController', () => {
   });
 
   describe('getVisits', () => {
-    it('delegates to service with course id', () => {
+    it('delegates to service with course id', async () => {
       mockCoursesService.getVisitsByCourseId.mockReturnValue({ total: 0, detalle: [] });
 
-      controller.getVisits(3);
+      await controller.getVisits(3);
 
       expect(mockCoursesService.getVisitsByCourseId).toHaveBeenCalledWith(3);
     });
@@ -103,11 +104,13 @@ describe('CoursesController', () => {
   });
 
   describe('getUserDashboard', () => {
-    it('extracts userId from JWT and delegates to service', () => {
+    it('extracts userId from JWT and delegates to service', async () => {
       const dashboard = { userId: 5, totalCourses: 1, courses: [] };
       mockCoursesService.getUserDashboard.mockReturnValue(dashboard);
 
-      const result = controller.getUserDashboard({ user: { sub: '5' } });
+      const result = await controller.getUserDashboard({
+        user: { sub: 5, email: 'user@test.com', role: 'user' },
+      } as RequestWithUser);
 
       expect(mockCoursesService.getUserDashboard).toHaveBeenCalledWith(5);
       expect(result).toBe(dashboard);
@@ -115,11 +118,13 @@ describe('CoursesController', () => {
   });
 
   describe('registerVisit', () => {
-    it('extracts userId from JWT and delegates to service', () => {
+    it('extracts userId from JWT and delegates to service', async () => {
       const visit = { user_course_id: 1, user_id: 7, course_id: 2 };
       mockCoursesService.registerVisit.mockReturnValue(visit);
 
-      const result = controller.registerVisit(2, { user: { sub: '7' } });
+      const result = await controller.registerVisit(2, {
+        user: { sub: 7, email: 'user@test', role: 'user' },
+      } as RequestWithUser);
 
       expect(mockCoursesService.registerVisit).toHaveBeenCalledWith(2, 7);
       expect(result).toBe(visit);
