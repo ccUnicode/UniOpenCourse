@@ -17,7 +17,6 @@ export async function Search(busqueda: string, page: number) {
     const url = `${baseUrl}/search?${params.toString()}`;
     const response = await fetch(url);
     const resultados = await response.json();
-    console.log(resultados);
     if (resultados.error) {
       return { data: [], error: resultados.error, message: resultados.message };
     }
