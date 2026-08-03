@@ -21,31 +21,26 @@ import {
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
 
-// --- Types ---
-type MaterialType = "pdf" | "google-drive" | "presentation" | "web-link" | "reference" | "other";
-type MaterialStatus = "visible" | "hidden";
+type MaterialType = "file" | "link" | "reference";
 
 interface ClassMaterial {
   id: number;
   classId: number;
   name: string;
   type: MaterialType;
-  url: string;
-  description?: string;
-  status: MaterialStatus;
+  url?: string;
+  reference?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface ApiMaterial {
   material_id: number;
-  title: string;
-  type: string;
-  url?: string;
-  file_path?: string;
-  content?: string;
-  created_at?: string;
-  updated_at?: string;
+  class_id: number;
+  material_type: string;
+  filename: string;
+  url_link?: string;
+  written_reference?: string;
+  material_creation_date: string;
 }
 
 interface ClassInfo {
@@ -64,33 +59,23 @@ interface Course {
 }
 
 const TypeIconMap: Record<MaterialType, React.ElementType> = {
-  pdf: FileText,
-  "google-drive": HardDrive,
-  presentation: Presentation,
-  "web-link": LinkIcon,
+  file: FileText,
+  link: LinkIcon,
   reference: BookOpen,
-  other: FolderOpen
 };
 
 const TypeLabels: Record<MaterialType, string> = {
-  pdf: "PDF",
-  "google-drive": "Google Drive",
-  presentation: "Presentación",
-  "web-link": "Enlace web",
-  reference: "Referencia",
-  other: "Otro"
+  file: "Archivo PDF/Imagen",
+  link: "Enlace externo",
+  reference: "Referencia escrita",
 };
 
 const TypeHelpTexts: Record<MaterialType, string> = {
-  pdf: "Agrega el enlace público o directo al documento PDF.",
-  "google-drive": "Asegúrate de que el recurso tenga permisos de visualización mediante el enlace.",
-  presentation: "Enlace externo a tu presentación (Canva, Slides, etc.).",
-  "web-link": "Enlace a un sitio web de interés para la clase.",
-  reference: "Puedes registrar una fuente académica, artículo, libro o documentación.",
-  other: "Cualquier otro tipo de enlace externo útil para los estudiantes."
+  file: "Sube un archivo PDF o imagen (máx 5MB).",
+  link: "Enlace a un sitio web, video, o recurso externo.",
+  reference: "Información en texto o fuente bibliográfica.",
 };
 
-// --- Components ---
 const MaterialTypeBadge = ({ type }: { type: MaterialType }) => {
   const Icon = TypeIconMap[type];
   return (
@@ -99,13 +84,6 @@ const MaterialTypeBadge = ({ type }: { type: MaterialType }) => {
       {TypeLabels[type]}
     </span>
   );
-};
-
-const MaterialStatusBadge = ({ status }: { status: MaterialStatus }) => {
-  if (status === 'visible') {
-    return <span className="inline-flex items-center rounded-full border border-[#145A42] bg-[#103C2D] text-[#45D483] px-3 py-1 text-xs font-medium">Visible</span>;
-  }
-  return <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 text-white/55 px-3 py-1 text-xs font-medium">Oculto</span>;
 };
 
 // --- Utils ---
@@ -174,38 +152,51 @@ const deleteMaterialApi = async (id: number): Promise<void> => {
   if (!response.ok) throw new Error('Error al eliminar material');
 };
 
-const createLinkMaterialApi = async (classId: number, title: string, url: string): Promise<ApiMaterial> => {
+const createLinkMaterialApi = async (classId: number, filename: string, url_link: string): Promise<ApiMaterial> => {
   const response = await fetch(`${API_URL}/admin/materials/link`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ class_id: classId, title, url }),
+    body: JSON.stringify({ class_id: classId, filename, url_link }),
   });
   if (!response.ok) throw new Error('Error al crear enlace');
   return await response.json();
 };
 
-const fetchMaterialsApi = async (classId: number): Promise<ApiMaterial[]> => {
-  try {
-    const response = await fetch(`${API_URL}/admin/materials?class_id=${classId}`, { headers: getAuthHeaders() });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.data || [];
-  } catch {
-    return [];
-  }
+const createReferenceMaterialApi = async (classId: number, filename: string, written_reference: string): Promise<ApiMaterial> => {
+  const response = await fetch(`${API_URL}/admin/materials/reference`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ class_id: classId, filename, written_reference }),
+  });
+  if (!response.ok) throw new Error('Error al crear referencia');
+  return await response.json();
+};
+
+const createFileMaterialApi = async (classId: number, filename: string, file: File): Promise<ApiMaterial> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+  const formData = new FormData();
+  formData.append('class_id', classId.toString());
+  formData.append('filename', filename);
+  formData.append('file', file);
+  
+  const response = await fetch(`${API_URL}/admin/materials/file`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) throw new Error('Error al crear archivo');
+  return await response.json();
 };
 
 // Map API material to local format
-const mapApiMaterial = (m: ApiMaterial, classId: number): ClassMaterial => ({
+const mapApiMaterial = (m: ApiMaterial): ClassMaterial => ({
   id: m.material_id,
-  classId,
-  name: m.title,
-  type: (m.type === 'link' ? 'web-link' : m.type === 'file' ? 'pdf' : 'reference') as MaterialType,
-  url: m.url || m.file_path || '#',
-  description: m.content || undefined,
-  status: 'visible',
-  createdAt: m.created_at || new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
-  updatedAt: m.updated_at || new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+  classId: m.class_id,
+  name: m.filename,
+  type: m.material_type as MaterialType,
+  url: m.url_link || undefined,
+  reference: m.written_reference || undefined,
+  createdAt: new Date(m.material_creation_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
 });
 
 // --- Page Component ---
@@ -241,8 +232,8 @@ export default function AdminClassPage() {
   const [materialToDelete, setMaterialToDelete] = useState<ClassMaterial | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<{ name: string; type: MaterialType | ""; url: string; description: string; status: MaterialStatus }>({
-    name: '', type: '', url: '', description: '', status: 'visible'
+  const [formData, setFormData] = useState<{ name: string; type: MaterialType | ""; url: string; reference: string; file: File | null }>({
+    name: '', type: '', url: '', reference: '', file: null
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -256,10 +247,9 @@ export default function AdminClassPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [courseData, classInfo, apiMaterials] = await Promise.all([
+      const [courseData, classInfo] = await Promise.all([
         fetchCourse(parseInt(courseId)),
         fetchClassInfo(parseInt(classId)),
-        fetchMaterialsApi(parseInt(classId)),
       ]);
       setCourse(courseData);
       setClassData(classInfo);
@@ -268,7 +258,8 @@ export default function AdminClassPage() {
         description: classInfo.description || '',
         video_url: classInfo.video_url || '',
       });
-      setMaterials(apiMaterials.map(m => mapApiMaterial(m, parseInt(classId))));
+      // @ts-expect-error backend returns materials in classInfo
+      setMaterials((classInfo.materials || []).map(mapApiMaterial));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -300,17 +291,13 @@ export default function AdminClassPage() {
         const typeKey = Object.keys(TypeLabels).find(key => TypeLabels[key as MaterialType] === typeFilter);
         matchesType = m.type === typeKey;
       }
-      let matchesStatus = true;
-      if (statusFilter === 'Visible') matchesStatus = m.status === 'visible';
-      if (statusFilter === 'Oculto') matchesStatus = m.status === 'hidden';
-      return matchesSearch && matchesType && matchesStatus;
+      return matchesSearch && matchesType;
     });
-  }, [materials, searchQuery, typeFilter, statusFilter]);
+  }, [materials, searchQuery, typeFilter]);
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setTypeFilter('Todos los tipos');
-    setStatusFilter('Todos los estados');
   };
 
   // Keyboard accessibility
@@ -327,7 +314,7 @@ export default function AdminClassPage() {
 
   const openCreateModal = () => {
     setEditingMaterial(null);
-    setFormData({ name: '', type: '', url: '', description: '', status: 'visible' });
+    setFormData({ name: '', type: '', url: '', reference: '', file: null });
     setFormErrors({});
     setIsFormModalOpen(true);
   };
@@ -337,18 +324,12 @@ export default function AdminClassPage() {
     setFormData({
       name: material.name,
       type: material.type,
-      url: material.url,
-      description: material.description || '',
-      status: material.status
+      url: material.url || '',
+      reference: material.reference || '',
+      file: null
     });
     setFormErrors({});
     setIsFormModalOpen(true);
-  };
-
-  const toggleStatus = (id: number) => {
-    setMaterials(materials.map(m =>
-      m.id === id ? { ...m, status: m.status === 'visible' ? 'hidden' : 'visible' } : m
-    ));
   };
 
   const confirmDelete = (material: ClassMaterial) => {
@@ -376,14 +357,21 @@ export default function AdminClassPage() {
     const errors: Record<string, string> = {};
 
     const trimmedName = formData.name.trim();
-    const trimmedUrl = formData.url.trim();
 
     if (!trimmedName) errors.name = 'El nombre es obligatorio';
     if (!formData.type) errors.type = 'Selecciona un tipo de material';
-    if (!trimmedUrl) {
-      errors.url = 'La URL es obligatoria';
-    } else if (!isValidUrl(trimmedUrl)) {
-      errors.url = 'Ingresa una URL válida (http:// o https://)';
+    
+    if (formData.type === 'link') {
+      const trimmedUrl = formData.url.trim();
+      if (!trimmedUrl) {
+        errors.url = 'La URL es obligatoria';
+      } else if (!isValidUrl(trimmedUrl)) {
+        errors.url = 'Ingresa una URL válida (http:// o https://)';
+      }
+    } else if (formData.type === 'reference') {
+      if (!formData.reference.trim()) errors.reference = 'La referencia es obligatoria';
+    } else if (formData.type === 'file') {
+      if (!formData.file && !editingMaterial) errors.file = 'Debes subir un archivo';
     }
 
     setFormErrors(errors);
@@ -392,40 +380,31 @@ export default function AdminClassPage() {
     setIsSubmitting(true);
     try {
       if (editingMaterial) {
-        // Edit local only (API doesn't have a PATCH for materials in original design)
+        // Can't edit materials via API yet, skip updating API for now
         setMaterials(materials.map(m => m.id === editingMaterial.id ? {
           ...m,
           name: trimmedName,
           type: formData.type as MaterialType,
-          url: trimmedUrl,
-          description: formData.description.trim(),
-          status: formData.status
+          url: formData.type === 'link' ? formData.url.trim() : (formData.type === 'file' ? m.url : undefined),
+          reference: formData.type === 'reference' ? formData.reference.trim() : undefined,
         } : m));
       } else {
-        // Try to create via API first, fallback to local
-        try {
-          const created = await createLinkMaterialApi(parseInt(classId), trimmedName, trimmedUrl);
-          const newMaterial = mapApiMaterial(created, parseInt(classId));
-          newMaterial.type = formData.type as MaterialType;
-          newMaterial.description = formData.description.trim() || undefined;
-          newMaterial.status = formData.status;
-          setMaterials([...materials, newMaterial]);
-        } catch {
-          const newMaterial: ClassMaterial = {
-            id: Date.now(),
-            classId: parseInt(classId),
-            name: trimmedName,
-            type: formData.type as MaterialType,
-            url: trimmedUrl,
-            description: formData.description.trim(),
-            status: formData.status,
-            createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
-            updatedAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-          };
-          setMaterials([...materials, newMaterial]);
+        let created;
+        if (formData.type === 'link') {
+          created = await createLinkMaterialApi(parseInt(classId), trimmedName, formData.url.trim());
+        } else if (formData.type === 'reference') {
+          created = await createReferenceMaterialApi(parseInt(classId), trimmedName, formData.reference.trim());
+        } else if (formData.type === 'file' && formData.file) {
+          created = await createFileMaterialApi(parseInt(classId), trimmedName, formData.file);
+        }
+        if (created) {
+          setMaterials([...materials, mapApiMaterial(created)]);
         }
       }
       setIsFormModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      setFormErrors({ name: 'Error al procesar el material' });
     } finally {
       setIsSubmitting(false);
     }
@@ -579,16 +558,6 @@ export default function AdminClassPage() {
                         {Object.values(TypeLabels).map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
 
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                      >
-                        <option value="Todos los estados">Todos los estados</option>
-                        <option value="Visible">Visible</option>
-                        <option value="Oculto">Oculto</option>
-                      </select>
-
                       <button
                         onClick={handleClearFilters}
                         className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors whitespace-nowrap"
@@ -605,9 +574,8 @@ export default function AdminClassPage() {
                         <tr className="bg-[#151A17] border-b border-[#2B332F]">
                           <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Material</th>
                           <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Tipo</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Enlace</th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Recurso</th>
                           <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Estado</th>
                           <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -616,34 +584,35 @@ export default function AdminClassPage() {
                           <tr key={m.id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
                             <td className="px-5 py-4 max-w-[250px]">
                               <p className="text-sm font-semibold text-white truncate">{m.name}</p>
-                              {m.description && <p className="mt-1 line-clamp-1 text-xs text-white/40">{m.description}</p>}
                             </td>
                             <td className="px-5 py-4">
                               <MaterialTypeBadge type={m.type} />
                             </td>
                             <td className="px-5 py-4">
-                              <a href={m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors">
-                                Abrir recurso
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                              <p className="mt-0.5 text-xs text-white/30">{getDomain(m.url)}</p>
+                              {m.type === 'reference' ? (
+                                <p className="text-sm text-white/80 line-clamp-2 max-w-[300px]">{m.reference}</p>
+                              ) : (
+                                <>
+                                  <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors">
+                                    Abrir recurso
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                  {m.type === 'link' && m.url && <p className="mt-0.5 text-xs text-white/30">{getDomain(m.url)}</p>}
+                                </>
+                              )}
                             </td>
                             <td className="px-5 py-4">
                               <span className="text-sm text-white/50">{m.createdAt}</span>
                             </td>
-                            <td className="px-5 py-4">
-                              <MaterialStatusBadge status={m.status} />
-                            </td>
                             <td className="px-5 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <a href={m.url} target="_blank" rel="noopener noreferrer" aria-label="Abrir material" title="Abrir material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
+                                {m.type !== 'reference' && m.url && (
+                                  <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" aria-label="Abrir material" title="Abrir material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                )}
                                 <button onClick={() => openEditModal(m)} type="button" aria-label="Editar material" title="Editar material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
                                   <SquarePen className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => toggleStatus(m.id)} type="button" aria-label={m.status === 'visible' ? "Ocultar material" : "Mostrar material"} title={m.status === 'visible' ? "Ocultar material" : "Mostrar material"} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
-                                  {m.status === 'visible' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
                                 <button onClick={() => confirmDelete(m)} type="button" aria-label="Eliminar material" title="Eliminar material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors">
                                   <Trash2 className="w-4 h-4" />
@@ -670,21 +639,24 @@ export default function AdminClassPage() {
                         <div className="flex justify-between items-start gap-4 mb-3">
                           <div>
                             <p className="text-sm font-semibold text-white">{m.name}</p>
-                            <p className="mt-1 text-xs text-white/40">{getDomain(m.url)}</p>
                           </div>
-                          <MaterialStatusBadge status={m.status} />
                         </div>
-                        {m.description && <p className="text-xs text-white/60 mb-3">{m.description}</p>}
+                        {m.type === 'reference' ? (
+                          <p className="text-xs text-white/60 mb-3">{m.reference}</p>
+                        ) : (
+                          m.type === 'link' && m.url && <p className="mt-1 text-xs text-white/40 mb-3">{getDomain(m.url)}</p>
+                        )}
                         <div className="mb-4">
                           <MaterialTypeBadge type={m.type} />
                         </div>
                         <div className="flex items-center justify-between border-t border-[#2B332F] pt-3">
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]">
-                            Abrir recurso <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                          {m.type !== 'reference' && m.url ? (
+                            <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]">
+                              Abrir recurso <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          ) : <div />}
                           <div className="flex items-center gap-1">
                             <button onClick={() => openEditModal(m)} className="p-2 text-white/35 hover:text-white"><SquarePen className="w-4 h-4" /></button>
-                            <button onClick={() => toggleStatus(m.id)} className="p-2 text-white/35 hover:text-white">{m.status === 'visible' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                             <button onClick={() => confirmDelete(m)} className="p-2 text-white/35 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </div>
@@ -725,27 +697,31 @@ export default function AdminClassPage() {
                 {formErrors.type && <p className="mt-1 text-xs text-red-400">{formErrors.type}</p>}
               </div>
 
-              <div>
-                <label htmlFor="url" className="mb-1.5 block text-sm font-normal text-white/85">URL del material</label>
-                <input type="url" id="url" placeholder="https://" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-                {formErrors.url && <p className="mt-1 text-xs text-red-400">{formErrors.url}</p>}
-              </div>
+              {formData.type === 'link' && (
+                <div>
+                  <label htmlFor="url" className="mb-1.5 block text-sm font-normal text-white/85">URL del material</label>
+                  <input type="url" id="url" placeholder="https://" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
+                  {formErrors.url && <p className="mt-1 text-xs text-red-400">{formErrors.url}</p>}
+                </div>
+              )}
 
-              <div>
-                <label htmlFor="description" className="mb-1.5 flex justify-between text-sm font-normal text-white/85">
-                  Descripción opcional
-                  <span className="text-white/40">{formData.description.length}/300</span>
-                </label>
-                <textarea id="description" maxLength={300} placeholder="Agrega una breve descripción para ayudar al estudiante a identificar el recurso." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none" />
-              </div>
+              {formData.type === 'reference' && (
+                <div>
+                  <label htmlFor="reference" className="mb-1.5 flex justify-between text-sm font-normal text-white/85">
+                    Referencia escrita
+                  </label>
+                  <textarea id="reference" placeholder="Agrega la referencia, texto o fuente bibliográfica" value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} rows={4} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none" />
+                  {formErrors.reference && <p className="mt-1 text-xs text-red-400">{formErrors.reference}</p>}
+                </div>
+              )}
 
-              <div>
-                <label htmlFor="status" className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as MaterialStatus })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
-                  <option value="visible">Visible</option>
-                  <option value="hidden">Oculto</option>
-                </select>
-              </div>
+              {formData.type === 'file' && !editingMaterial && (
+                <div>
+                  <label htmlFor="file" className="mb-1.5 block text-sm font-normal text-white/85">Archivo (PDF, PNG, JPG)</label>
+                  <input type="file" id="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => setFormData({ ...formData, file: e.target.files ? e.target.files[0] : null })} className="w-full text-sm text-white/50 file:mr-4 file:py-2.5 file:px-4 file:rounded-[10px] file:border-0 file:text-sm file:font-semibold file:bg-[#1A201D] file:text-white hover:file:bg-[#2B332F] cursor-pointer" />
+                  {formErrors.file && <p className="mt-1 text-xs text-red-400">{formErrors.file}</p>}
+                </div>
+              )}
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
                 <button type="button" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">

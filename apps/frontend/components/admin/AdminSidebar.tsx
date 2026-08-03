@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Route, Tags, Users, Settings, LogOut, Menu, X } from 'lucide-react';
+import { BookOpen, Users, Settings, LogOut, Menu, X } from 'lucide-react';
 
 export const AdminSidebar = () => {
   const router = useRouter();
@@ -16,8 +16,6 @@ export const AdminSidebar = () => {
 
   const menuItems = [
     { icon: BookOpen, label: "Cursos", href: "/admin/cursos", active: false },
-    { icon: Route, label: "Rutas", href: "#", active: false },
-    { icon: Tags, label: "Etiquetas", href: "#", active: false },
     { icon: Users, label: "Usuarios", href: "#", active: false },
     { icon: Settings, label: "Configuración", href: "#", active: false },
   ];

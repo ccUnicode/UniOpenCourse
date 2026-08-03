@@ -33,7 +33,7 @@ export class MaterialsService {
 
     return this.prisma.material.create({
       data: {
-        class_id: createFileDto.class_id,
+        class_id: Number(createFileDto.class_id),
         material_type: MaterialTypes.file,
         filename: file.originalname,
         url_link: file.filename,
