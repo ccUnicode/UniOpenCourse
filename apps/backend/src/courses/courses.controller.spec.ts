@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
+import { RequestWithUser } from 'src/auth/interfaces/request.interface';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
@@ -107,7 +108,9 @@ describe('CoursesController', () => {
       const dashboard = { userId: 5, totalCourses: 1, courses: [] };
       mockCoursesService.getUserDashboard.mockReturnValue(dashboard);
 
-      const result = await controller.getUserDashboard({ user: { sub: '5' } });
+      const result = await controller.getUserDashboard({
+        user: { sub: 5, email: 'user@test.com', role: 'user' },
+      } as RequestWithUser);
 
       expect(mockCoursesService.getUserDashboard).toHaveBeenCalledWith(5);
       expect(result).toBe(dashboard);
@@ -119,7 +122,9 @@ describe('CoursesController', () => {
       const visit = { user_course_id: 1, user_id: 7, course_id: 2 };
       mockCoursesService.registerVisit.mockReturnValue(visit);
 
-      const result = await controller.registerVisit(2, { user: { sub: '7' } });
+      const result = await controller.registerVisit(2, {
+        user: { sub: 7, email: 'user@test', role: 'user' },
+      } as RequestWithUser);
 
       expect(mockCoursesService.registerVisit).toHaveBeenCalledWith(2, 7);
       expect(result).toBe(visit);

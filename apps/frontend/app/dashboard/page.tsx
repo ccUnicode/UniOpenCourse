@@ -1,5 +1,6 @@
-import { Course } from '@/interfaces/course.interface';
+import { CourseDashboard } from '@/interfaces/course.interface';
 
+export const dynamic = 'force-dynamic';
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
 async function getCourseData() {
@@ -9,11 +10,11 @@ async function getCourseData() {
 }
 
 export default async function Dashboard() {
-  const courses = await getCourseData();
+  const data = await getCourseData();
   return (
     <div>
       <h1>User Dashboard</h1>
-      {courses?.data?.map((course: Course) => (
+      {data?.courses?.map((course: CourseDashboard) => (
         <div key={course.course_id}>
           <h2>{course.name}</h2>
         </div>

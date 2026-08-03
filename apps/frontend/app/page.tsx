@@ -3,6 +3,7 @@ import { getCarouselData } from '@/services/courses.service';
 import Carousel from '@/components/carousel';
 import { CourseSection } from '@/components/course-section';
 
+export const dynamic = 'force-dynamic';
 export default async function Home() {
   const courses_carousel = await getCarouselData();
 

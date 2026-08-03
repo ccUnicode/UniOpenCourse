@@ -35,7 +35,7 @@ export class GlobalSearcherService {
         where: {
           OR: [{ name: searchFilter }, { course_code: searchFilter }],
         },
-        orderBy: { course_creation_date: 'desc', course_id: 'desc' },
+        orderBy: [{ course_creation_date: 'desc' }, { course_id: 'desc' }],
         skip: offset,
         take: RESULT_PER_TYPE,
         include: {
@@ -44,7 +44,7 @@ export class GlobalSearcherService {
       }),
       this.prisma.class.findMany({
         where: { title: searchFilter },
-        orderBy: { class_creation_date: 'desc', class_id: 'desc' },
+        orderBy: [{ class_creation_date: 'desc' }, { class_id: 'desc' }],
         skip: offset,
         take: RESULT_PER_TYPE,
         include: {

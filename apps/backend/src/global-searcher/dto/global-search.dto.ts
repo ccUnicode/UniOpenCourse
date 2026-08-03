@@ -17,7 +17,7 @@ export class SearchDto {
     return value.trim().toLowerCase();
   })
   @IsString()
-  @MinLength(2)
+  @MinLength(2, { message: 'La búsqueda debe tener al menos 2 caracteres' })
   @MaxLength(150)
   q!: string;
 

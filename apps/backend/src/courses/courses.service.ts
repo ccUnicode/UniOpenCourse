@@ -257,9 +257,12 @@ export class CoursesService {
             course_code: true,
             url_image: true,
             description: true,
-            teacher_id: true,
-            course_creation_date: true,
-            update_date: true,
+            teacher: {
+              select: {
+                name: true,
+                last_name: true,
+              },
+            },
           },
         },
       },
@@ -275,11 +278,12 @@ export class CoursesService {
         course_code: v.course.course_code,
         url_image: v.course.url_image,
         description: v.course.description,
-        teacher_id: v.course.teacher_id,
-        course_creation_date: v.course.course_creation_date,
-        update_date: v.course.update_date,
         start_date: v.start_date,
         last_visit_date: v.last_visit_date,
+        teacher: {
+          name: v.course.teacher.name,
+          last_name: v.course.teacher.last_name,
+        },
       })),
     };
   }

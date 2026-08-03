@@ -11,3 +11,16 @@ export async function getCourseData(busqueda: string, page: number = 1) {
   console.log(courses);
   return courses;
 }
+
+export async function getAdminCourseData(search: string, token: string) {
+  const response = await fetch(`${baseUrl}/admin/courses?q=${search}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await response.json();
+  if (data.error) {
+    return { data: [], error: true, message: data.message };
+  }
+  return data;
+}
