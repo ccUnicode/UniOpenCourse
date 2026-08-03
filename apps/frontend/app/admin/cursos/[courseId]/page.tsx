@@ -138,6 +138,7 @@ export default function AdminCourseDetailPage() {
     course_code: '',
     description: '',
     teacher_name: '',
+    teacher_last_name: '',
     url_image: '',
     status: 'draft' as CourseStatus,
   });
@@ -148,7 +149,7 @@ export default function AdminCourseDetailPage() {
 
   // Create modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newClass, setNewClass] = useState({ order: '', title: '', status: 'draft' as CourseStatus });
+  const [newClass, setNewClass] = useState({ title: '', description: '', url_youtube: '' });
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -164,11 +165,14 @@ export default function AdminCourseDetailPage() {
         fetchClasses(courseId),
       ]);
       setCourseInfo(courseData);
+      // teacher comes as { name, last_name } from the backend
+      const teacherData = (courseData as unknown as { teacher?: { name: string; last_name: string } }).teacher;
       setCourseFormData({
         name: courseData.name,
         course_code: courseData.course_code,
         description: courseData.description || '',
-        teacher_name: courseData.teacher_name || '',
+        teacher_name: teacherData?.name || '',
+        teacher_last_name: teacherData?.last_name || '',
         url_image: courseData.url_image || '',
         status: courseData.status || 'draft',
       });
@@ -188,10 +192,10 @@ export default function AdminCourseDetailPage() {
         name: courseFormData.name,
         course_code: courseFormData.course_code,
         description: courseFormData.description,
-        teacher_name: courseFormData.teacher_name,
+        teacher_name: courseFormData.teacher_name || undefined,
+        teacher_last_name: courseFormData.teacher_last_name || undefined,
         url_image: courseFormData.url_image || undefined,
-        status: courseFormData.status,
-      });
+      } as Parameters<typeof updateCourse>[1]);
       setCourseInfo(updated);
     } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -222,23 +226,20 @@ export default function AdminCourseDetailPage() {
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClass.title.trim()) return;
+    if (!newClass.title.trim() || !newClass.description.trim()) return;
 
     setIsCreating(true);
     try {
-      const orderNumber = newClass.order
-        ? parseInt(newClass.order.replace('Clase ', ''))
-        : classes.length + 1;
-
       const created = await createClass({
         course_id: courseId,
         title: newClass.title,
-        order_number: orderNumber,
+        description: newClass.description,
+        ...(newClass.url_youtube.trim() && { url_youtube: newClass.url_youtube.trim() }),
       });
 
       setClasses([...classes, created]);
       setIsCreateModalOpen(false);
-      setNewClass({ order: '', title: '', status: 'draft' });
+      setNewClass({ title: '', description: '', url_youtube: '' });
       loadData();
     } catch (error) {
       console.error('Error creating class:', error);
@@ -292,7 +293,7 @@ export default function AdminCourseDetailPage() {
                   <button
                     onClick={handleSaveCourse}
                     disabled={isSaving}
-                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
@@ -324,11 +325,22 @@ export default function AdminCourseDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Profesor</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">Nombre del profesor</label>
                   <input
                     type="text"
+                    placeholder="Ej: Carlos"
                     value={courseFormData.teacher_name}
                     onChange={e => setCourseFormData({ ...courseFormData, teacher_name: e.target.value })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">Apellido del profesor</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: López"
+                    value={courseFormData.teacher_last_name}
+                    onChange={e => setCourseFormData({ ...courseFormData, teacher_last_name: e.target.value })}
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
                 </div>
@@ -375,7 +387,7 @@ export default function AdminCourseDetailPage() {
                 </div>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0"
+                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   Crear clase
@@ -393,7 +405,6 @@ export default function AdminCourseDetailPage() {
                   <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead>
                       <tr className="bg-[#151A17] border-b border-[#2B332F]">
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Orden</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título de la clase</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Última actualización</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
@@ -402,7 +413,6 @@ export default function AdminCourseDetailPage() {
                     <tbody>
                       {classes.map((cls) => (
                         <tr key={cls.class_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
-                          <td className="px-5 py-4 text-sm text-white/75">Clase {cls.order_number}</td>
                           <td className="px-5 py-4 text-sm font-semibold text-white">{cls.title}</td>
                           <td className="px-5 py-4 text-sm text-white/50">{cls.updated_at || cls.created_at || 'N/A'}</td>
                           <td className="px-5 py-4 text-right">
@@ -474,37 +484,42 @@ export default function AdminCourseDetailPage() {
       {/* Modal Crear Clase */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear nueva clase</h2>
             <p className="mt-1 text-sm text-white/50">Agrega una clase al temario del curso.</p>
 
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Número u orden</label>
-                <select
-                  value={newClass.order}
-                  onChange={(e) => setNewClass({ ...newClass, order: e.target.value })}
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                >
-                  <option value="" disabled>Selecciona el orden de la clase</option>
-                  {Array.from({ length: 16 }, (_, i) => `Clase ${i + 1}`).map(opt => {
-                    const orderNum = parseInt(opt.replace('Clase ', ''));
-                    const exists = classes.some(c => c.order_number === orderNum);
-                    return (
-                      <option key={opt} value={opt} disabled={exists} className={exists ? "text-white/30" : "text-white"}>
-                        {opt} {exists ? '(Ya registrada)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Título de la clase</label>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">Título de la clase <span className="text-red-400">*</span></label>
                 <input
                   type="text"
                   placeholder="Ej: Estructuras de control"
                   value={newClass.title}
                   onChange={(e) => setNewClass({ ...newClass, title: e.target.value })}
+                  required
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción <span className="text-red-400">*</span></label>
+                <textarea
+                  placeholder="Explica brevemente de qué trata esta clase..."
+                  value={newClass.description}
+                  onChange={(e) => setNewClass({ ...newClass, description: e.target.value })}
+                  required
+                  rows={3}
+                  className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">Enlace de video <span className="text-white/35">(opcional)</span></label>
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={newClass.url_youtube}
+                  onChange={(e) => setNewClass({ ...newClass, url_youtube: e.target.value })}
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
               </div>
@@ -512,15 +527,15 @@ export default function AdminCourseDetailPage() {
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+                  onClick={() => { setIsCreateModalOpen(false); setNewClass({ title: '', description: '', url_youtube: '' }); }}
+                  className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreating}
-                  className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isCreating || !newClass.title.trim() || !newClass.description.trim()}
+                  className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isCreating ? 'Creando...' : 'Crear clase'}
                 </button>

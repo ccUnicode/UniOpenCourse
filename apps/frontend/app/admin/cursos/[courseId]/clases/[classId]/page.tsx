@@ -221,7 +221,6 @@ export default function AdminClassPage() {
 
   // Class form state (inline edit)
   const [classFormData, setClassFormData] = useState({
-    order: '',
     title: '',
     description: '',
     video_url: '',
@@ -265,7 +264,6 @@ export default function AdminClassPage() {
       setCourse(courseData);
       setClassData(classInfo);
       setClassFormData({
-        order: `Clase ${classInfo.order_number}`,
         title: classInfo.title,
         description: classInfo.description || '',
         video_url: classInfo.video_url || '',
@@ -281,14 +279,10 @@ export default function AdminClassPage() {
   const handleSaveClass = async () => {
     setIsSaving(true);
     try {
-      const orderNum = classFormData.order
-        ? parseInt(classFormData.order.replace('Clase ', ''))
-        : classData?.order_number || 1;
       await updateClass(parseInt(classId), {
         title: classFormData.title,
         description: classFormData.description || undefined,
         video_url: classFormData.video_url || undefined,
-        order_number: orderNum,
       });
     } catch (error) {
       console.error('Error saving class:', error);
@@ -468,7 +462,7 @@ export default function AdminClassPage() {
                   {course?.name || `Curso ${courseId}`}
                 </Link>
                 <span>/</span>
-                <span className="text-white">Clase {classData?.order_number || classId}</span>
+                <span className="text-white">{classData?.title || `Clase ${classId}`}</span>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -486,7 +480,7 @@ export default function AdminClassPage() {
                   <button
                     onClick={handleSaveClass}
                     disabled={isSaving}
-                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
@@ -499,15 +493,6 @@ export default function AdminClassPage() {
               <h2 className="text-lg font-bold text-white mb-6">Información de la clase</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-normal text-white/85">Número u orden</label>
-                    <input
-                      type="text"
-                      value={classFormData.order}
-                      onChange={e => setClassFormData({ ...classFormData, order: e.target.value })}
-                      className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                    />
-                  </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-normal text-white/85">Título</label>
                     <input
@@ -549,7 +534,7 @@ export default function AdminClassPage() {
                 </div>
                 <button
                   onClick={openCreateModal}
-                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0"
+                  className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   Agregar material

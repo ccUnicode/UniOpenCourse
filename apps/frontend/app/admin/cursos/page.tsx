@@ -20,6 +20,7 @@ interface Course {
   name: string;
   course_code: string;
   teacher_name?: string;
+  teacher?: { name: string; last_name: string };
   description: string;
   url_image?: string;
   status?: CourseStatus;
@@ -68,7 +69,12 @@ const fetchCourses = async (search: string = ''): Promise<Course[]> => {
     }
     
     const data = await response.json();
-    return data.data || [];
+    // Backend returns teacher as nested object { name, last_name }, flatten it
+    const courses = (data.data || []) as Course[];
+    return courses.map(c => ({
+      ...c,
+      teacher_name: c.teacher ? `${c.teacher.name} ${c.teacher.last_name}` : undefined,
+    }));
   } catch (error) {
     console.error('Error fetching courses:', error);
     return [];
@@ -137,7 +143,10 @@ export default function AdminCoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('Todos los profesores');
-  const [statusFilter, setStatusFilter] = useState('Todos los estados');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -145,7 +154,7 @@ export default function AdminCoursesPage() {
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({ name: '', course_code: '', description: '', teacher_name: '', url_image: '', status: 'draft' as CourseStatus });
+  const [formData, setFormData] = useState({ name: '', course_code: '', description: '', teacher_name: '', teacher_last_name: '', url_image: '', status: 'draft' as CourseStatus });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -173,21 +182,22 @@ export default function AdminCoursesPage() {
     return courses.filter(course => {
       const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) || course.course_code.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesTeacher = teacherFilter === 'Todos los profesores' || course.teacher_name === teacherFilter;
-      
-      let matchesStatus = true;
-      if (statusFilter === 'Publicado') matchesStatus = course.status === 'published';
-      if (statusFilter === 'Borrador') matchesStatus = course.status === 'draft';
-      if (statusFilter === 'Archivado') matchesStatus = course.status === 'archived';
-
-      return matchesSearch && matchesTeacher && matchesStatus;
+      return matchesSearch && matchesTeacher;
     });
-  }, [courses, searchQuery, teacherFilter, statusFilter]);
+  }, [courses, searchQuery, teacherFilter]);
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setTeacherFilter('Todos los profesores');
-    setStatusFilter('Todos los estados');
+    setCurrentPage(1);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, teacherFilter, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage) || 1;
+  const paginatedCourses = filteredCourses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +205,7 @@ export default function AdminCoursesPage() {
     if (!formData.name.trim()) errors.name = 'Requerido';
     if (!formData.course_code.trim()) errors.course_code = 'Requerido';
     if (!formData.teacher_name.trim()) errors.teacher_name = 'Requerido';
+    if (!formData.teacher_last_name.trim()) errors.teacher_last_name = 'Requerido';
     
     // Check duplicates
     if (courses.some(c => c.course_code.toUpperCase() === formData.course_code.toUpperCase())) {
@@ -211,12 +222,14 @@ export default function AdminCoursesPage() {
         course_code: formData.course_code.toUpperCase(),
         description: formData.description,
         teacher_name: formData.teacher_name,
+        teacher_last_name: formData.teacher_last_name,
         url_image: formData.url_image || undefined,
       });
       
-      setCourses([...courses, newCourse]);
+      setCourses([...courses, { ...newCourse, teacher_name: `${formData.teacher_name} ${formData.teacher_last_name}` }]);
       setIsCreateModalOpen(false);
-      setFormData({ name: '', course_code: '', description: '', teacher_name: '', url_image: '', status: 'draft' });
+      setFormData({ name: '', course_code: '', description: '', teacher_name: '', teacher_last_name: '', url_image: '', status: 'draft' });
+      loadCourses();
     } catch (error) {
       console.error('Error creating course:', error);
       errors.name = 'Error al crear el curso';
@@ -260,7 +273,7 @@ export default function AdminCoursesPage() {
               </div>
               <button 
                 onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200"
+                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200 cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
                 Crear curso
@@ -294,7 +307,7 @@ export default function AdminCoursesPage() {
               
               <button 
                 onClick={loadCourses}
-                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors"
+                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
                 {isLoading ? 'Cargando...' : 'Recargar'}
               </button>
@@ -308,20 +321,9 @@ export default function AdminCoursesPage() {
                   {teachers.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
 
-                <select 
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white outline-none focus:border-[#157347] transition-colors"
-                >
-                  <option value="Todos los estados">Todos los estados</option>
-                  <option value="Publicado">Publicado</option>
-                  <option value="Borrador">Borrador</option>
-                  <option value="Archivado">Archivado</option>
-                </select>
-
                 <button 
                   onClick={handleClearFilters}
-                  className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors duration-200 whitespace-nowrap"
+                  className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors duration-200 whitespace-nowrap cursor-pointer"
                 >
                   Limpiar filtros
                 </button>
@@ -336,14 +338,12 @@ export default function AdminCoursesPage() {
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Nombre del curso y Código</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Profesor</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Etiquetas</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Última actualización</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Estado</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCourses.map((course) => (
+                    {paginatedCourses.map((course) => (
                       <tr key={course.course_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{course.name}</p>
@@ -353,20 +353,14 @@ export default function AdminCoursesPage() {
                           <span className="text-sm text-white/75">{course.teacher_name || 'Sin asignar'}</span>
                         </td>
                         <td className="px-5 py-4">
-                          {/* Las etiquetas se implementarán posteriormente */}
-                        </td>
-                        <td className="px-5 py-4">
                           <span className="text-sm text-white/55">{course.updated_at || 'N/A'}</span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <StatusBadge status={course.status || 'draft'} />
                         </td>
                         <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Link href={`/admin/cursos/${course.course_id}`} aria-label="Administrar curso" title="Administrar curso (clases)" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200">
                                 <SquarePen className="w-4 h-4" />
                               </Link>
-                              <button onClick={() => confirmDelete(course)} type="button" aria-label="Eliminar curso" title="Eliminar curso" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-200">
+                              <button onClick={() => confirmDelete(course)} type="button" aria-label="Eliminar curso" title="Eliminar curso" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-200 cursor-pointer">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -382,7 +376,7 @@ export default function AdminCoursesPage() {
                   <p className="mt-1 text-sm text-white/50 max-w-sm">Crea el primer curso para comenzar a construir el catálogo académico.</p>
                   <button 
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors duration-200"
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors duration-200 cursor-pointer"
                   >
                     Crear primer curso
                   </button>
@@ -394,19 +388,43 @@ export default function AdminCoursesPage() {
             {filteredCourses.length > 0 && (
               <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4 text-sm text-white/50">
-                  <span>Mostrando 1–{Math.min(filteredCourses.length, 10)} de {filteredCourses.length} cursos</span>
-                  <select className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347]">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
+                  <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredCourses.length)} de {filteredCourses.length} cursos</span>
+                  <select 
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347] cursor-pointer"
+                  >
+                    <option value="10" className="bg-[#1A201D] text-white">10</option>
+                    <option value="25" className="bg-[#1A201D] text-white">25</option>
+                    <option value="50" className="bg-[#1A201D] text-white">50</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button disabled className="px-3 py-1.5 rounded-md text-sm font-medium text-white/30 cursor-not-allowed">Anterior</button>
-                  <button className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium bg-[#153D30] text-white border border-[#1A6B50]">1</button>
-                  <button className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors">2</button>
-                  <button className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors">3</button>
-                  <button className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors">Siguiente</button>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage === 1 ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
+                  >
+                    Anterior
+                  </button>
+                  
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button 
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium cursor-pointer transition-colors ${currentPage === i + 1 ? 'bg-[#153D30] text-white border border-[#1A6B50]' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage === totalPages ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
+                  >
+                    Siguiente
+                  </button>
                 </div>
               </div>
             )}
@@ -437,9 +455,15 @@ export default function AdminCoursesPage() {
               </div>
 
               <div>
-                <label htmlFor="teacher_name" className="mb-1.5 block text-sm font-normal text-white/85">Profesor</label>
-                <input type="text" id="teacher_name" value={formData.teacher_name} onChange={(e) => setFormData({...formData, teacher_name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
+                <label htmlFor="teacher_name" className="mb-1.5 block text-sm font-normal text-white/85">Nombre del profesor</label>
+                <input type="text" id="teacher_name" placeholder="Ej: Carlos" value={formData.teacher_name} onChange={(e) => setFormData({...formData, teacher_name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
                 {formErrors.teacher_name && <p className="mt-1 text-xs text-red-400">{formErrors.teacher_name}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="teacher_last_name" className="mb-1.5 block text-sm font-normal text-white/85">Apellido del profesor</label>
+                <input type="text" id="teacher_last_name" placeholder="Ej: López" value={formData.teacher_last_name} onChange={(e) => setFormData({...formData, teacher_last_name: e.target.value})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
+                {formErrors.teacher_last_name && <p className="mt-1 text-xs text-red-400">{formErrors.teacher_last_name}</p>}
               </div>
 
               <div>
@@ -450,15 +474,6 @@ export default function AdminCoursesPage() {
               <div>
                 <label htmlFor="url_image" className="mb-1.5 block text-sm font-normal text-white/85">URL de imagen (opcional)</label>
                 <input type="text" id="url_image" value={formData.url_image} onChange={(e) => setFormData({...formData, url_image: e.target.value})} placeholder="https://ejemplo.com/imagen.jpg" className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-              </div>
-
-              <div>
-                <label htmlFor="status" className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                <select id="status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as CourseStatus})} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
-                  <option value="draft">Borrador</option>
-                  <option value="published">Publicado</option>
-                  <option value="archived">Archivado</option>
-                </select>
               </div>
 
               <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">

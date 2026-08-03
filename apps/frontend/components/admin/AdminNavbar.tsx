@@ -24,10 +24,10 @@ export const AdminNavbar = () => {
           <Link href="/" className="text-sm text-white/85 hover:text-white transition-colors duration-200">Home</Link>
           <Link href="/cursos" className="text-sm text-white/85 hover:text-white transition-colors duration-200">Cursos</Link>
           <Link href="/admin/cursos" className="text-sm font-medium text-white transition-colors duration-200">Administrador</Link>
-          <button className="text-sm text-white/85 hover:text-white transition-colors duration-200">Perfil</button>
+          <button className="text-sm text-white/85 hover:text-white transition-colors duration-200 cursor-pointer">Perfil</button>
         </div>
         <div className="flex md:hidden items-center">
-          <button aria-label="Abrir menú" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white/85 hover:text-white transition-colors duration-200">
+          <button aria-label="Abrir menú" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white/85 hover:text-white transition-colors duration-200 cursor-pointer">
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>

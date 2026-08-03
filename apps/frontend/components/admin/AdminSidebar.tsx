@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, BookOpen, Route, Tags, Users, Settings, LogOut, Menu, X } from 'lucide-react';
+import { BookOpen, Route, Tags, Users, Settings, LogOut, Menu, X } from 'lucide-react';
 
 export const AdminSidebar = () => {
   const router = useRouter();
@@ -15,7 +15,6 @@ export const AdminSidebar = () => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard", active: false },
     { icon: BookOpen, label: "Cursos", href: "/admin/cursos", active: false },
     { icon: Route, label: "Rutas", href: "#", active: false },
     { icon: Tags, label: "Etiquetas", href: "#", active: false },
@@ -27,7 +26,7 @@ export const AdminSidebar = () => {
     <>
       {/* Botón flotante para móviles */}
       <button 
-        className="lg:hidden fixed bottom-6 right-6 z-[60] bg-[#157347] hover:bg-[#115c38] p-3.5 rounded-full shadow-lg text-white transition-colors"
+        className="lg:hidden fixed bottom-6 right-6 z-[60] bg-[#157347] hover:bg-[#115c38] p-3.5 rounded-full shadow-lg text-white transition-colors cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Alternar menú"
       >
@@ -69,7 +68,7 @@ export const AdminSidebar = () => {
       <div className="pt-6 border-t border-[#2B332F]">
         <button 
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors duration-200"
+          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors duration-200 cursor-pointer"
         >
           <LogOut className="w-5 h-5" />
           <span className="text-sm font-medium">Cerrar sesión</span>
