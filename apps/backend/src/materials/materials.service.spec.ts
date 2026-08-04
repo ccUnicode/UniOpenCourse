@@ -3,7 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import * as fs from 'fs';
+const fs = require('fs');
+import type { ReadStream } from 'fs';
 describe('MaterialsService', () => {
   let service: MaterialsService;
 
@@ -194,7 +195,10 @@ describe('MaterialsService', () => {
       });
       jest.spyOn(fs, 'existsSync').mockReturnValue(true);
       
-      const mockStream = {} as any;
+      const mockStream = {
+        pipe: jest.fn(),
+        on: jest.fn(),
+      } as unknown as ReadStream;
       jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream);
 
       const result = await service.getDownloadableFile(1);

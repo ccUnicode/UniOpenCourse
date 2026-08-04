@@ -7,7 +7,6 @@ import type { Response } from 'express';
 
 describe('MaterialsController', () => {
   let controller: MaterialsController;
-  let service: MaterialsService;
 
   const mockMaterialsService = {
     getDownloadableFile: jest.fn(),
@@ -28,7 +27,6 @@ describe('MaterialsController', () => {
       .compile();
 
     controller = module.get<MaterialsController>(MaterialsController);
-    service = module.get<MaterialsService>(MaterialsService);
   });
 
   afterEach(() => {
@@ -41,22 +39,23 @@ describe('MaterialsController', () => {
 
   describe('download', () => {
     it('should set headers and return a StreamableFile', async () => {
-      const mockStream = { pipe: jest.fn() } as any;
+      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
       const expectedFilename = 'test.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({
         stream: mockStream,
         filename: expectedFilename,
-      });
+      } as never);
 
+      const mockSet = jest.fn();
       const mockRes = {
-        set: jest.fn(),
+        set: mockSet,
       } as unknown as Response;
 
       const result = await controller.download(1, mockRes);
 
       expect(mockMaterialsService.getDownloadableFile).toHaveBeenCalledWith(1);
-      expect(mockRes.set).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${expectedFilename}"`,
       });

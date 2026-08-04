@@ -1,4 +1,12 @@
-import { Controller, Get, Param, ParseIntPipe, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Res,
+  StreamableFile,
+  UseGuards,
+} from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { MaterialsService } from './materials.service';
