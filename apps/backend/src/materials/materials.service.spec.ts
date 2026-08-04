@@ -3,8 +3,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-const fs = require('fs');
+import * as fs from 'fs';
 import type { ReadStream } from 'fs';
+
+jest.mock('fs', () => ({
+  ...jest.requireActual<typeof fs>('fs'),
+  existsSync: jest.fn(),
+  createReadStream: jest.fn(),
+  promises: {
+    unlink: jest.fn(),
+  },
+}));
 describe('MaterialsService', () => {
   let service: MaterialsService;
 
@@ -182,7 +191,7 @@ describe('MaterialsService', () => {
         material_type: 'file',
         file_path: 'test.pdf',
       });
-      jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
 
       await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
     });
@@ -193,13 +202,13 @@ describe('MaterialsService', () => {
         file_path: 'test.pdf',
         filename: 'original.pdf',
       });
-      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-      
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
       const mockStream = {
         pipe: jest.fn(),
         on: jest.fn(),
       } as unknown as ReadStream;
-      jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream);
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
 
       const result = await service.getDownloadableFile(1);
 

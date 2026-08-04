@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsController } from './materials.controller';
 import { MaterialsService } from './materials.service';
 import { StreamableFile } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 
 describe('MaterialsController', () => {
@@ -21,10 +20,7 @@ describe('MaterialsController', () => {
           useValue: mockMaterialsService,
         },
       ],
-    })
-      .overrideGuard(ThrottlerGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<MaterialsController>(MaterialsController);
   });
