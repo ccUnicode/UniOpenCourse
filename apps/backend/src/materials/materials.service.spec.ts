@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-
+import * as fs from 'fs';
 describe('MaterialsService', () => {
   let service: MaterialsService;
 
@@ -163,7 +163,7 @@ describe('MaterialsService', () => {
     it('should throw BadRequestException if material is not a file', async () => {
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'link',
-        file_path: 'test.pdf'
+        file_path: 'test.pdf',
       });
       await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
     });
@@ -171,9 +171,40 @@ describe('MaterialsService', () => {
     it('should throw BadRequestException if material file_path is empty', async () => {
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
-        file_path: null
+        file_path: null,
       });
       await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if physical file is missing from server', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: 'test.pdf',
+      });
+      jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return a read stream and filename if file exists', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: 'test.pdf',
+        filename: 'original.pdf',
+      });
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      
+      const mockStream = {} as any;
+      jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream);
+
+      const result = await service.getDownloadableFile(1);
+
+      expect(result).toEqual({
+        stream: mockStream,
+        filename: 'original.pdf',
+      });
+      expect(fs.existsSync).toHaveBeenCalled();
+      expect(fs.createReadStream).toHaveBeenCalled();
     });
   });
 });
