@@ -23,8 +23,8 @@ export class MaterialsController {
     // Obliga al navegador a descargar el archivo con el nombre original
     res.set({
       'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${filename}"`,
     });
+    res.attachment(filename);
 
     return new StreamableFile(stream);
   }

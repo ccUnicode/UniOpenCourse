@@ -44,8 +44,10 @@ describe('MaterialsController', () => {
       } as never);
 
       const mockSet = jest.fn();
+      const mockAttachment = jest.fn();
       const mockRes = {
         set: mockSet,
+        attachment: mockAttachment,
       } as unknown as Response;
 
       const result = await controller.download(1, mockRes);
@@ -53,8 +55,34 @@ describe('MaterialsController', () => {
       expect(mockMaterialsService.getDownloadableFile).toHaveBeenCalledWith(1);
       expect(mockSet).toHaveBeenCalledWith({
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${expectedFilename}"`,
       });
+      expect(mockAttachment).toHaveBeenCalledWith(expectedFilename);
+      expect(result).toBeInstanceOf(StreamableFile);
+    });
+
+    it('should validate download with names containing spaces, accents or Unicode', async () => {
+      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
+      const expectedFilename = 'Mí Ãrchivö de Prúebâ 123 🚀.pdf';
+
+      mockMaterialsService.getDownloadableFile.mockResolvedValue({
+        stream: mockStream,
+        filename: expectedFilename,
+      } as never);
+
+      const mockSet = jest.fn();
+      const mockAttachment = jest.fn();
+      const mockRes = {
+        set: mockSet,
+        attachment: mockAttachment,
+      } as unknown as Response;
+
+      const result = await controller.download(2, mockRes);
+
+      expect(mockMaterialsService.getDownloadableFile).toHaveBeenCalledWith(2);
+      expect(mockSet).toHaveBeenCalledWith({
+        'Content-Type': 'application/octet-stream',
+      });
+      expect(mockAttachment).toHaveBeenCalledWith(expectedFilename);
       expect(result).toBeInstanceOf(StreamableFile);
     });
   });
