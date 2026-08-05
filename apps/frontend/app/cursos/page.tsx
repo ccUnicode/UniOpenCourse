@@ -1,33 +1,38 @@
-import { Course } from '../../interfaces/course.interface';
-import Link from 'next/link';
-import { Search, BookOpen } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { BookOpen } from 'lucide-react';
 import CourseCard from '@/components/course-card';
+import { Course } from '@/interfaces/course.interface';
+import { getCourseData } from '@/services/courses.service';
 
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
+export default function Cursos() {
+  const [busqueda, setBusqueda] = useState('');
+  const [page, setPage] = useState(1);
+  const [courses, setCourses] = useState<{ data: Course[]; totalPages: number }>({
+    data: [],
+    totalPages: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-async function getCourseData(busqueda: string) {
-  try {
-    const response = await fetch(`${baseUrl}/courses?q=${busqueda}`, {
-      next: { revalidate: 60 },
-    });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-    return null;
-  }
-}
-
-export default async function Cursos({
-  searchParams,
-}: {
-  searchParams: Promise<{ busqueda: string }>;
-}) {
-  const params = await searchParams;
-  const busqueda = params.busqueda || '';
-  const coursesResponse = await getCourseData(busqueda);
-
-  const coursesList: Course[] = coursesResponse?.data || [];
+  useEffect(() => {
+    const loadCourses = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getCourseData(busqueda, page);
+        setCourses({
+          data: response?.data || [],
+          totalPages: response?.totalPages || 0,
+        });
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        setCourses({ data: [], totalPages: 0 });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadCourses();
+  }, [busqueda, page]);
 
   return (
     <div className="flex-1 text-white font-sans min-h-screen">
@@ -41,30 +46,38 @@ export default async function Cursos({
             expandir tus conocimientos.
           </p>
 
-          <form action="/cursos" method="GET" className="relative max-w-2xl">
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 w-5 h-5 text-white/50" />
-              <input
-                type="text"
-                name="busqueda"
-                defaultValue={busqueda}
-                placeholder="¿Qué te gustaría aprender hoy?"
-                className="w-full h-14 pl-12 pr-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/50 outline-none focus:bg-white/20 focus:border-white/40 transition-all backdrop-blur-sm"
+          <div className="flex h-12 max-w-2xl items-center gap-4 rounded-lg border border-border px-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              fill="none"
+              viewBox="0 0 18 18"
+              className="shrink-0"
+            >
+              <path
+                fill="#31413C"
+                d="m16.6 18-6.3-6.3A6.096 6.096 0 0 1 6.5 13c-1.817 0-3.354-.63-4.612-1.887C.629 9.854 0 8.317 0 6.5c0-1.817.63-3.354 1.887-4.612C3.146.629 4.683 0 6.5 0c1.817 0 3.354.63 4.613 1.887C12.37 3.146 13 4.683 13 6.5a6.096 6.096 0 0 1-1.3 3.8l6.3 6.3-1.4 1.4ZM6.5 11c1.25 0 2.313-.438 3.188-1.313C10.562 8.813 11 7.75 11 6.5c0-1.25-.438-2.313-1.313-3.188C8.813 2.438 7.75 2 6.5 2c-1.25 0-2.313.438-3.188 1.313C2.438 4.186 2 5.25 2 6.5c0 1.25.438 2.313 1.313 3.188C4.186 10.562 5.25 11 6.5 11Z"
               />
-              <button
-                type="submit"
-                className="absolute right-2 px-6 py-2 bg-white text-[#014D3B] font-semibold rounded-lg hover:bg-white/90 transition-colors"
-              >
-                Buscar
-              </button>
-            </div>
-          </form>
+            </svg>
+            <input
+              type="text"
+              placeholder="¿Qué quieres aprender hoy?"
+              className="w-full bg-transparent text-text-muted placeholder:text-text-muted outline-none"
+              value={busqueda}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Grid de Cursos */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 -mt-10 relative z-10">
-        {coursesList.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16 text-white/50">Cargando cursos...</div>
+        ) : courses.data.length === 0 ? (
           <div className="bg-[#1A201D] border border-white/10 rounded-2xl p-12 text-center">
             <BookOpen className="w-16 h-16 text-white/20 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-white mb-2">
@@ -74,20 +87,84 @@ export default async function Cursos({
               Intenta buscar con otros términos o explora todas las categorías.
             </p>
             {busqueda && (
-              <Link
-                href="/cursos"
-                className="inline-block mt-6 px-6 py-2 bg-[#157347] hover:bg-[#115c38] text-white font-medium rounded-lg transition-colors"
+              <button
+                type="button"
+                onClick={() => {
+                  setBusqueda('');
+                  setPage(1);
+                }}
+                className="inline-block mt-6 px-6 py-2 bg-[#157347] hover:bg-[#115c38] text-white font-medium rounded-lg transition-colors cursor-pointer"
               >
                 Ver todos los cursos
-              </Link>
+              </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {coursesList.map((course: Course) => (
-              <CourseCard key={course.course_id} course={course} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.data.map((course: Course) => (
+                <CourseCard key={course.course_id} course={course} />
+              ))}
+            </div>
+
+            {courses.totalPages > 1 && (
+              <div className="flex gap-4 mt-8 justify-center items-center">
+                <button
+                  type="button"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className={`${page === 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="8"
+                    height="12"
+                    fill="none"
+                    viewBox="0 0 8 12"
+                  >
+                    <path fill="#F8F9FF" d="M6 12 0 6l6-6 1.4 1.4L2.8 6l4.6 4.6L6 12Z" />
+                  </svg>
+                </button>
+                {Array.from({ length: courses.totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+                  return (
+                    <button
+                      type="button"
+                      key={pageNumber}
+                      className={`w-10 h-10 rounded border transition cursor-pointer ${
+                        page === pageNumber
+                          ? 'bg-accent text-white border-accent'
+                          : 'hover:bg-background-secondary border-border text-text-muted'
+                      }`}
+                      onClick={() => setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className={`${
+                    page === courses.totalPages
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'cursor-pointer'
+                  }`}
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === courses.totalPages}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="8"
+                    height="12"
+                    fill="none"
+                    viewBox="0 0 8 12"
+                  >
+                    <path fill="#F8F9FF" d="M4.6 6 0 1.4 1.4 0l6 6-6 6L0 10.6 4.6 6Z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

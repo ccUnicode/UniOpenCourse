@@ -30,11 +30,11 @@ export class AdminClassesController {
     return this.service.create(createClassDto);
   }
 
-  /** Retrieves a paginated list of classes, optionally filtered by search */
+  /** Retrieves a paginated list of classes, optionally filtered by search and course */
   @Get()
   findAll(@Query() query: FindAllClassesDto) {
-    const { page, limit, search } = query;
-    return this.service.findAll(search, page, limit);
+    const { page, limit, search, course_id } = query;
+    return this.service.findAll(search, page, limit, course_id);
   }
 
   /** Retrieves a specific class by its ID */

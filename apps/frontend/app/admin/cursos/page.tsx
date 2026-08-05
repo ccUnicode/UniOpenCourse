@@ -24,28 +24,24 @@ interface Course {
   description: string;
   url_image?: string;
   status?: CourseStatus;
-  updated_at?: string;
+  course_creation_date?: string;
+  update_date?: string;
 }
 
-// --- Components ---
-
-const StatusBadge = ({ status }: { status: CourseStatus }) => {
-  const styles = {
-    published: "border border-[#145A42] bg-[#103C2D] text-[#45D483]",
-    draft: "border border-white/10 bg-white/5 text-white/60",
-    archived: "border border-amber-700/50 bg-amber-900/20 text-amber-400"
-  };
-  const labels = {
-    published: "Publicado",
-    draft: "Borrador",
-    archived: "Archivado"
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
-  );
+const formatAdminDate = (date?: string) => {
+  if (!date) return 'N/A';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
+
+// --- Components ---
 
 // --- API Functions ---
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -81,7 +77,16 @@ const fetchCourses = async (search: string = ''): Promise<Course[]> => {
   }
 };
 
-const createCourse = async (courseData: Omit<Course, 'course_id'> & Partial<Course>): Promise<Course> => {
+type CreateCoursePayload = {
+  name: string;
+  course_code: string;
+  description: string;
+  teacher_name?: string;
+  teacher_last_name?: string;
+  url_image?: string;
+};
+
+const createCourse = async (courseData: CreateCoursePayload): Promise<Course> => {
   try {
     const response = await fetch(`${API_URL}/admin/courses`, {
       method: 'POST',
@@ -338,6 +343,7 @@ export default function AdminCoursesPage() {
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Nombre del curso y Código</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Profesor</th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Última actualización</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                     </tr>
@@ -353,7 +359,10 @@ export default function AdminCoursesPage() {
                           <span className="text-sm text-white/75">{course.teacher_name || 'Sin asignar'}</span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{course.updated_at || 'N/A'}</span>
+                          <span className="text-sm text-white/55">{formatAdminDate(course.course_creation_date)}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-sm text-white/55">{formatAdminDate(course.update_date)}</span>
                         </td>
                         <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">

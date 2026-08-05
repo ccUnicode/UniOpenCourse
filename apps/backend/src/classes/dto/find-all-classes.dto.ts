@@ -19,4 +19,10 @@ export class FindAllClassesDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  course_id?: number;
 }

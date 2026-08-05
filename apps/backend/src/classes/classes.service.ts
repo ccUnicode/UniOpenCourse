@@ -18,12 +18,19 @@ export class ClassesService {
   }
 
   /**
-   * Retrieves paginated classes, optionally filtered by title
+   * Retrieves paginated classes, optionally filtered by title and/or course
    * @param search - Optional search term to filter classes
    * @param page - The current page number for pagination (defaults to 1)
+   * @param limit - Page size
+   * @param courseId - Optional course ID to restrict results to one course
    * @returns A paginated object containing the data and metadata
    */
-  async findAll(search?: string, page: number = 1, limit: number = DEFAULT_PAGE_SIZE) {
+  async findAll(
+    search?: string,
+    page: number = 1,
+    limit: number = DEFAULT_PAGE_SIZE,
+    courseId?: number,
+  ) {
     const safePage = Number.isInteger(page) && page > 0 ? page : 1;
     const safeLimit =
       Number.isInteger(limit) && limit > 0
@@ -31,14 +38,21 @@ export class ClassesService {
         : DEFAULT_PAGE_SIZE;
     const skip = (safePage - 1) * safeLimit;
 
-    const where = search
-      ? {
-          title: {
-            contains: search,
-            mode: 'insensitive' as const,
-          },
-        }
-      : {};
+    const where: {
+      title?: { contains: string; mode: 'insensitive' };
+      course_id?: number;
+    } = {};
+
+    if (search) {
+      where.title = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    if (courseId) {
+      where.course_id = Number(courseId);
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.class.findMany({

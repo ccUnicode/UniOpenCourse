@@ -136,6 +136,8 @@ export class CoursesService {
           course_code: true,
           url_image: true,
           description: true,
+          course_creation_date: true,
+          update_date: true,
           teacher: {
             select: {
               name: true,

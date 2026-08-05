@@ -13,8 +13,21 @@ interface Class {
   description?: string;
   video_url?: string;
   order_number: number;
-  created_at?: string;
+  class_creation_date?: string;
 }
+
+const formatAdminDate = (date?: string) => {
+  if (!date) return 'N/A';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 // --- API Functions ---
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -279,7 +292,7 @@ export default function AdminClassesPage() {
                           <span className="text-sm text-white/55">{classItem.order_number}</span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{classItem.created_at || 'N/A'}</span>
+                          <span className="text-sm text-white/55">{formatAdminDate(classItem.class_creation_date)}</span>
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">

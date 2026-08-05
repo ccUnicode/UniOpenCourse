@@ -46,8 +46,14 @@ export class AuthService {
     }
   }
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const identifier = dto.email.trim();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: 'insensitive' } },
+          { username: { equals: identifier, mode: 'insensitive' } },
+        ],
+      },
       include: { role: true },
     });
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
@@ -58,8 +64,8 @@ export class AuthService {
   }
   async adminLogin(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-      include: { role: true }, // Incluir el rol para verificarlo
+      where: { email: dto.email.trim() },
+      include: { role: true },
     });
 
     if (!user || user.role?.role_name !== 'ADMIN') {

@@ -6,13 +6,9 @@ import {
   Search,
   ExternalLink,
   SquarePen,
-  Eye,
-  EyeOff,
   Trash2,
   FolderOpen,
   FileText,
-  HardDrive,
-  Presentation,
   Link as LinkIcon,
   BookOpen,
   Plus,
@@ -209,6 +205,8 @@ export default function AdminClassPage() {
   const [classData, setClassData] = useState<ClassInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
 
   // Class form state (inline edit)
   const [classFormData, setClassFormData] = useState({
@@ -223,7 +221,6 @@ export default function AdminClassPage() {
   // Filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos los tipos');
-  const [statusFilter, setStatusFilter] = useState('Todos los estados');
 
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -269,14 +266,19 @@ export default function AdminClassPage() {
 
   const handleSaveClass = async () => {
     setIsSaving(true);
+    setSaveError('');
+    setSaveSuccess('');
     try {
       await updateClass(parseInt(classId), {
         title: classFormData.title,
         description: classFormData.description || undefined,
         video_url: classFormData.video_url || undefined,
       });
+      setSaveSuccess('Datos guardados exitosamente');
+      setTimeout(() => setSaveSuccess(''), 3000);
     } catch (error) {
       console.error('Error saving class:', error);
+      setSaveError('Error al guardar los cambios.');
     } finally {
       setIsSaving(false);
     }
@@ -465,6 +467,8 @@ export default function AdminClassPage() {
                   </button>
                 </div>
               </div>
+              {saveError && <p className="mt-2 text-sm text-red-400">{saveError}</p>}
+              {saveSuccess && <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>}
             </div>
 
             {/* Información de la clase (inline edit) */}
@@ -527,7 +531,7 @@ export default function AdminClassPage() {
                   <p className="mt-1 text-sm text-white/50 max-w-sm">Agrega enlaces a documentos, presentaciones, referencias u otros recursos externos.</p>
                   <button
                     onClick={openCreateModal}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors"
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Agregar primer material
@@ -687,7 +691,7 @@ export default function AdminClassPage() {
 
               <div>
                 <label htmlFor="type" className="mb-1.5 block text-sm font-normal text-white/85">Tipo de material</label>
-                <select id="type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as MaterialType })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
+                <select id="type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as MaterialType })} className="h-11 w-full cursor-pointer rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
                   <option value="" disabled>Selecciona un tipo</option>
                   {Object.entries(TypeLabels).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
@@ -717,17 +721,34 @@ export default function AdminClassPage() {
 
               {formData.type === 'file' && !editingMaterial && (
                 <div>
-                  <label htmlFor="file" className="mb-1.5 block text-sm font-normal text-white/85">Archivo (PDF, PNG, JPG)</label>
-                  <input type="file" id="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => setFormData({ ...formData, file: e.target.files ? e.target.files[0] : null })} className="w-full text-sm text-white/50 file:mr-4 file:py-2.5 file:px-4 file:rounded-[10px] file:border-0 file:text-sm file:font-semibold file:bg-[#1A201D] file:text-white hover:file:bg-[#2B332F] cursor-pointer" />
+                  <span className="mb-1.5 block text-sm font-normal text-white/85">Archivo (PDF, PNG, JPG)</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      type="file"
+                      id="file"
+                      accept="application/pdf,image/png,image/jpeg"
+                      onChange={(e) => setFormData({ ...formData, file: e.target.files ? e.target.files[0] : null })}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="file"
+                      className="inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-[#157347] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1A8A56]"
+                    >
+                      Seleccionar archivo
+                    </label>
+                    <span className="text-sm text-white/50">
+                      {formData.file ? formData.file.name : 'Ningún archivo seleccionado'}
+                    </span>
+                  </div>
                   {formErrors.file && <p className="mt-1 text-xs text-red-400">{formErrors.file}</p>}
                 </div>
               )}
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
-                <button type="button" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
+                <button type="button" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                   {isSubmitting ? 'Guardando...' : editingMaterial ? 'Guardar cambios' : 'Agregar material'}
                 </button>
               </div>

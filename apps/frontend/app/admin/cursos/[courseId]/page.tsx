@@ -22,9 +22,21 @@ interface Class {
   description?: string;
   video_url?: string;
   order_number: number;
-  created_at?: string;
-  updated_at?: string;
+  class_creation_date?: string;
 }
+
+const formatAdminDate = (date?: string) => {
+  if (!date) return 'N/A';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 interface Course {
   course_id: number;
@@ -78,9 +90,12 @@ const fetchCourse = async (courseId: number): Promise<Course> => {
 
 const fetchClasses = async (courseId: number): Promise<Class[]> => {
   try {
-    const response = await fetch(`${API_URL}/admin/classes?course_id=${courseId}`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_URL}/admin/classes?course_id=${courseId}&limit=100`,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
     if (!response.ok) throw new Error('Error al obtener clases');
     const data = await response.json();
     return data.data || [];
@@ -131,6 +146,7 @@ export default function AdminCourseDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
 
   // Course form state (for inline editing)
   const [courseFormData, setCourseFormData] = useState({
@@ -187,6 +203,7 @@ export default function AdminCourseDetailPage() {
   const handleSaveCourse = async () => {
     setIsSaving(true);
     setSaveError('');
+    setSaveSuccess('');
     try {
       const updated = await updateCourse(courseId, {
         name: courseFormData.name,
@@ -197,6 +214,8 @@ export default function AdminCourseDetailPage() {
         url_image: courseFormData.url_image || undefined,
       } as Parameters<typeof updateCourse>[1]);
       setCourseInfo(updated);
+      setSaveSuccess('Datos guardados exitosamente');
+      setTimeout(() => setSaveSuccess(''), 3000);
     } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _err = error;
@@ -300,6 +319,7 @@ export default function AdminCourseDetailPage() {
                 </div>
               </div>
               {saveError && <p className="mt-2 text-sm text-red-400">{saveError}</p>}
+              {saveSuccess && <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>}
             </div>
 
             {/* Información del Curso (inline edit) */}
@@ -406,7 +426,7 @@ export default function AdminCourseDetailPage() {
                     <thead>
                       <tr className="bg-[#151A17] border-b border-[#2B332F]">
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título de la clase</th>
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Última actualización</th>
+                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                       </tr>
                     </thead>
@@ -414,7 +434,7 @@ export default function AdminCourseDetailPage() {
                       {classes.map((cls) => (
                         <tr key={cls.class_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
                           <td className="px-5 py-4 text-sm font-semibold text-white">{cls.title}</td>
-                          <td className="px-5 py-4 text-sm text-white/50">{cls.updated_at || cls.created_at || 'N/A'}</td>
+                          <td className="px-5 py-4 text-sm text-white/50">{formatAdminDate(cls.class_creation_date)}</td>
                           <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Link
