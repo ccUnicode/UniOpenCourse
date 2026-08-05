@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ClassInterface } from '@/interfaces/class.interface';
 
 interface CourseSidebarProps {
   courseId: string;
   courseName: string;
-  classes: any[];
+  classes: ClassInterface[];
 }
 
 export default function CourseSidebar({ courseId, courseName, classes }: CourseSidebarProps) {
