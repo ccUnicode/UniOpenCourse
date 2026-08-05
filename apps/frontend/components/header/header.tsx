@@ -17,7 +17,7 @@ export default async function Header() {
   const access_token = cookieStore.get('access_token');
   return (
     <header
-      className={`${plusJakartaSans.variable} flex h-18 items-center justify-between bg-header-bg px-9 text-primary`}
+      className={`${plusJakartaSans.variable} sticky top-0 z-50 flex h-18 items-center justify-between bg-header-bg px-9 text-primary`}
     >
       <Link href={access_token ? '/dashboard' : '/'}>
         <div className="flex items-center">
