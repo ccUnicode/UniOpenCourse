@@ -22,7 +22,7 @@ export default function GlobalSearcher({}) {
     router.push(`/busqueda?q=${encodeURIComponent(query)}`);
   };
   return (
-    <div className="searchContainer h-10 bg-black/10 border-border border rounded-full flex items-center px-4 w-7/20">
+    <div className="hidden sm:flex min-w-75 searchContainer h-10 bg-black/10 border-border border rounded-full items-center px-4 w-7/20">
       <button onClick={handleSearch} className="cursor-pointer">
         <svg
           xmlns="http://www.w3.org/2000/svg"
