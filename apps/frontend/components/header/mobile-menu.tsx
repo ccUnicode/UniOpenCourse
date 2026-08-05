@@ -12,7 +12,9 @@ interface Props {
 
 export default function MobileMenu({ open, setOpen, access_token }: Props) {
   return (
-    <div className={`fixed inset-0 z-50 transition ${open ? 'visible' : 'invisible'}`}>
+    <div
+      className={`fixed md:hidden inset-0 z-50 transition ${open ? 'visible' : 'invisible'}`}
+    >
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity ${
           open ? 'opacity-100' : 'opacity-0'
@@ -25,16 +27,16 @@ export default function MobileMenu({ open, setOpen, access_token }: Props) {
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <button onClick={() => setOpen(false)} className="mb-8 text-2xl">
+        <button onClick={() => setOpen(false)} className="mb-8 text-2xl cursor-pointer">
           ✕
         </button>
 
-        <div className="mb-8">
+        <div className="mb-4 sm:hidden block">
           <Suspense fallback={null}>
             <GlobalSearcher />
           </Suspense>
         </div>
-        <nav>
+        <nav className="flex-1">
           <Navigation access_token={access_token} />
         </nav>
       </aside>

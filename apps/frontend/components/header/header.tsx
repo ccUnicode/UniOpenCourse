@@ -35,10 +35,11 @@ export default async function Header() {
           </span>
         </div>
       </Link>
-
-      <Suspense fallback={null}>
-        <GlobalSearcher />
-      </Suspense>
+      <div className="w-7/20 hidden sm:block min-w-75">
+        <Suspense fallback={null}>
+          <GlobalSearcher />
+        </Suspense>
+      </div>
 
       <HeaderMenu access_token={!!access_token} />
     </header>
