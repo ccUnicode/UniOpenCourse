@@ -10,7 +10,6 @@ async function getCourse(course_id: string) {
   const course = await response.json();
   return course;
 }
-
 export default async function Clase({
   params,
 }: {
@@ -24,7 +23,11 @@ export default async function Clase({
 
   const course = await getCourse(course_id);
   const clase = await getClassData(class_id);
+  if (clase.error === 'Not Found') {
+    notFound();
+  }
   const materials = await getMaterialData(class_id);
+  console.log(clase);
 
   if (course.error === 'Not Found' || course.statusCode === 404 || clase.error === 'Not Found') {
     notFound();

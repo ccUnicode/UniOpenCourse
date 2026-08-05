@@ -48,7 +48,6 @@ export async function getClassData(class_id: string) {
   clase.url_youtube = getEmbedUrl(clase.url_youtube);
   return clase;
 }
-
 export async function getClassesByCourse(course_id: string) {
   const response = await fetch(`${baseUrl}/courses/${course_id}/classes`);
   const classes = await response.json();
