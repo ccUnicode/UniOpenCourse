@@ -32,7 +32,7 @@ export default function CourseSidebar({ courseId, courseName, classes }: CourseS
         <h3 className="text-lg font-bold text-primary mb-4">Clases</h3>
         <ul className="space-y-1">
           {classes.map((cls, index) => {
-            const currentId = cls.class_id || cls.id;
+            const currentId = cls.class_id;
             const isActive = pathname === `/cursos/${courseId}/clases/${currentId}`;
             
             return (
