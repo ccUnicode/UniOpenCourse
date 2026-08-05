@@ -47,22 +47,9 @@ export default async function Header() {
           </li>
 
           {accessToken ? (
-            <>
-              <li>
-                <Link href="/dashboard">Dashboard</Link>
-              </li>
-              <li>
-                <Link href="/perfil">
-                  <Image
-                    src="/default-avatar.png"
-                    alt="Perfil"
-                    width={36}
-                    height={36}
-                    className="rounded-full"
-                  />
-                </Link>
-              </li>
-            </>
+            <li>
+              <Link href="/logout">Cerrar Sesión</Link>
+            </li>
           ) : (
             <li>
               <Link href="/login">
