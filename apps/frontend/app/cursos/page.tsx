@@ -1,7 +1,6 @@
 import { Course } from '../../interfaces/course.interface';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Search, BookOpen, ArrowRight } from 'lucide-react';
+import { Search, BookOpen } from 'lucide-react';
 import CourseCard from '@/components/course-card';
 
 const baseUrl = process.env.API_URL || 'http://localhost:3001';
@@ -32,7 +31,7 @@ export default async function Cursos({
 
   return (
     <div className="flex-1 text-white font-sans min-h-screen">
-      <div className="bg-background-secondary py-12 px-4 md:px-8 relative">
+      <div className="bg-background-secondary py-12 px-4 md:px-8 relative mb-10">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4">
             Catálogo de Cursos
