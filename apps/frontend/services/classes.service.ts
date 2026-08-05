@@ -22,9 +22,7 @@ function getEmbedUrl(youtubeUrl: string) {
       return url.href;
     }
     return '';
-  } catch (error) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _err = error;
+  } catch {
     return '';
   }
 }
