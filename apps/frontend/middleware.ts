@@ -2,30 +2,30 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Solo interceptamos si la ruta empieza con /admin
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    
-    // Si van al login viejo de admin, ignoramos
-    if (request.nextUrl.pathname === '/admin/login') {
-      return NextResponse.next();
+  const { pathname } = request.nextUrl;
+
+  // Interceptar únicamente rutas bajo /admin
+  if (pathname.startsWith('/admin')) {
+    const token = request.cookies.get('access_token')?.value;
+    const role = request.cookies.get('user_role')?.value;
+
+    const isLoginPage = pathname === '/admin/login';
+
+    // Si intenta entrar a /admin/login estando ya autenticado como ADMIN
+    if (isLoginPage && token && role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/cursos', request.url));
     }
 
-    // Por ahora deshabilitamos la verificación de autenticación en el middleware
-    // La autenticación se maneja en el cliente con JWT tokens en localStorage
-    // TODO: Implementar verificación JWT en el middleware si es necesario
-    
-    // Comentamos temporalmente la verificación de cookie
-    // const role = request.cookies.get('role')?.value;
-    // if (role !== 'admin') {
-    //   const loginUrl = new URL('/login', request.url);
-    //   return NextResponse.redirect(loginUrl);
-    // }
+    // Si NO es la página de login y no tiene token ni rol ADMIN, redirigir al login
+    if (!isLoginPage && (!token || role !== 'ADMIN')) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Aplicar a todas las rutas bajo /admin
   matcher: '/admin/:path*',
 };
+

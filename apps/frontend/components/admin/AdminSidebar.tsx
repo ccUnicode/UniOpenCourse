@@ -2,22 +2,24 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { BookOpen, Users, Settings, LogOut, Menu, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { BookOpen, Video, FileText, LogOut, Menu, X } from 'lucide-react';
+
+import { clearAuthCookies } from '@/lib/auth-cookies';
 
 export const AdminSidebar = () => {
-  const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    router.push('/admin/login');
+    clearAuthCookies();
+    window.location.replace('/admin/login');
   };
 
   const menuItems = [
-    { icon: BookOpen, label: "Cursos", href: "/admin/cursos", active: false },
-    { icon: Users, label: "Usuarios", href: "#", active: false },
-    { icon: Settings, label: "Configuración", href: "#", active: false },
+    { icon: BookOpen, label: "Cursos", href: "/admin/cursos" },
+    { icon: Video, label: "Clases", href: "/admin/clases" },
+    { icon: FileText, label: "Materiales", href: "/admin/materiales" },
   ];
 
   return (
@@ -34,7 +36,7 @@ export const AdminSidebar = () => {
       {/* Overlay para móviles */}
       {isOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[50]" 
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[50] cursor-pointer" 
           onClick={() => setIsOpen(false)} 
         />
       )}
@@ -47,21 +49,24 @@ export const AdminSidebar = () => {
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
       <nav className="flex-1 space-y-2">
-        {menuItems.map((item, idx) => (
-          <Link
-            key={idx}
-            href={item.href}
-            onClick={() => setIsOpen(false)}
-            className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-200 ${
-              item.active
-                ? "bg-[#153D30] text-white border border-[#1A6B50]"
-                : "text-white/60 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="text-sm font-medium">{item.label}</span>
-          </Link>
-        ))}
+        {menuItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-200 cursor-pointer ${
+                isActive
+                  ? "bg-[#153D30] text-white border border-[#1A6B50]"
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-sm font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
       <div className="pt-6 border-t border-[#2B332F]">
         <button 
@@ -76,3 +81,4 @@ export const AdminSidebar = () => {
     </>
   );
 };
+

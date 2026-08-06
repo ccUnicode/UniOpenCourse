@@ -60,6 +60,11 @@ export class ClassesService {
         skip,
         take: safeLimit,
         orderBy: { class_creation_date: 'desc' },
+        include: {
+          course: {
+            select: { name: true, course_code: true },
+          },
+        },
       }),
       this.prisma.class.count({ where }),
     ]);

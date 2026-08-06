@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { setAuthCookies } from '@/lib/auth-cookies';
+
 
 // Iconos SVG simples para el formulario
 const EyeIcon = ({ className = "w-5 h-5" }) => (
@@ -75,8 +77,9 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // Guardar token en localStorage
+        // Guardar token en cookies y localStorage
         if (data.access_token) {
+          setAuthCookies(data.access_token, data.user?.role || 'USER');
           localStorage.setItem('access_token', data.access_token);
         }
         if (data.user && data.user.role) {

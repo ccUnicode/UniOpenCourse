@@ -10,10 +10,13 @@ interface Class {
   class_id: number;
   course_id: number;
   title: string;
-  description?: string;
-  video_url?: string;
-  order_number: number;
+  description: string;
+  url_youtube?: string;
   class_creation_date?: string;
+  course?: {
+    name: string;
+    course_code: string;
+  };
 }
 
 const formatAdminDate = (date?: string) => {
@@ -58,7 +61,7 @@ const fetchClasses = async (search: string = '', page: number = 1, limit: number
   }
 };
 
-const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>): Promise<Class> => {
+const createClass = async (classData: { course_id: number; title: string; description: string; url_youtube?: string }): Promise<Class> => {
   try {
     const response = await fetch(`${API_URL}/admin/classes`, {
       method: 'POST',
@@ -73,26 +76,6 @@ const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'or
     return await response.json();
   } catch (error) {
     console.error('Error creating class:', error);
-    throw error;
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const updateClass = async (id: number, classData: Partial<Class>): Promise<Class> => {
-  try {
-    const response = await fetch(`${API_URL}/admin/classes/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(classData),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al actualizar clase');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error updating class:', error);
     throw error;
   }
 };
@@ -132,8 +115,7 @@ export default function AdminClassesPage() {
     course_id: '', 
     title: '', 
     description: '', 
-    video_url: '', 
-    order_number: 0 
+    url_youtube: '', 
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,25 +143,24 @@ export default function AdminClassesPage() {
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!formData.course_id.trim()) errors.course_id = 'Requerido';
-    if (!formData.title.trim()) errors.title = 'Requerido';
+    if (!formData.course_id.trim()) errors.course_id = 'El ID del curso es requerido';
+    if (!formData.title.trim()) errors.title = 'El título de la clase es requerido';
+    if (!formData.description.trim()) errors.description = 'La descripción de la clase es requerida';
     
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
     setIsSubmitting(true);
     try {
-      const newClass = await createClass({
-        course_id: parseInt(formData.course_id),
-        title: formData.title,
-        description: formData.description || undefined,
-        video_url: formData.video_url || undefined,
-        order_number: formData.order_number || 0,
+      await createClass({
+        course_id: parseInt(formData.course_id, 10),
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        url_youtube: formData.url_youtube.trim() || undefined,
       });
       
-      setClasses([...classes, newClass]);
       setIsCreateModalOpen(false);
-      setFormData({ course_id: '', title: '', description: '', video_url: '', order_number: 0 });
+      setFormData({ course_id: '', title: '', description: '', url_youtube: '' });
       loadClasses();
     } catch (error) {
       console.error('Error creating class:', error);
@@ -225,7 +206,7 @@ export default function AdminClassesPage() {
               </div>
               <button 
                 onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200"
+                className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200 cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
                 Crear clase
@@ -259,7 +240,7 @@ export default function AdminClassesPage() {
               
               <button 
                 onClick={loadClasses}
-                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors"
+                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
                 {isLoading ? 'Cargando...' : 'Recargar'}
               </button>
@@ -272,8 +253,7 @@ export default function AdminClassesPage() {
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Curso ID</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Orden</th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Curso</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
                     </tr>
@@ -286,24 +266,31 @@ export default function AdminClassesPage() {
                           {classItem.description && <p className="mt-1 text-xs text-white/35">{classItem.description}</p>}
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/75">{classItem.course_id}</span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{classItem.order_number}</span>
+                          <span className="text-sm font-medium text-white/85">
+                            {classItem.course 
+                              ? `${classItem.course.name} (${classItem.course.course_code})`
+                              : `Curso #${classItem.course_id}`
+                            }
+                          </span>
                         </td>
                         <td className="px-5 py-4">
                           <span className="text-sm text-white/55">{formatAdminDate(classItem.class_creation_date)}</span>
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Link href={`/admin/clases/${classItem.class_id}`} aria-label="Editar clase" title="Editar clase" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200">
+                            <Link 
+                              href={`/admin/cursos/${classItem.course_id}/clases/${classItem.class_id}`} 
+                              aria-label="Editar clase" 
+                              title="Editar clase" 
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200 cursor-pointer"
+                            >
                               <SquarePen className="w-4 h-4" />
                             </Link>
                             <button 
                               onClick={() => confirmDelete(classItem)}
                               aria-label="Eliminar clase" 
                               title="Eliminar clase" 
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-red-400 transition-colors duration-200"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-red-400 transition-colors duration-200 cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -330,14 +317,14 @@ export default function AdminClassesPage() {
                   <button 
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Anterior
                   </button>
                   <button 
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage * 10 >= total}
-                    className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Siguiente
                   </button>
@@ -382,7 +369,7 @@ export default function AdminClassesPage() {
               </div>
 
               <div>
-                <label htmlFor="description" className="mb-1.5 block text-sm font-normal text-white/85">Descripción (opcional)</label>
+                <label htmlFor="description" className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
                 <textarea 
                   id="description" 
                   value={formData.description} 
@@ -390,27 +377,17 @@ export default function AdminClassesPage() {
                   rows={3} 
                   className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                 />
+                {formErrors.description && <p className="mt-1 text-xs text-red-400">{formErrors.description}</p>}
               </div>
 
               <div>
-                <label htmlFor="video_url" className="mb-1.5 block text-sm font-normal text-white/85">URL del video (opcional)</label>
+                <label htmlFor="url_youtube" className="mb-1.5 block text-sm font-normal text-white/85">URL de YouTube (opcional)</label>
                 <input 
                   type="text" 
-                  id="video_url" 
-                  value={formData.video_url} 
-                  onChange={(e) => setFormData({...formData, video_url: e.target.value})} 
+                  id="url_youtube" 
+                  value={formData.url_youtube} 
+                  onChange={(e) => setFormData({...formData, url_youtube: e.target.value})} 
                   placeholder="https://youtube.com/watch?v=..." 
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" 
-                />
-              </div>
-
-              <div>
-                <label htmlFor="order_number" className="mb-1.5 block text-sm font-normal text-white/85">Orden</label>
-                <input 
-                  type="number" 
-                  id="order_number" 
-                  value={formData.order_number} 
-                  onChange={(e) => setFormData({...formData, order_number: parseInt(e.target.value) || 0})} 
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" 
                 />
               </div>
@@ -419,14 +396,14 @@ export default function AdminClassesPage() {
                 <button 
                   type="button" 
                   onClick={() => setIsCreateModalOpen(false)} 
-                  className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+                  className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSubmitting ? 'Creando...' : 'Crear clase'}
                 </button>
@@ -451,13 +428,13 @@ export default function AdminClassesPage() {
                   setIsDeleteModalOpen(false);
                   setClassToDelete(null);
                 }}
-                className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+                className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleDelete}
-                className="rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus:ring-2 focus:ring-red-600/40 transition-colors"
+                className="rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus:ring-2 focus:ring-red-600/40 transition-colors cursor-pointer"
               >
                 Eliminar
               </button>

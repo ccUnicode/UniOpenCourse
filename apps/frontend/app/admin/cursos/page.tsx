@@ -54,9 +54,15 @@ const getAuthHeaders = () => {
   };
 };
 
-const fetchCourses = async (search: string = ''): Promise<Course[]> => {
+interface FetchCoursesResponse {
+  data: Course[];
+  total: number;
+  totalPages: number;
+}
+
+const fetchCourses = async (search: string = '', page: number = 1, limit: number = 10): Promise<FetchCoursesResponse> => {
   try {
-    const response = await fetch(`${API_URL}/admin/courses?q=${search}`, {
+    const response = await fetch(`${API_URL}/admin/courses?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`, {
       headers: getAuthHeaders(),
     });
     
@@ -65,15 +71,20 @@ const fetchCourses = async (search: string = ''): Promise<Course[]> => {
     }
     
     const data = await response.json();
-    // Backend returns teacher as nested object { name, last_name }, flatten it
     const courses = (data.data || []) as Course[];
-    return courses.map(c => ({
+    const mapped = courses.map(c => ({
       ...c,
       teacher_name: c.teacher ? `${c.teacher.name} ${c.teacher.last_name}` : undefined,
     }));
+
+    return {
+      data: mapped,
+      total: data.total || 0,
+      totalPages: data.totalPages || 1,
+    };
   } catch (error) {
     console.error('Error fetching courses:', error);
-    return [];
+    return { data: [], total: 0, totalPages: 1 };
   }
 };
 
@@ -152,6 +163,8 @@ export default function AdminCoursesPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalCourses, setTotalCourses] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -163,16 +176,21 @@ export default function AdminCoursesPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load courses on mount
+  // Load courses on search query or page change with debounce
   useEffect(() => {
-    loadCourses();
+    const timer = setTimeout(() => {
+      loadCourses();
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchQuery, currentPage, itemsPerPage]);
 
   const loadCourses = async () => {
     setIsLoading(true);
-    const data = await fetchCourses(searchQuery);
-    setCourses(data);
+    const result = await fetchCourses(searchQuery, currentPage, itemsPerPage);
+    setCourses(result.data);
+    setTotalCourses(result.total);
+    setTotalPages(result.totalPages);
     setIsLoading(false);
   };
 
@@ -182,27 +200,19 @@ export default function AdminCoursesPage() {
     return ['Todos los profesores', ...Array.from(new Set(all))];
   }, [courses]);
 
-  // Filtering
+  // Filtering local teacher selection if active
   const filteredCourses = useMemo(() => {
     return courses.filter(course => {
-      const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) || course.course_code.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesTeacher = teacherFilter === 'Todos los profesores' || course.teacher_name === teacherFilter;
-      return matchesSearch && matchesTeacher;
+      return matchesTeacher;
     });
-  }, [courses, searchQuery, teacherFilter]);
+  }, [courses, teacherFilter]);
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setTeacherFilter('Todos los profesores');
     setCurrentPage(1);
   };
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, teacherFilter, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage) || 1;
-  const paginatedCourses = filteredCourses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,7 +359,7 @@ export default function AdminCoursesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedCourses.map((course) => (
+                    {filteredCourses.map((course) => (
                       <tr key={course.course_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-white">{course.name}</p>
@@ -394,13 +404,16 @@ export default function AdminCoursesPage() {
             </div>
             
             {/* Paginación */}
-            {filteredCourses.length > 0 && (
+            {totalCourses > 0 && (
               <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4 text-sm text-white/50">
-                  <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredCourses.length)} de {filteredCourses.length} cursos</span>
+                  <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, totalCourses)} de {totalCourses} cursos</span>
                   <select 
                     value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                     className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347] cursor-pointer"
                   >
                     <option value="10" className="bg-[#1A201D] text-white">10</option>
@@ -429,8 +442,8 @@ export default function AdminCoursesPage() {
 
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage === totalPages ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
+                    disabled={currentPage >= totalPages}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage >= totalPages ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
                   >
                     Siguiente
                   </button>

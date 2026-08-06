@@ -20,6 +20,59 @@ export class MaterialsService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * Retrieves paginated materials, optionally filtered by class_id or filename search
+   * Includes class title and course details
+   */
+  async findAll(search?: string, classId?: number, page: number = 1, limit: number = 10) {
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+    const skip = (safePage - 1) * safeLimit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { filename: { contains: search, mode: 'insensitive' } },
+        { class: { title: { contains: search, mode: 'insensitive' } } },
+        { class: { course: { name: { contains: search, mode: 'insensitive' } } } },
+        { class: { course: { course_code: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    if (classId) {
+      where.class_id = Number(classId);
+    }
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.material.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy: { material_creation_date: 'desc' },
+        include: {
+          class: {
+            select: {
+              title: true,
+              course: {
+                select: { name: true, course_code: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.material.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
+  }
+
+  /**
    * Creates a new physical file material
    * @param createFileDto - Data containing the class_id
    * @param file - The uploaded file object

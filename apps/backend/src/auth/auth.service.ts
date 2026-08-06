@@ -14,14 +14,16 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
+    const username = dto.username.trim().toLowerCase();
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     try {
       const user = await this.prisma.user.create({
         data: {
-          email: dto.email,
-          name: dto.name,
-          username: dto.username,
-          last_name: dto.last_name,
+          email,
+          name: dto.name.trim(),
+          username,
+          last_name: dto.last_name ? dto.last_name.trim() : dto.last_name,
           role: {
             connect: { role_name: 'USER' },
           },
@@ -46,7 +48,7 @@ export class AuthService {
     }
   }
   async login(dto: LoginDto) {
-    const identifier = dto.email.trim();
+    const identifier = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -63,8 +65,14 @@ export class AuthService {
     return this.generateToken(user);
   }
   async adminLogin(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.trim() },
+    const identifier = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: 'insensitive' } },
+          { username: { equals: identifier, mode: 'insensitive' } },
+        ],
+      },
       include: { role: true },
     });
 

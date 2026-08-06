@@ -74,3 +74,8 @@ next-env.d.ts
 # Misc
 # =========================
 *.pem
+
+# Storage / Uploads
+apps/backend/storage/*
+!apps/backend/storage/.gitkeep
+

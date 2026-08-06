@@ -13,15 +13,13 @@ import {
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
 // --- Types ---
-type CourseStatus = "published" | "draft" | "archived";
 
 interface Class {
   class_id: number;
   course_id: number;
   title: string;
   description?: string;
-  video_url?: string;
-  order_number: number;
+  url_youtube?: string;
   class_creation_date?: string;
 }
 
@@ -45,29 +43,8 @@ interface Course {
   description: string;
   teacher_name?: string;
   url_image?: string;
-  status?: CourseStatus;
 }
 
-// --- Components ---
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const StatusBadge = ({ status }: { status: CourseStatus }) => {
-  const styles = {
-    published: "border border-[#145A42] bg-[#103C2D] text-[#45D483]",
-    draft: "border border-white/10 bg-white/5 text-white/60",
-    archived: "border border-amber-700/50 bg-amber-900/20 text-amber-400"
-  };
-  const labels = {
-    published: "Publicado",
-    draft: "Borrador",
-    archived: "Archivado"
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
-  );
-};
 
 // --- API Functions ---
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -156,7 +133,6 @@ export default function AdminCourseDetailPage() {
     teacher_name: '',
     teacher_last_name: '',
     url_image: '',
-    status: 'draft' as CourseStatus,
   });
 
   // Delete modal
@@ -190,7 +166,6 @@ export default function AdminCourseDetailPage() {
         teacher_name: teacherData?.name || '',
         teacher_last_name: teacherData?.last_name || '',
         url_image: courseData.url_image || '',
-        status: courseData.status || 'draft',
       });
       setClasses(classesData);
     } catch (error) {
@@ -363,18 +338,6 @@ export default function AdminCourseDetailPage() {
                     onChange={e => setCourseFormData({ ...courseFormData, teacher_last_name: e.target.value })}
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Estado</label>
-                  <select
-                    value={courseFormData.status}
-                    onChange={e => setCourseFormData({ ...courseFormData, status: e.target.value as CourseStatus })}
-                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                  >
-                    <option value="published">Publicado</option>
-                    <option value="draft">Borrador</option>
-                    <option value="archived">Archivado</option>
-                  </select>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">URL de imagen (opcional)</label>

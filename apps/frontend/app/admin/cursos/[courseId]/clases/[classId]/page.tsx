@@ -43,9 +43,8 @@ interface ClassInfo {
   class_id: number;
   course_id: number;
   title: string;
-  description?: string;
-  video_url?: string;
-  order_number: number;
+  description: string;
+  url_youtube?: string;
 }
 
 interface Course {
@@ -212,8 +211,9 @@ export default function AdminClassPage() {
   const [classFormData, setClassFormData] = useState({
     title: '',
     description: '',
-    video_url: '',
+    url_youtube: '',
   });
+  const [classFormErrors, setClassFormErrors] = useState<Record<string, string>>({});
 
   // Materials state
   const [materials, setMaterials] = useState<ClassMaterial[]>([]);
@@ -248,12 +248,20 @@ export default function AdminClassPage() {
         fetchCourse(parseInt(courseId)),
         fetchClassInfo(parseInt(classId)),
       ]);
+
+      // Validate that the class belongs to the course from the URL
+      if (classInfo.course_id !== parseInt(courseId)) {
+        console.error('La clase no pertenece al curso especificado');
+        setIsLoading(false);
+        return;
+      }
+
       setCourse(courseData);
       setClassData(classInfo);
       setClassFormData({
         title: classInfo.title,
         description: classInfo.description || '',
-        video_url: classInfo.video_url || '',
+        url_youtube: classInfo.url_youtube || '',
       });
       // @ts-expect-error backend returns materials in classInfo
       setMaterials((classInfo.materials || []).map(mapApiMaterial));
@@ -265,14 +273,20 @@ export default function AdminClassPage() {
   };
 
   const handleSaveClass = async () => {
+    const errors: Record<string, string> = {};
+    if (!classFormData.title.trim()) errors.title = 'El título es obligatorio';
+    if (!classFormData.description.trim()) errors.description = 'La descripción es obligatoria';
+    setClassFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setIsSaving(true);
     setSaveError('');
     setSaveSuccess('');
     try {
       await updateClass(parseInt(classId), {
-        title: classFormData.title,
-        description: classFormData.description || undefined,
-        video_url: classFormData.video_url || undefined,
+        title: classFormData.title.trim(),
+        description: classFormData.description.trim(),
+        url_youtube: classFormData.url_youtube.trim() || undefined,
       });
       setSaveSuccess('Datos guardados exitosamente');
       setTimeout(() => setSaveSuccess(''), 3000);
@@ -321,17 +335,10 @@ export default function AdminClassPage() {
     setIsFormModalOpen(true);
   };
 
-  const openEditModal = (material: ClassMaterial) => {
-    setEditingMaterial(material);
-    setFormData({
-      name: material.name,
-      type: material.type,
-      url: material.url || '',
-      reference: material.reference || '',
-      file: null
-    });
-    setFormErrors({});
-    setIsFormModalOpen(true);
+  // Edit is not supported by the API yet — inform user instead
+  const openEditModal = (_material: ClassMaterial) => {
+    setFormErrors({ name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.' });
+    setIsFormModalOpen(false);
   };
 
   const confirmDelete = (material: ClassMaterial) => {
@@ -343,14 +350,16 @@ export default function AdminClassPage() {
     if (materialToDelete) {
       try {
         await deleteMaterialApi(materialToDelete.id);
-      } catch (e) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _error = e;
-        // If API fails (e.g. not yet in DB), still remove locally
+        // Only update local state if API confirms deletion
+        setMaterials(materials.filter(m => m.id !== materialToDelete.id));
+        setIsDeleteModalOpen(false);
+        setMaterialToDelete(null);
+      } catch (error) {
+        console.error('Error al eliminar material:', error);
+        setSaveError('No se pudo eliminar el material. Inténtalo de nuevo.');
+        setIsDeleteModalOpen(false);
+        setMaterialToDelete(null);
       }
-      setMaterials(materials.filter(m => m.id !== materialToDelete.id));
-      setIsDeleteModalOpen(false);
-      setMaterialToDelete(null);
     }
   };
 
@@ -382,14 +391,10 @@ export default function AdminClassPage() {
     setIsSubmitting(true);
     try {
       if (editingMaterial) {
-        // Can't edit materials via API yet, skip updating API for now
-        setMaterials(materials.map(m => m.id === editingMaterial.id ? {
-          ...m,
-          name: trimmedName,
-          type: formData.type as MaterialType,
-          url: formData.type === 'link' ? formData.url.trim() : (formData.type === 'file' ? m.url : undefined),
-          reference: formData.type === 'reference' ? formData.reference.trim() : undefined,
-        } : m));
+        // Material editing is not supported by the backend API yet
+        setFormErrors({ name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.' });
+        setIsSubmitting(false);
+        return;
       } else {
         let created;
         if (formData.type === 'link') {
@@ -484,13 +489,14 @@ export default function AdminClassPage() {
                       onChange={e => setClassFormData({ ...classFormData, title: e.target.value })}
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
+                    {classFormErrors.title && <p className="mt-1 text-xs text-red-400">{classFormErrors.title}</p>}
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-normal text-white/85">URL del video (opcional)</label>
+                    <label className="mb-1.5 block text-sm font-normal text-white/85">URL de YouTube (opcional)</label>
                     <input
                       type="text"
-                      value={classFormData.video_url}
-                      onChange={e => setClassFormData({ ...classFormData, video_url: e.target.value })}
+                      value={classFormData.url_youtube}
+                      onChange={e => setClassFormData({ ...classFormData, url_youtube: e.target.value })}
                       placeholder="https://youtube.com/watch?v=..."
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
@@ -504,6 +510,7 @@ export default function AdminClassPage() {
                     rows={5}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
+                  {classFormErrors.description && <p className="mt-1 text-xs text-red-400">{classFormErrors.description}</p>}
                 </div>
               </div>
             </section>

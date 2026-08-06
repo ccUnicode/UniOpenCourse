@@ -10,12 +10,18 @@ type MaterialType = 'file' | 'link' | 'reference';
 interface Material {
   material_id: number;
   class_id: number;
-  type: MaterialType;
-  title: string;
-  url?: string;
-  file_path?: string;
-  content?: string;
-  created_at?: string;
+  material_type: MaterialType;
+  filename: string;
+  url_link?: string;
+  written_reference?: string;
+  material_creation_date?: string;
+  class?: {
+    title: string;
+    course?: {
+      name: string;
+      course_code: string;
+    };
+  };
 }
 
 // --- API Functions ---
@@ -36,11 +42,12 @@ const getMultipartHeaders = () => {
   };
 };
 
-const fetchMaterials = async (classId?: number): Promise<Material[]> => {
+const fetchMaterials = async (classId?: number, search: string = ''): Promise<Material[]> => {
   try {
-    const url = classId 
-      ? `${API_URL}/admin/materials?class_id=${classId}`
-      : `${API_URL}/admin/materials`;
+    let url = `${API_URL}/admin/materials?search=${encodeURIComponent(search)}`;
+    if (classId) {
+      url += `&class_id=${classId}`;
+    }
       
     const response = await fetch(url, {
       headers: getAuthHeaders(),
@@ -58,11 +65,11 @@ const fetchMaterials = async (classId?: number): Promise<Material[]> => {
   }
 };
 
-const createFileMaterial = async (classId: number, title: string, file: File): Promise<Material> => {
+const createFileMaterial = async (classId: number, filename: string, file: File): Promise<Material> => {
   try {
     const formData = new FormData();
     formData.append('class_id', classId.toString());
-    formData.append('title', title);
+    formData.append('filename', filename);
     formData.append('file', file);
 
     const response = await fetch(`${API_URL}/admin/materials/file`, {
@@ -82,12 +89,12 @@ const createFileMaterial = async (classId: number, title: string, file: File): P
   }
 };
 
-const createLinkMaterial = async (classId: number, title: string, url: string): Promise<Material> => {
+const createLinkMaterial = async (classId: number, filename: string, url_link: string): Promise<Material> => {
   try {
     const response = await fetch(`${API_URL}/admin/materials/link`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ class_id: classId, title, url }),
+      body: JSON.stringify({ class_id: classId, filename, url_link }),
     });
     
     if (!response.ok) {
@@ -101,12 +108,12 @@ const createLinkMaterial = async (classId: number, title: string, url: string): 
   }
 };
 
-const createReferenceMaterial = async (classId: number, title: string, content: string): Promise<Material> => {
+const createReferenceMaterial = async (classId: number, filename: string, written_reference: string): Promise<Material> => {
   try {
     const response = await fetch(`${API_URL}/admin/materials/reference`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ class_id: classId, title, content }),
+      body: JSON.stringify({ class_id: classId, filename, written_reference }),
     });
     
     if (!response.ok) {
@@ -142,7 +149,7 @@ export default function AdminMaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterClassId, setFilterClassId] = useState('');
+  const [typeFilter, setTypeFilter] = useState('Todos los tipos');
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -161,16 +168,18 @@ export default function AdminMaterialsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load materials on mount
+  // Load materials on mount or search change
   useEffect(() => {
-    loadMaterials();
+    const timer = setTimeout(() => {
+      loadMaterials();
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterClassId]);
+  }, [searchQuery]);
 
   const loadMaterials = async () => {
     setIsLoading(true);
-    const classId = filterClassId ? parseInt(filterClassId) : undefined;
-    const data = await fetchMaterials(classId);
+    const data = await fetchMaterials(undefined, searchQuery);
     setMaterials(data);
     setIsLoading(false);
   };
@@ -310,27 +319,40 @@ export default function AdminMaterialsPage() {
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar materiales..." 
+                  placeholder="Buscar por nombre, curso o clase..." 
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#1A201D] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 transition-colors duration-200"
                 />
               </div>
               
-              <div className="relative w-full xl:w-[200px]">
-                <input 
-                  type="number" 
-                  value={filterClassId}
-                  onChange={(e) => setFilterClassId(e.target.value)}
-                  placeholder="Filtrar por ID de clase" 
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 transition-colors duration-200"
-                />
+              <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 cursor-pointer"
+                >
+                  <option value="Todos los tipos">Todos los tipos</option>
+                  <option value="file">Archivo PDF/Imagen</option>
+                  <option value="link">Enlace externo</option>
+                  <option value="reference">Referencia escrita</option>
+                </select>
+
+                <button 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setTypeFilter('Todos los tipos');
+                  }}
+                  className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                >
+                  Limpiar filtros
+                </button>
+
+                <button 
+                  onClick={loadMaterials}
+                  className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  {isLoading ? 'Cargando...' : 'Recargar'}
+                </button>
               </div>
-              
-              <button 
-                onClick={loadMaterials}
-                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors"
-              >
-                {isLoading ? 'Cargando...' : 'Recargar'}
-              </button>
             </div>
 
             {/* Tabla de materiales */}
@@ -341,7 +363,7 @@ export default function AdminMaterialsPage() {
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Tipo</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Clase ID</th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Clase</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Contenido/URL</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
@@ -349,37 +371,64 @@ export default function AdminMaterialsPage() {
                   </thead>
                   <tbody>
                     {materials
-                      .filter(m => 
-                        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (m.url && m.url.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                        (m.content && m.content.toLowerCase().includes(searchQuery.toLowerCase()))
-                      )
+                      .filter((m) => {
+                        const query = searchQuery.toLowerCase();
+                        const matchesSearch = 
+                          m.filename.toLowerCase().includes(query) ||
+                          (m.class?.title && m.class.title.toLowerCase().includes(query)) ||
+                          (m.class?.course?.name && m.class.course.name.toLowerCase().includes(query)) ||
+                          (m.class?.course?.course_code && m.class.course.course_code.toLowerCase().includes(query));
+
+                        const matchesType = typeFilter === 'Todos los tipos' || m.material_type === typeFilter;
+
+                        return matchesSearch && matchesType;
+                      })
                       .map((material) => (
                       <tr key={material.material_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-white/35">{getMaterialIcon(material.type)}</span>
-                            <p className="text-sm font-semibold text-white">{material.title}</p>
+                            <span className="text-white/35">{getMaterialIcon(material.material_type)}</span>
+                            <div>
+                              <p className="text-sm font-semibold text-white">{material.filename}</p>
+                              {material.class?.course && (
+                                <p className="text-xs text-white/40">
+                                  {material.class.course.name} ({material.class.course.course_code})
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-5 py-4">
                           <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-white/5 text-white/75">
-                            {getMaterialTypeLabel(material.type)}
+                            {getMaterialTypeLabel(material.material_type)}
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/75">{material.class_id}</span>
+                          <span className="text-sm text-white/75">
+                            {material.class?.title || 'Sin clase'}
+                          </span>
                         </td>
                         <td className="px-5 py-4">
                           <span className="text-sm text-white/55 max-w-xs truncate block">
-                            {material.type === 'link' && material.url ? material.url : 
-                             material.type === 'reference' && material.content ? material.content :
-                             material.type === 'file' && material.file_path ? material.file_path : 
-                             '-'}
+                            {material.material_type === 'link' && material.url_link ? (
+                              <a href={material.url_link} target="_blank" rel="noopener noreferrer" className="text-[#13A47D] hover:underline">
+                                {material.url_link}
+                              </a>
+                            ) : material.material_type === 'reference' && material.written_reference ? (
+                              material.written_reference
+                            ) : material.material_type === 'file' && material.url_link ? (
+                              <a href={`${API_URL}/storage/${material.url_link}`} target="_blank" rel="noopener noreferrer" className="text-[#13A47D] hover:underline">
+                                {material.filename}
+                              </a>
+                            ) : (
+                              '-'
+                            )}
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{material.created_at || 'N/A'}</span>
+                          <span className="text-sm text-white/55">
+                            {material.material_creation_date ? new Date(material.material_creation_date).toLocaleDateString('es-ES') : 'N/A'}
+                          </span>
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -558,7 +607,7 @@ export default function AdminMaterialsPage() {
           <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Eliminar material</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Estás seguro de que deseas eliminar el material &quot;{materialToDelete.title}&quot;? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar el material &quot;{materialToDelete.filename}&quot;? Esta acción no se puede deshacer.
             </p>
             
             <div className="mt-6 flex items-center justify-end gap-3">
