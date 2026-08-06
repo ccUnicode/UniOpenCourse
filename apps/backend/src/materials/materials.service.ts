@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
-import { MaterialTypes } from '../generated/prisma/client';
+import { MaterialTypes, Prisma } from '../generated/prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -28,7 +28,7 @@ export class MaterialsService {
     const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 10;
     const skip = (safePage - 1) * safeLimit;
 
-    const where: any = {};
+    const where: Prisma.MaterialWhereInput = {};
 
     if (search) {
       where.OR = [

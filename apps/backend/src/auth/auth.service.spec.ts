@@ -7,8 +7,16 @@ import bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prismaMock: any;
-  let jwtMock: any;
+  let prismaMock: {
+    user: {
+      create: jest.Mock;
+      findFirst: jest.Mock;
+      findUnique: jest.Mock;
+    };
+  };
+  let jwtMock: {
+    sign: jest.Mock;
+  };
 
   beforeEach(async () => {
     prismaMock = {
@@ -59,10 +67,18 @@ describe('AuthService', () => {
       });
 
       expect(prismaMock.user.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: {
           email: 'test@example.com',
           username: 'testuser',
-        }),
+          name: 'Test',
+          last_name: 'User',
+          password: expect.any(String) as unknown as string,
+          role: {
+            connect: {
+              role_name: 'USER',
+            },
+          },
+        },
         include: { role: true },
       });
       expect(result).toHaveProperty('access_token', 'mock_token');
@@ -155,4 +171,3 @@ describe('AuthService', () => {
     });
   });
 });
-
