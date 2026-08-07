@@ -1,15 +1,9 @@
 import CourseHero from '@/features/courses/components/CourseHero';
 import CourseMaterials from '@/features/courses/components/CourseMaterials';
-import { getClassData, getMaterialData } from '@/services/classes.service';
+import { getClassData, getMaterialData, getCourse } from '@/services/classes.service';
 import { notFound } from 'next/navigation';
 
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
 
-async function getCourse(course_id: string) {
-  const response = await fetch(`${baseUrl}/courses/${course_id}`);
-  const course = await response.json();
-  return course;
-}
 export default async function Clase({
   params,
 }: {

@@ -11,6 +11,10 @@ export default async function CourseLayout({
 }) {
   const { course_id } = await params;
 
+  if (!/^\d+$/.test(course_id)) {
+    notFound();
+  }
+
   const course = await getCourse(course_id);
   const classes = await getClassesByCourse(course_id);
 
