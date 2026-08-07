@@ -17,13 +17,29 @@ export default async function DashboardAdmin({
   const courseData = await getAdminCourseData(busqueda, token);
   return (
     <>
-      <CreateCourse />
-      {courseData.data.map((course: CourseDashboardAdmin) => (
-        <div key={course.course_id}>
-          <h2>{course.name}</h2>
-          <h3>{course.course_code}</h3>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard Admin</h1>
+            <p className="text-gray-400">Gestión de cursos, clases y materiales</p>
+          </div>
+          <CreateCourse />
         </div>
-      ))}
+        
+        {courseData.data && courseData.data.length > 0 ? (
+          <div className="grid gap-4">
+            {courseData.data.map((course: CourseDashboardAdmin) => (
+              <div key={course.course_id} className="bg-[#1A201D] border border-white/10 rounded-lg p-4">
+                <h2 className="text-lg font-semibold">{course.name}</h2>
+                <h3 className="text-sm text-gray-400">{course.course_code}</h3>
+                {course.description && <p className="text-sm mt-2">{course.description}</p>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400">No hay cursos disponibles</p>
+        )}
+      </div>
     </>
   );
 }

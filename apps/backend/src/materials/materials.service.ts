@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
-import { MaterialTypes } from '../generated/prisma/client';
+import { MaterialTypes, Prisma } from '../generated/prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -18,6 +18,59 @@ export class MaterialsService {
   private readonly logger = new Logger(MaterialsService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Retrieves paginated materials, optionally filtered by class_id or filename search
+   * Includes class title and course details
+   */
+  async findAll(search?: string, classId?: number, page: number = 1, limit: number = 10) {
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+    const skip = (safePage - 1) * safeLimit;
+
+    const where: Prisma.MaterialWhereInput = {};
+
+    if (search) {
+      where.OR = [
+        { filename: { contains: search, mode: 'insensitive' } },
+        { class: { title: { contains: search, mode: 'insensitive' } } },
+        { class: { course: { name: { contains: search, mode: 'insensitive' } } } },
+        { class: { course: { course_code: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    if (classId) {
+      where.class_id = Number(classId);
+    }
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.material.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy: { material_creation_date: 'desc' },
+        include: {
+          class: {
+            select: {
+              title: true,
+              course: {
+                select: { name: true, course_code: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.material.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
+  }
 
   /**
    * Creates a new physical file material
@@ -33,7 +86,7 @@ export class MaterialsService {
 
     return this.prisma.material.create({
       data: {
-        class_id: createFileDto.class_id,
+        class_id: Number(createFileDto.class_id),
         material_type: MaterialTypes.file,
         filename: file.originalname,
         file_path: file.filename,

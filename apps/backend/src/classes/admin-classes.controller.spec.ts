@@ -65,13 +65,19 @@ describe('AdminClassesController', () => {
     it('should call service findAll with parsed page and limit', async () => {
       await controller.findAll({ page: 2, limit: 12, search: 'query' });
       const findAllSpy = jest.spyOn(service, 'findAll');
-      expect(findAllSpy).toHaveBeenCalledWith('query', 2, 12);
+      expect(findAllSpy).toHaveBeenCalledWith('query', 2, 12, undefined);
     });
 
     it('should default to page 1 and limit 12', async () => {
       await controller.findAll({ search: 'query' });
       const findAllSpy = jest.spyOn(service, 'findAll');
-      expect(findAllSpy).toHaveBeenCalledWith('query', undefined, undefined);
+      expect(findAllSpy).toHaveBeenCalledWith('query', undefined, undefined, undefined);
+    });
+
+    it('should pass course_id when provided', async () => {
+      await controller.findAll({ page: 1, limit: 100, course_id: 5 });
+      const findAllSpy = jest.spyOn(service, 'findAll');
+      expect(findAllSpy).toHaveBeenCalledWith(undefined, 1, 100, 5);
     });
   });
 

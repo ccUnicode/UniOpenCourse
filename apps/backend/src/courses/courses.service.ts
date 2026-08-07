@@ -102,6 +102,8 @@ export class CoursesService {
         course_id: true,
         name: true,
         course_code: true,
+        description: true,
+        url_image: true,
         teacher_id: true,
         teacher: {
           select: { teacher_id: true, name: true, last_name: true },
@@ -134,6 +136,8 @@ export class CoursesService {
           course_code: true,
           url_image: true,
           description: true,
+          course_creation_date: true,
+          update_date: true,
           teacher: {
             select: {
               name: true,

@@ -2,9 +2,11 @@ import 'multer';
 
 import {
   Controller,
+  Get,
   Post,
   Body,
   Param,
+  Query,
   Delete,
   UseInterceptors,
   UploadedFile,
@@ -27,6 +29,22 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Roles('ADMIN')
 export class AdminMaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
+
+  /** Retrieves paginated materials, optionally filtered by class_id and search term */
+  @Get()
+  findAll(
+    @Query('search') search?: string,
+    @Query('class_id') classId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.materialsService.findAll(
+      search,
+      classId ? parseInt(classId, 10) : undefined,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 10,
+    );
+  }
 
   /**
    * Uploads a physical file material and saves it to local storage

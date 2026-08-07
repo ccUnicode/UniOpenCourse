@@ -1,9 +1,9 @@
-import { IsEmail, IsNotEmpty, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 export class LoginDto {
-  @IsEmail({}, { message: 'El correo electrónico debe ser válido' })
-  @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
+  @IsString({ message: 'El correo o nombre de usuario debe ser un texto' })
+  @IsNotEmpty({ message: 'El correo electrónico o nombre de usuario es obligatorio' })
   @MaxLength(75, {
-    message: 'El correo electrónico no puede tener más de 75 caracteres',
+    message: 'El correo o nombre de usuario no puede tener más de 75 caracteres',
   })
   email: string;
 
