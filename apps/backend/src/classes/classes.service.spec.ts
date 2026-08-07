@@ -49,6 +49,10 @@ describe('ClassesService (Public)', () => {
       expect(result).toEqual(expected);
       expect(mockPrismaService.class.findMany).toHaveBeenCalledWith({
         where: { course_id: 5 },
+        orderBy: [
+          { class_creation_date: 'asc' },
+          { class_id: 'asc' }
+        ],
       });
     });
   });
