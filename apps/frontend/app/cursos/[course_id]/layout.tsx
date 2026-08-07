@@ -25,7 +25,7 @@ export default async function CourseLayout({
   const safeClasses = Array.isArray(classes) ? classes : [];
 
   return (
-    <div className="flex min-h-[calc(100vh-4.5rem)] bg-background items-start">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-4.5rem)] bg-background items-start">
       <CourseSidebar 
         courseId={course_id} 
         courseName={course.name}
