@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Search,
   ExternalLink,
-  SquarePen,
   Trash2,
   FolderOpen,
   FileText,
@@ -622,9 +621,6 @@ export default function AdminClassPage() {
                                     <ExternalLink className="w-4 h-4" />
                                   </a>
                                 )}
-                                <button onClick={() => openEditModal(m)} type="button" aria-label="Editar material" title="Editar material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
-                                  <SquarePen className="w-4 h-4" />
-                                </button>
                                 <button onClick={() => confirmDelete(m)} type="button" aria-label="Eliminar material" title="Eliminar material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors">
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -667,7 +663,6 @@ export default function AdminClassPage() {
                             </a>
                           ) : <div />}
                           <div className="flex items-center gap-1">
-                            <button onClick={() => openEditModal(m)} className="p-2 text-white/35 hover:text-white"><SquarePen className="w-4 h-4" /></button>
                             <button onClick={() => confirmDelete(m)} className="p-2 text-white/35 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </div>
