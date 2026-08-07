@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 
-export default function GlobalSearcher({}) {
+export default function GlobalSearcher({ onSearch }: { onSearch?: () => void }) {
   const searchParams = useSearchParams();
 
   const router = useRouter();
@@ -17,6 +17,7 @@ export default function GlobalSearcher({}) {
   }, [searchParams]);
 
   const handleSearch = () => {
+    onSearch?.();
     if (!query.trim()) return;
 
     router.push(`/busqueda?q=${encodeURIComponent(query)}`);

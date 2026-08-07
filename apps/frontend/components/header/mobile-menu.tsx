@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Suspense } from 'react';
 import GlobalSearcher from './global-searcher';
 import Navigation from './navigation';
 
@@ -12,42 +12,29 @@ interface Props {
 }
 
 export default function MobileMenu({ open, setOpen, access_token }: Props) {
-  const pathname = usePathname();
-  const search_params = useSearchParams();
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname, search_params, setOpen]);
-
   return (
-    <div
-      className={`fixed md:hidden inset-0 z-50 transition ${open ? 'visible' : 'invisible'}`}
-    >
-      <div
-        className={`absolute inset-0 bg-black/40 transition-opacity ${
-          open ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={() => setOpen(false)}
-      />
-
-      <aside
-        className={`absolute right-0 h-full w-80 bg-header-bg p-6 transition-transform duration-300 ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <button onClick={() => setOpen(false)} className="mb-8 text-2xl cursor-pointer">
-          ✕
-        </button>
-
-        <div className="mb-4 sm:hidden block">
-          <Suspense fallback={null}>
-            <GlobalSearcher />
-          </Suspense>
-        </div>
-        <nav className="flex-1">
-          <Navigation access_token={access_token} />
-        </nav>
-      </aside>
-    </div>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content
+          className="fixed right-0 top-0 z-50
+            h-screen w-80
+            bg-header-bg
+            p-6
+            data-[state=open]:animate-in
+            data-[state=closed]:animate-out"
+        >
+          <Dialog.Close asChild>
+            <button className="mb-8 text-2xl cursor-pointer">x</button>
+          </Dialog.Close>
+          <div className="mb-4 sm:hidden">
+            <Suspense fallback={null}>
+              <GlobalSearcher onSearch={() => setOpen(false)} />
+            </Suspense>
+          </div>
+          <Navigation access_token={access_token} onNavigate={() => setOpen(false)} />
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
