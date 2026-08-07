@@ -42,26 +42,44 @@ const getMultipartHeaders = () => {
   };
 };
 
-const fetchMaterials = async (classId?: number, search: string = ''): Promise<Material[]> => {
+interface FetchMaterialsResponse {
+  data: Material[];
+  total: number;
+  totalPages: number;
+}
+
+const getMaterialDownloadUrl = (materialId: number) =>
+  `${API_URL}/materials/${materialId}/download`;
+
+const fetchMaterials = async (
+  search: string = '',
+  page: number = 1,
+  limit: number = 10,
+  classId?: number,
+): Promise<FetchMaterialsResponse> => {
   try {
-    let url = `${API_URL}/admin/materials?search=${encodeURIComponent(search)}`;
+    let url = `${API_URL}/admin/materials?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
     if (classId) {
       url += `&class_id=${classId}`;
     }
-      
+
     const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       throw new Error('Error al obtener materiales');
     }
-    
+
     const data = await response.json();
-    return data.data || [];
+    return {
+      data: data.data || [],
+      total: data.total || 0,
+      totalPages: data.totalPages || 1,
+    };
   } catch (error) {
     console.error('Error fetching materials:', error);
-    return [];
+    return { data: [], total: 0, totalPages: 1 };
   }
 };
 
@@ -150,6 +168,12 @@ export default function AdminMaterialsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos los tipos');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalMaterials, setTotalMaterials] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -168,21 +192,27 @@ export default function AdminMaterialsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load materials on mount or search change
+  // Load materials on search, page or limit change
   useEffect(() => {
     const timer = setTimeout(() => {
       loadMaterials();
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, currentPage, itemsPerPage]);
 
   const loadMaterials = async () => {
     setIsLoading(true);
-    const data = await fetchMaterials(undefined, searchQuery);
-    setMaterials(data);
+    const result = await fetchMaterials(searchQuery, currentPage, itemsPerPage);
+    setMaterials(result.data);
+    setTotalMaterials(result.total);
+    setTotalPages(result.totalPages);
     setIsLoading(false);
   };
+
+  const filteredMaterials = materials.filter(
+    (m) => typeFilter === 'Todos los tipos' || m.material_type === typeFilter,
+  );
 
   const handleCreateMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,7 +336,7 @@ export default function AdminMaterialsPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-white/55">Materiales registrados</p>
-                <p className="mt-1 text-2xl font-bold text-white">{materials.length}</p>
+                <p className="mt-1 text-2xl font-bold text-white">{totalMaterials}</p>
                 <p className="mt-1 text-sm text-white/40">Total en el sistema</p>
               </div>
             </div>
@@ -318,7 +348,10 @@ export default function AdminMaterialsPage() {
                 <input 
                   type="text" 
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Buscar por nombre, curso o clase..." 
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#1A201D] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 transition-colors duration-200"
                 />
@@ -340,6 +373,7 @@ export default function AdminMaterialsPage() {
                   onClick={() => {
                     setSearchQuery('');
                     setTypeFilter('Todos los tipos');
+                    setCurrentPage(1);
                   }}
                   className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                 >
@@ -357,7 +391,7 @@ export default function AdminMaterialsPage() {
 
             {/* Tabla de materiales */}
             <div className="mt-6 overflow-hidden rounded-2xl border border-[#2B332F] bg-[#1A201D] overflow-x-auto">
-              {materials.length > 0 ? (
+              {filteredMaterials.length > 0 ? (
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
@@ -370,20 +404,7 @@ export default function AdminMaterialsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {materials
-                      .filter((m) => {
-                        const query = searchQuery.toLowerCase();
-                        const matchesSearch = 
-                          m.filename.toLowerCase().includes(query) ||
-                          (m.class?.title && m.class.title.toLowerCase().includes(query)) ||
-                          (m.class?.course?.name && m.class.course.name.toLowerCase().includes(query)) ||
-                          (m.class?.course?.course_code && m.class.course.course_code.toLowerCase().includes(query));
-
-                        const matchesType = typeFilter === 'Todos los tipos' || m.material_type === typeFilter;
-
-                        return matchesSearch && matchesType;
-                      })
-                      .map((material) => (
+                    {filteredMaterials.map((material) => (
                       <tr key={material.material_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
@@ -416,8 +437,8 @@ export default function AdminMaterialsPage() {
                               </a>
                             ) : material.material_type === 'reference' && material.written_reference ? (
                               material.written_reference
-                            ) : material.material_type === 'file' && material.url_link ? (
-                              <a href={`${API_URL}/storage/${material.url_link}`} target="_blank" rel="noopener noreferrer" className="text-[#13A47D] hover:underline">
+                            ) : material.material_type === 'file' ? (
+                              <a href={getMaterialDownloadUrl(material.material_id)} target="_blank" rel="noopener noreferrer" className="text-[#13A47D] hover:underline">
                                 {material.filename}
                               </a>
                             ) : (
@@ -448,10 +469,58 @@ export default function AdminMaterialsPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-white/50">
-                  {isLoading ? 'Cargando materiales...' : 'No hay materiales disponibles'}
+                  {isLoading ? 'Cargando materiales...' : totalMaterials > 0 ? 'No hay materiales que coincidan con el filtro' : 'No hay materiales disponibles'}
                 </div>
               )}
             </div>
+
+            {/* Paginación */}
+            {totalMaterials > 0 && (
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4 text-sm text-white/50">
+                  <span>Mostrando {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, totalMaterials)} de {totalMaterials} materiales</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347] cursor-pointer"
+                  >
+                    <option value="10" className="bg-[#1A201D] text-white">10</option>
+                    <option value="25" className="bg-[#1A201D] text-white">25</option>
+                    <option value="50" className="bg-[#1A201D] text-white">50</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage === 1 ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
+                  >
+                    Anterior
+                  </button>
+
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium cursor-pointer transition-colors ${currentPage === i + 1 ? 'bg-[#153D30] text-white border border-[#1A6B50]' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${currentPage >= totalPages ? 'text-white/30 cursor-not-allowed' : 'text-white/50 hover:bg-white/5 hover:text-white transition-colors cursor-pointer'}`}
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         </main>
