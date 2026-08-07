@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import GlobalSearcher from './global-searcher';
 import Navigation from './navigation';
 
@@ -11,6 +12,13 @@ interface Props {
 }
 
 export default function MobileMenu({ open, setOpen, access_token }: Props) {
+  const pathname = usePathname();
+  const search_params = useSearchParams();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, search_params, setOpen]);
+
   return (
     <div
       className={`fixed md:hidden inset-0 z-50 transition ${open ? 'visible' : 'invisible'}`}
