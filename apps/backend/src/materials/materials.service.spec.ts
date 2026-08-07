@@ -3,7 +3,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import * as fs from 'fs';
+import type { ReadStream } from 'fs';
 
+jest.mock('fs', () => ({
+  ...jest.requireActual<typeof fs>('fs'),
+  existsSync: jest.fn(),
+  createReadStream: jest.fn(),
+  promises: {
+    unlink: jest.fn(),
+  },
+}));
 describe('MaterialsService', () => {
   let service: MaterialsService;
 
@@ -51,7 +61,7 @@ describe('MaterialsService', () => {
         class_id: dto.class_id,
         material_type: 'file',
         filename: mockFile.originalname,
-        url_link: mockFile.filename,
+        file_path: mockFile.filename,
       };
 
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
@@ -64,7 +74,7 @@ describe('MaterialsService', () => {
           class_id: dto.class_id,
           material_type: 'file',
           filename: mockFile.originalname,
-          url_link: mockFile.filename,
+          file_path: mockFile.filename,
         },
       });
     });
@@ -151,6 +161,63 @@ describe('MaterialsService', () => {
       expect(mockPrismaService.material.findUnique).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
+    });
+  });
+
+  describe('getDownloadableFile', () => {
+    it('should throw NotFoundException if material does not exist', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue(null);
+      await expect(service.getDownloadableFile(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if material is not a file', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'link',
+        file_path: 'test.pdf',
+      });
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if material file_path is empty', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: null,
+      });
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if physical file is missing from server', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: 'test.pdf',
+      });
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+      await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return a read stream and filename if file exists', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: 'test.pdf',
+        filename: 'original.pdf',
+      });
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      const mockStream = {
+        pipe: jest.fn(),
+        on: jest.fn(),
+      } as unknown as ReadStream;
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+
+      const result = await service.getDownloadableFile(1);
+
+      expect(result).toEqual({
+        stream: mockStream,
+        filename: 'original.pdf',
+      });
+      expect(fs.existsSync).toHaveBeenCalled();
+      expect(fs.createReadStream).toHaveBeenCalled();
     });
   });
 });

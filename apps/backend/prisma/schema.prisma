@@ -76,9 +76,9 @@ model Material {
   filename               String        @db.VarChar(150)
   material_creation_date DateTime      @default(now())
   material_type          MaterialTypes
-  /// Temporal hybrid use:
-  /// - link: External URL
-  /// - file: File name in storage
+  // Physical file stored in the server (Multer)
+  file_path              String?       @db.VarChar(255)
+  // External resource link (YouTube, Drive, etc.)
   url_link               String?
   written_reference      String?
   material_id            Int           @id @default(autoincrement())
@@ -90,3 +90,4 @@ enum MaterialTypes {
   link
   reference
 }
+

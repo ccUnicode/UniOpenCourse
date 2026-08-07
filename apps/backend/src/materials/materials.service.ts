@@ -89,7 +89,7 @@ export class MaterialsService {
         class_id: Number(createFileDto.class_id),
         material_type: MaterialTypes.file,
         filename: file.originalname,
-        url_link: file.filename,
+        file_path: file.filename,
       },
     });
   }
@@ -124,8 +124,8 @@ export class MaterialsService {
       throw new NotFoundException('Material no encontrado.');
     }
 
-    if (material.material_type === MaterialTypes.file && material.url_link) {
-      const filePath = path.join('./storage', material.url_link);
+    if (material.material_type === MaterialTypes.file && material.file_path) {
+      const filePath = path.join('./storage', material.file_path);
       try {
         if (fs.existsSync(filePath)) {
           await fs.promises.unlink(filePath);
@@ -141,5 +141,32 @@ export class MaterialsService {
     return this.prisma.material.delete({
       where: { material_id: id },
     });
+  }
+
+  /** Gets the read stream and original filename for a physical material file */
+  async getDownloadableFile(id: number) {
+    const material = await this.prisma.material.findUnique({
+      where: { material_id: id },
+    });
+
+    if (!material) {
+      throw new NotFoundException('Material no encontrado.');
+    }
+
+    // Usamos file_path en lugar de url_link como estaba en la rama anterior
+    if (material.material_type !== MaterialTypes.file || !material.file_path) {
+      throw new BadRequestException('Este material no es un archivo descargable.');
+    }
+
+    const filePath = path.join(process.cwd(), 'storage', material.file_path);
+
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
+    }
+
+    return {
+      stream: fs.createReadStream(filePath),
+      filename: material.filename || material.file_path,
+    };
   }
 }
