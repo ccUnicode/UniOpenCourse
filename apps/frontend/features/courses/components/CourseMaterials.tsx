@@ -4,7 +4,7 @@ import { Material } from '../types/course.types';
 const baseUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface CourseMaterialsProps {
-  materials: Material[] | any; // Permitir any temporalmente para el caso de error
+  materials: Material[] | { message?: string; error?: string };
 }
 
 export default function CourseMaterials({ materials }: CourseMaterialsProps) {
