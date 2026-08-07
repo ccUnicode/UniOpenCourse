@@ -27,24 +27,34 @@ function getEmbedUrl(youtubeUrl: string) {
   }
 }
 
+async function handleResponse(response: Response) {
+  if (!response.ok) {
+    if (response.status === 404) return { error: 'Not Found', statusCode: 404 };
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+  return await response.json();
+}
+
 export async function getMaterialData(class_id: string) {
   const response = await fetch(`${baseUrl}/classes/${class_id}/materials`);
-  const materials = await response.json();
-  console.log(materials);
-  if (materials.error) {
-    return { error: materials.error, message: materials.message };
-  }
-
-  return materials;
+  return handleResponse(response);
 }
 
 export async function getClassData(class_id: string) {
   const response = await fetch(`${baseUrl}/classes/${class_id}`);
-  const clase = await response.json();
-  if (clase.error) {
-    return { error: clase.error, message: clase.message };
-  }
-
+  const clase = await handleResponse(response);
+  if (clase.error) return clase;
+  
   clase.url_youtube = getEmbedUrl(clase.url_youtube);
   return clase;
+}
+
+export async function getClassesByCourse(course_id: string) {
+  const response = await fetch(`${baseUrl}/courses/${course_id}/classes`);
+  return handleResponse(response);
+}
+
+export async function getCourse(course_id: string) {
+  const response = await fetch(`${baseUrl}/courses/${course_id}`);
+  return handleResponse(response);
 }

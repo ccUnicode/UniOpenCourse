@@ -1,16 +1,21 @@
-import { Material } from '@/interfaces/material.interface';
-import { getClassData, getMaterialData } from '@/services/classes.service';
+import CourseHero from '@/features/courses/components/CourseHero';
+import CourseMaterials from '@/features/courses/components/CourseMaterials';
+import { getClassData, getMaterialData, getCourse } from '@/services/classes.service';
 import { notFound } from 'next/navigation';
+
 
 export default async function Clase({
   params,
 }: {
-  params: Promise<{ class_id: string }>;
+  params: Promise<{ course_id: string; class_id: string }>;
 }) {
-  const { class_id } = await params;
+  const { course_id, class_id } = await params;
+  
   if (class_id != parseInt(class_id).toString()) {
     notFound();
   }
+
+  const course = await getCourse(course_id);
   const clase = await getClassData(class_id);
   if (clase.error === 'Not Found') {
     notFound();
@@ -18,29 +23,43 @@ export default async function Clase({
   const materials = await getMaterialData(class_id);
   console.log(clase);
 
-  return (
-    <>
-      <h1>{clase.title}</h1>
-      <p>{clase.description}</p>
-      {clase.url_youtube ? (
-        <iframe
-          width="560"
-          height="315"
-          src={clase.url_youtube}
-          title="YouTube video player"
-        ></iframe>
-      ) : null}
+  if (course.error === 'Not Found' || course.statusCode === 404 || clase.error === 'Not Found') {
+    notFound();
+  }
 
-      <h2>Materials</h2>
-      {materials.error ? (
-        <p>Error: {materials.message}</p>
-      ) : (
-        <ul>
-          {materials.map((material: Material) => (
-            <li key={material.material_id}>{material.class_id} </li>
-          ))}
-        </ul>
-      )}
-    </>
+  if (clase.course_id && String(clase.course_id) !== String(course_id)) {
+    notFound();
+  }
+
+  return (
+    <div className="flex flex-col w-full bg-[#0f1714]">
+      <CourseHero 
+        courseName={course.name}
+        courseCode={course.course_code}
+        description={course.description}
+        imageUrl={course.url_image}
+        teacher={course.teacher} 
+      />
+
+      <div id="reproductor" className="px-4 md:px-12 pt-6 pb-4">
+        <h1 className="text-3xl text-white font-bold mb-4">{clase.title}</h1>
+        <p className="text-gray-400 mb-8">{clase.description}</p>
+        
+        {clase.url_youtube && (
+          <div className="w-full aspect-video rounded-xl overflow-hidden shadow-2xl bg-black">
+            <iframe 
+              src={clase.url_youtube} 
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowFullScreen
+            ></iframe>
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 md:px-12 pb-12">
+        <CourseMaterials materials={materials} />
+      </div>
+    </div>
   );
 }

@@ -63,6 +63,10 @@ export class ClassesService {
   async findAllByCourse(courseId: number) {
     return this.prisma.class.findMany({
       where: { course_id: courseId },
+      orderBy: [
+        { class_creation_date: 'asc' },
+        { class_id: 'asc' }
+      ]
     });
   }
 
