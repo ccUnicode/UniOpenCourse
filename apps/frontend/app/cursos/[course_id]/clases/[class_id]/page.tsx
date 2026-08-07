@@ -33,6 +33,10 @@ export default async function Clase({
     notFound();
   }
 
+  if (clase.course_id && String(clase.course_id) !== String(course_id)) {
+    notFound();
+  }
+
   return (
     <div className="flex flex-col w-full bg-[#0f1714]">
       <CourseHero 
