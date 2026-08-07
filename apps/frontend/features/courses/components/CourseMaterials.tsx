@@ -1,13 +1,29 @@
 import React from 'react';
 import { Material } from '../types/course.types';
 
+const baseUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 interface CourseMaterialsProps {
-  materials: Material[];
+  materials: Material[] | any; // Permitir any temporalmente para el caso de error
 }
 
 export default function CourseMaterials({ materials }: CourseMaterialsProps) {
-  if (!materials || materials.length === 0) {
-    return <p className="text-gray-500">No hay materiales disponibles para esta clase.</p>;
+  if (!Array.isArray(materials)) {
+    return (
+      <div className="mt-12">
+        <h2 className="text-2xl text-white font-bold mb-6">Materiales</h2>
+        <p className="text-red-400">Ocurrió un error al cargar los materiales. {materials?.message || 'Inténtalo de nuevo más tarde.'}</p>
+      </div>
+    );
+  }
+
+  if (materials.length === 0) {
+    return (
+      <div className="mt-12">
+        <h2 className="text-2xl text-white font-bold mb-6">Materiales</h2>
+        <p className="text-gray-500">No hay materiales disponibles para esta clase.</p>
+      </div>
+    );
   }
 
   return (
@@ -44,7 +60,7 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
             <div className="flex items-center">
               {material.material_type === 'file' && (
                 <a 
-                  href={`http://localhost:3001/materials/${material.material_id}/download`} 
+                  href={`${baseUrl}/materials/${material.material_id}/download`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="bg-[#01392a] text-white p-2 rounded-full hover:bg-opacity-80 transition-colors flex items-center justify-center"
