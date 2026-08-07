@@ -14,7 +14,7 @@ export default function CourseSidebar({ courseId, courseName, classes }: CourseS
   const pathname = usePathname();
 
   return (
-    <aside className="w-72 flex-shrink-0 bg-background-secondary border-r border-border flex flex-col h-[calc(100vh-72px)] overflow-y-auto custom-scrollbar overscroll-none sticky top-0">
+    <aside className="w-full md:w-72 flex-shrink-0 bg-background-secondary border-b md:border-b-0 md:border-r border-border flex flex-col h-auto max-h-[40vh] md:max-h-none md:h-[calc(100vh-72px)] overflow-y-auto custom-scrollbar overscroll-none md:sticky top-0 z-20">
       <div className="p-6 border-b border-border">
         <h2 className="text-xl font-bold text-primary">Curso: {courseName}</h2>
       </div>
