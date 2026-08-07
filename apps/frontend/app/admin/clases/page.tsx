@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Plus, SquarePen, Trash2, BookOpen } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { apiFetch } from '@/lib/api-client';
 
 // --- Types ---
 interface Class {
@@ -32,22 +33,12 @@ const formatAdminDate = (date?: string) => {
   });
 };
 
-// --- API Functions ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
+// --- API Functions ---
 
 const fetchClasses = async (search: string = '', page: number = 1, limit: number = 10): Promise<{ data: Class[]; total: number }> => {
   try {
-    const response = await fetch(`${API_URL}/admin/classes?search=${search}&page=${page}&limit=${limit}`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await apiFetch(`admin/classes?search=${search}&page=${page}&limit=${limit}`);
     
     if (!response.ok) {
       throw new Error('Error al obtener clases');
@@ -63,9 +54,8 @@ const fetchClasses = async (search: string = '', page: number = 1, limit: number
 
 const createClass = async (classData: { course_id: number; title: string; description: string; url_youtube?: string }): Promise<Class> => {
   try {
-    const response = await fetch(`${API_URL}/admin/classes`, {
+    const response = await apiFetch('admin/classes', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(classData),
     });
     
@@ -82,9 +72,8 @@ const createClass = async (classData: { course_id: number; title: string; descri
 
 const deleteClass = async (id: number): Promise<void> => {
   try {
-    const response = await fetch(`${API_URL}/admin/classes/${id}`, {
+    const response = await apiFetch(`admin/classes/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

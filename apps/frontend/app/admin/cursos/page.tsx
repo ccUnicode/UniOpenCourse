@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { apiFetch } from '@/lib/api-client';
 
 // --- Types ---
 type CourseStatus = "published" | "draft" | "archived";
@@ -43,16 +44,8 @@ const formatAdminDate = (date?: string) => {
 
 // --- Components ---
 
-// --- API Functions ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
+// --- API Functions ---
 
 interface FetchCoursesResponse {
   data: Course[];
@@ -62,9 +55,7 @@ interface FetchCoursesResponse {
 
 const fetchCourses = async (search: string = '', page: number = 1, limit: number = 10): Promise<FetchCoursesResponse> => {
   try {
-    const response = await fetch(`${API_URL}/admin/courses?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await apiFetch(`admin/courses?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`);
     
     if (!response.ok) {
       throw new Error('Error al obtener cursos');
@@ -99,9 +90,8 @@ type CreateCoursePayload = {
 
 const createCourse = async (courseData: CreateCoursePayload): Promise<Course> => {
   try {
-    const response = await fetch(`${API_URL}/admin/courses`, {
+    const response = await apiFetch('admin/courses', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(courseData),
     });
     
@@ -119,9 +109,8 @@ const createCourse = async (courseData: CreateCoursePayload): Promise<Course> =>
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Course> => {
   try {
-    const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+    const response = await apiFetch(`admin/courses/${id}`, {
       method: 'PATCH',
-      headers: getAuthHeaders(),
       body: JSON.stringify(courseData),
     });
     
@@ -138,9 +127,8 @@ const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Co
 
 const deleteCourse = async (id: number): Promise<void> => {
   try {
-    const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+    const response = await apiFetch(`admin/courses/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, FileText, Link as LinkIcon, BookOpen, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { apiFetch, API_URL } from '@/lib/api-client';
 
 // --- Types ---
 type MaterialType = 'file' | 'link' | 'reference';
@@ -24,23 +25,6 @@ interface Material {
   };
 }
 
-// --- API Functions ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
-
-const getMultipartHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-  };
-};
 
 interface FetchMaterialsResponse {
   data: Material[];
@@ -58,14 +42,12 @@ const fetchMaterials = async (
   classId?: number,
 ): Promise<FetchMaterialsResponse> => {
   try {
-    let url = `${API_URL}/admin/materials?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
+    let path = `admin/materials?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
     if (classId) {
-      url += `&class_id=${classId}`;
+      path += `&class_id=${classId}`;
     }
 
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
-    });
+    const response = await apiFetch(path);
 
     if (!response.ok) {
       throw new Error('Error al obtener materiales');
@@ -90,9 +72,8 @@ const createFileMaterial = async (classId: number, filename: string, file: File)
     formData.append('filename', filename);
     formData.append('file', file);
 
-    const response = await fetch(`${API_URL}/admin/materials/file`, {
+    const response = await apiFetch('admin/materials/file', {
       method: 'POST',
-      headers: getMultipartHeaders(),
       body: formData,
     });
     
@@ -109,9 +90,8 @@ const createFileMaterial = async (classId: number, filename: string, file: File)
 
 const createLinkMaterial = async (classId: number, filename: string, url_link: string): Promise<Material> => {
   try {
-    const response = await fetch(`${API_URL}/admin/materials/link`, {
+    const response = await apiFetch('admin/materials/link', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ class_id: classId, filename, url_link }),
     });
     
@@ -128,9 +108,8 @@ const createLinkMaterial = async (classId: number, filename: string, url_link: s
 
 const createReferenceMaterial = async (classId: number, filename: string, written_reference: string): Promise<Material> => {
   try {
-    const response = await fetch(`${API_URL}/admin/materials/reference`, {
+    const response = await apiFetch('admin/materials/reference', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ class_id: classId, filename, written_reference }),
     });
     
@@ -147,9 +126,8 @@ const createReferenceMaterial = async (classId: number, filename: string, writte
 
 const deleteMaterial = async (id: number): Promise<void> => {
   try {
-    const response = await fetch(`${API_URL}/admin/materials/${id}`, {
+    const response = await apiFetch(`admin/materials/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

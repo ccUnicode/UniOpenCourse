@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { setAuthCookies } from '@/lib/auth-cookies';
+import { logout, saveUserDisplayName, getUserDisplayName } from '@/lib/auth-cookies';
 
 
 // Iconos SVG simples para el formulario
@@ -25,16 +25,18 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const role = localStorage.getItem('user_role');
-    if (token) {
-      if (role === 'ADMIN') {
-        router.replace('/admin/cursos');
-      } else {
-        router.replace('/dashboard');
-      }
-      return;
-    }
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated) {
+          if (data.role === 'ADMIN') {
+            router.replace('/admin/cursos');
+          } else {
+            router.replace('/dashboard');
+          }
+        }
+      })
+      .catch(() => {});
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('registered') === 'true') {
@@ -65,8 +67,7 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,19 +78,10 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // Guardar token en cookies y localStorage
-        if (data.access_token) {
-          setAuthCookies(data.access_token, data.user?.role || 'USER');
-          localStorage.setItem('access_token', data.access_token);
+        if (data.user?.name) {
+          saveUserDisplayName(data.user.name);
         }
-        if (data.user && data.user.role) {
-          localStorage.setItem('user_role', data.user.role);
-        }
-        if (data.user && data.user.name) {
-          localStorage.setItem('user_name', data.user.name);
-        }
-        
-        // Redirigir según el rol del usuario
+
         if (data.user && data.user.role === 'ADMIN') {
           window.location.replace('/admin/cursos');
         } else {

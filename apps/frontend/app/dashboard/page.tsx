@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { BookOpen, LogOut } from 'lucide-react';
 import CourseCard from '@/components/course-card';
 import { Course } from '@/interfaces/course.interface';
+import { logout, getUserDisplayName } from '@/lib/auth-cookies';
+import { apiFetch } from '@/lib/api-client';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -15,25 +17,24 @@ export default function Dashboard() {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-
-    // Obtener nombre del usuario si está en localStorage
-    const savedName = localStorage.getItem('user_name') || 'Estudiante';
-    setUserName(savedName);
-
     const loadDashboardData = async () => {
+      const sessionRes = await fetch('/api/auth/session', { credentials: 'include' });
+      const session = await sessionRes.json();
+
+      if (!session.authenticated) {
+        router.replace('/login');
+        return;
+      }
+
+      if (session.role === 'ADMIN') {
+        router.replace('/admin/cursos');
+        return;
+      }
+
+      setUserName(getUserDisplayName());
+
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${API_URL}/courses/dashboard`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await apiFetch('courses/dashboard');
 
         if (!response.ok) {
           throw new Error('Error al obtener datos');
@@ -52,10 +53,8 @@ export default function Dashboard() {
     loadDashboardData();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
+  const handleLogout = async () => {
+    await logout();
     window.location.replace('/login');
   };
 

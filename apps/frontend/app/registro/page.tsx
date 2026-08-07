@@ -25,15 +25,18 @@ export default function Registro() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const role = localStorage.getItem('user_role');
-    if (token) {
-      if (role === 'ADMIN') {
-        router.replace('/admin/cursos');
-      } else {
-        router.replace('/dashboard');
-      }
-    }
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated) {
+          if (data.role === 'ADMIN') {
+            router.replace('/admin/cursos');
+          } else {
+            router.replace('/dashboard');
+          }
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BookOpen, Video, FileText, LogOut, Menu, X } from 'lucide-react';
 
-import { clearAuthCookies } from '@/lib/auth-cookies';
+import { logout } from '@/lib/auth-cookies';
 
 export const AdminSidebar = () => {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleLogout = () => {
-    clearAuthCookies();
+  const handleLogout = async () => {
+    await logout();
     window.location.replace('/admin/login');
   };
 

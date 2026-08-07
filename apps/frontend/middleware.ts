@@ -1,23 +1,38 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifyAccessToken } from '@/lib/jwt';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Interceptar únicamente rutas bajo /admin
   if (pathname.startsWith('/admin')) {
     const token = request.cookies.get('access_token')?.value;
-    const role = request.cookies.get('user_role')?.value;
-
     const isLoginPage = pathname === '/admin/login';
 
-    // Si intenta entrar a /admin/login estando ya autenticado como ADMIN
-    if (isLoginPage && token && role === 'ADMIN') {
-      return NextResponse.redirect(new URL('/admin/cursos', request.url));
+    if (isLoginPage) {
+      if (token) {
+        try {
+          const payload = await verifyAccessToken(token);
+          if (payload.role === 'ADMIN') {
+            return NextResponse.redirect(new URL('/admin/cursos', request.url));
+          }
+        } catch {
+          // Token inválido: permitir ver el login
+        }
+      }
+      return NextResponse.next();
     }
 
-    // Si NO es la página de login y no tiene token ni rol ADMIN, redirigir al login
-    if (!isLoginPage && (!token || role !== 'ADMIN')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+
+    try {
+      const payload = await verifyAccessToken(token);
+      if (payload.role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/admin/login', request.url));
+      }
+    } catch {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }
@@ -28,4 +43,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: '/admin/:path*',
 };
-

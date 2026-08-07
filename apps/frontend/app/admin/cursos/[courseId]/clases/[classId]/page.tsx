@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
+import { apiFetch, API_URL } from '@/lib/api-client';
 
 type MaterialType = "file" | "link" | "reference";
 
@@ -100,38 +101,22 @@ const isValidUrl = (url: string) => {
 };
 
 // --- API Functions ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getMultipartHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return { 'Authorization': `Bearer ${token}` };
-};
 
 const fetchCourse = async (courseId: number): Promise<Course> => {
-  const response = await fetch(`${API_URL}/admin/courses/${courseId}`, { headers: getAuthHeaders() });
+  const response = await apiFetch(`admin/courses/${courseId}`);
   if (!response.ok) throw new Error('Error al obtener curso');
   return await response.json();
 };
 
 const fetchClassInfo = async (classId: number): Promise<ClassInfo> => {
-  const response = await fetch(`${API_URL}/admin/classes/${classId}`, { headers: getAuthHeaders() });
+  const response = await apiFetch(`admin/classes/${classId}`);
   if (!response.ok) throw new Error('Error al obtener clase');
   return await response.json();
 };
 
 const updateClass = async (classId: number, data: Partial<ClassInfo>): Promise<ClassInfo> => {
-  const response = await fetch(`${API_URL}/admin/classes/${classId}`, {
+  const response = await apiFetch(`admin/classes/${classId}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Error al actualizar clase');
@@ -139,17 +124,15 @@ const updateClass = async (classId: number, data: Partial<ClassInfo>): Promise<C
 };
 
 const deleteMaterialApi = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/admin/materials/${id}`, {
+  const response = await apiFetch(`admin/materials/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al eliminar material');
 };
 
 const createLinkMaterialApi = async (classId: number, filename: string, url_link: string): Promise<ApiMaterial> => {
-  const response = await fetch(`${API_URL}/admin/materials/link`, {
+  const response = await apiFetch('admin/materials/link', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ class_id: classId, filename, url_link }),
   });
   if (!response.ok) throw new Error('Error al crear enlace');
@@ -157,9 +140,8 @@ const createLinkMaterialApi = async (classId: number, filename: string, url_link
 };
 
 const createReferenceMaterialApi = async (classId: number, filename: string, written_reference: string): Promise<ApiMaterial> => {
-  const response = await fetch(`${API_URL}/admin/materials/reference`, {
+  const response = await apiFetch('admin/materials/reference', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ class_id: classId, filename, written_reference }),
   });
   if (!response.ok) throw new Error('Error al crear referencia');
@@ -167,20 +149,21 @@ const createReferenceMaterialApi = async (classId: number, filename: string, wri
 };
 
 const createFileMaterialApi = async (classId: number, filename: string, file: File): Promise<ApiMaterial> => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
   const formData = new FormData();
   formData.append('class_id', classId.toString());
   formData.append('filename', filename);
   formData.append('file', file);
-  
-  const response = await fetch(`${API_URL}/admin/materials/file`, {
+
+  const response = await apiFetch('admin/materials/file', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
     body: formData,
   });
   if (!response.ok) throw new Error('Error al crear archivo');
   return await response.json();
 };
+
+const getMaterialDownloadUrl = (materialId: number) =>
+  `${API_URL}/materials/${materialId}/download`;
 
 // Map API material to local format
 const mapApiMaterial = (m: ApiMaterial): ClassMaterial => ({
@@ -603,7 +586,7 @@ export default function AdminClassPage() {
                                 <p className="text-sm text-white/80 line-clamp-2 max-w-[300px]">{m.reference}</p>
                               ) : (
                                 <>
-                                  <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors">
+                                  <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors">
                                     Abrir recurso
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </a>
@@ -616,8 +599,8 @@ export default function AdminClassPage() {
                             </td>
                             <td className="px-5 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                {m.type !== 'reference' && m.url && (
-                                  <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" aria-label="Abrir material" title="Abrir material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
+                                {m.type !== 'reference' && (m.type === 'file' || m.url) && (
+                                  <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" aria-label="Abrir material" title="Abrir material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
                                     <ExternalLink className="w-4 h-4" />
                                   </a>
                                 )}
@@ -657,8 +640,8 @@ export default function AdminClassPage() {
                           <MaterialTypeBadge type={m.type} />
                         </div>
                         <div className="flex items-center justify-between border-t border-[#2B332F] pt-3">
-                          {m.type !== 'reference' && m.url ? (
-                            <a href={m.type === 'file' ? `${API_URL}/storage/${m.url}` : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]">
+                          {m.type !== 'reference' && (m.type === 'file' || m.url) ? (
+                            <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]">
                               Abrir recurso <ExternalLink className="w-3.5 h-3.5" />
                             </a>
                           ) : <div />}

@@ -11,6 +11,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { apiFetch } from '@/lib/api-client';
 
 // --- Types ---
 
@@ -47,32 +48,16 @@ interface Course {
 
 
 // --- API Functions ---
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-const getAuthHeaders = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
 
 const fetchCourse = async (courseId: number): Promise<Course> => {
-  const response = await fetch(`${API_URL}/admin/courses/${courseId}`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await apiFetch(`admin/courses/${courseId}`);
   if (!response.ok) throw new Error('Error al obtener curso');
   return await response.json();
 };
 
 const fetchClasses = async (courseId: number): Promise<Class[]> => {
   try {
-    const response = await fetch(
-      `${API_URL}/admin/classes?course_id=${courseId}&limit=100`,
-      {
-        headers: getAuthHeaders(),
-      },
-    );
+    const response = await apiFetch(`admin/classes?course_id=${courseId}&limit=100`);
     if (!response.ok) throw new Error('Error al obtener clases');
     const data = await response.json();
     return data.data || [];
@@ -83,9 +68,8 @@ const fetchClasses = async (courseId: number): Promise<Class[]> => {
 };
 
 const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Course> => {
-  const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+  const response = await apiFetch(`admin/courses/${id}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
     body: JSON.stringify(courseData),
   });
   if (!response.ok) throw new Error('Error al actualizar curso');
@@ -93,9 +77,8 @@ const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Co
 };
 
 const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>): Promise<Class> => {
-  const response = await fetch(`${API_URL}/admin/classes`, {
+  const response = await apiFetch('admin/classes', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify(classData),
   });
   if (!response.ok) throw new Error('Error al crear clase');
@@ -103,9 +86,8 @@ const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'or
 };
 
 const deleteClass = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/admin/classes/${id}`, {
+  const response = await apiFetch(`admin/classes/${id}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al eliminar clase');
 };

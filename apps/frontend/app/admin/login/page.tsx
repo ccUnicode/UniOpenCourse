@@ -15,7 +15,7 @@ const ShieldAlertIcon = ({ className = "w-6 h-6" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 );
 
-import { setAuthCookies } from '@/lib/auth-cookies';
+import { logout } from '@/lib/auth-cookies';
 
 export default function LoginAdmin() {
   const router = useRouter();
@@ -27,11 +27,14 @@ export default function LoginAdmin() {
   const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const role = localStorage.getItem('user_role');
-    if (token && role === 'ADMIN') {
-      router.replace('/admin/cursos');
-    }
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.role === 'ADMIN') {
+          router.replace('/admin/cursos');
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -56,8 +59,7 @@ export default function LoginAdmin() {
     setIsLoading(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/auth/admin/login`, {
+      const response = await fetch('/api/auth/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,11 +70,6 @@ export default function LoginAdmin() {
       const data = await response.json();
 
       if (response.ok) {
-        const token = data.access_token;
-        const role = data.user?.role || 'ADMIN';
-        if (token) {
-          setAuthCookies(token, role);
-        }
         window.location.replace('/admin/cursos');
       } else {
         if (data.message) {
