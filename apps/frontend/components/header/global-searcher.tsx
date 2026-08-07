@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 
-export default function GlobalSearcher({}) {
+export default function GlobalSearcher({ onSearch }: { onSearch?: () => void }) {
   const searchParams = useSearchParams();
 
   const router = useRouter();
@@ -17,12 +17,13 @@ export default function GlobalSearcher({}) {
   }, [searchParams]);
 
   const handleSearch = () => {
+    onSearch?.();
     if (!query.trim()) return;
 
     router.push(`/busqueda?q=${encodeURIComponent(query)}`);
   };
   return (
-    <div className="searchContainer h-10 bg-black/10 border-border border rounded-full flex items-center px-4 w-7/20">
+    <div className="flex searchContainer h-10 bg-black/10 border-border border rounded-full items-center px-4 w-full">
       <button onClick={handleSearch} className="cursor-pointer">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +48,7 @@ export default function GlobalSearcher({}) {
         }}
         type="text"
         placeholder="¿Qué quieres aprender hoy?"
-        className="text-white bg-transparent border-none outline-none w-full px-4 placeholder:text-placeholder"
+        className="text-white bg-transparent border-none outline-none w-full pl-2 sm:pl-4 placeholder:text-placeholder"
       />
     </div>
   );
