@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import LogoutButton from '../logout-button';
 export default function Navigation({
   access_token,
   onNavigate,
@@ -30,16 +31,7 @@ export default function Navigation({
       </li>
 
       {access_token ? (
-        <li className="h-15 flex items-center">
-          <Link
-            onClick={() => {
-              onNavigate?.();
-            }}
-            href="/logout"
-          >
-            Cerrar Sesión
-          </Link>
-        </li>
+        <LogoutButton message="Cerrar Sesión" />
       ) : (
         <li className="h-15 flex items-center">
           <Link
