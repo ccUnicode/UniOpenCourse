@@ -8,7 +8,10 @@ export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
   // --- Admin Methods ---
-  async create(data: CreateCourseDto) {
+  async create(data: CreateCourseDto, file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Debes adjuntar una imagen .jpeg o .png');
+    }
     return await this.prisma.$transaction(async (tx) => {
       let docenteId = data.teacher_id;
       if (!docenteId) {
@@ -38,7 +41,7 @@ export class CoursesService {
           name: data.name,
           course_code: data.course_code,
           description: data.description,
-          url_image: data.url_image || '',
+          url_image: file.filename,
           teacher: { connect: { teacher_id: docenteId } },
         },
       });

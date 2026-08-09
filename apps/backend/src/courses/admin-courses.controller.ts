@@ -8,12 +8,17 @@ import {
   Body,
   Query,
   UseGuards,
+  UploadedFile,
+  BadRequestException,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { storageConfig } from '../utils/storage.config';
 
 @Controller('admin/courses')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,8 +27,34 @@ export class AdminCoursesController {
   constructor(private readonly service: CoursesService) {}
 
   @Post()
-  create(@Body() dto: CreateCourseDto) {
-    return this.service.create(dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: storageConfig,
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowed = ['image/png', 'image/jpeg'];
+
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Tipo de imagen no permitido. Solo se aceptan PNGs y JPEGs.',
+            ),
+            false,
+          );
+        }
+
+        cb(null, true);
+      },
+    }),
+  )
+  create(@Body() dto: CreateCourseDto, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('La imagen del curso es obligatoria.');
+    }
+
+    return this.service.create(dto, file);
   }
 
   @Get()
