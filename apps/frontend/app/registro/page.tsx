@@ -128,8 +128,13 @@ export default function Registro() {
         router.push('/login?registered=true');
       } else {
         // Manejar errores del backend
+        console.log(data);
         if (data.message) {
-          newErrors.email = data.message;
+          if (data.field == 'username') {
+            newErrors.username = data.message;
+          } else {
+            newErrors.email = data.message;
+          }
         } else {
           newErrors.email = 'Error al registrar. Intenta con otros datos.';
         }

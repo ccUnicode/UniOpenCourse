@@ -16,6 +16,29 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
     const username = dto.username.trim().toLowerCase();
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        throw new ConflictException({
+          message: 'El correo electrónico ya está registrado',
+          field: 'email',
+        });
+      }
+
+      if (existingUser.username === username) {
+        throw new ConflictException({
+          message: 'El nombre de usuario ya está registrado',
+          field: 'username',
+        });
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     try {
       const user = await this.prisma.user.create({
@@ -33,17 +56,6 @@ export class AuthService {
       });
       return this.generateToken(user);
     } catch (error) {
-      const prismaError = error as { code?: string; meta?: { target?: string[] } };
-      if (prismaError.code === 'P2002') {
-        const target = prismaError.meta?.target || [];
-        if (target.includes('username')) {
-          throw new ConflictException('El nombre de usuario ya está registrado');
-        }
-        if (target.includes('email')) {
-          throw new ConflictException('El correo electrónico ya está registrado');
-        }
-        throw new ConflictException('El correo o nombre de usuario ya está registrado');
-      }
       throw error;
     }
   }
