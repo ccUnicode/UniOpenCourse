@@ -5,7 +5,11 @@ import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export default function CourseCard({ course }: { course: Course }) {
   return (
-    <Link href={`/cursos/${course.course_id}`} key={course.course_id}>
+    <Link
+      href={`/cursos/${course.course_id}`}
+      key={course.course_id}
+      className="mx-auto lg:mx-0"
+    >
       <div className="group relative overflow-hidden max-w-110 w-full rounded-2xl border border-white/5 hover:border-white/20 bg-background-secondary transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:-translate-y-1">
         <div className="z-10 flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
           <svg
