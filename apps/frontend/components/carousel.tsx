@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { Course } from '../interfaces/course.interface';
 import { useEffect, useState } from 'react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export default function Carousel({ data }: { data: Course[] }) {
   const courses_carousel = data;
   const courses_length = courses_carousel.length;
@@ -24,7 +26,6 @@ export default function Carousel({ data }: { data: Course[] }) {
   const prev = () => {
     setCurrent((prev) => (prev - 1 + courses_length) % courses_length);
   };
-  console.log(courses_carousel);
   return (
     <div className="overflow-hidden w-128">
       <div
@@ -50,9 +51,10 @@ export default function Carousel({ data }: { data: Course[] }) {
               </div>
               <figure className="relative h-64 w-full">
                 <Image
-                  src={course.url_image}
+                  src={`${API_URL}/storage/${course.url_image}`}
                   alt={course.name}
                   className="object-cover"
+                  unoptimized={process.env.NODE_ENV === 'development'}
                   fill
                 />
               </figure>

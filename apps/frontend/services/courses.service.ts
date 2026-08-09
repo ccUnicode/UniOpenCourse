@@ -1,7 +1,7 @@
 import { CreateCourse } from '@/interfaces/course.interface';
 import { CreateCoursePayload } from '@/interfaces/course.interface';
 import { apiFetch } from '@/lib/api-client';
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function getCarouselData() {
   const response = await fetch(`${baseUrl}/courses/carrusel`);

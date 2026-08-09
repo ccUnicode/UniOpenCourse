@@ -71,7 +71,6 @@ export class CoursesService {
           name: data.name,
           course_code: data.course_code,
           description: data.description,
-          url_image: data.url_image,
           ...(docenteId && { teacher: { connect: { teacher_id: docenteId } } }),
         },
       });

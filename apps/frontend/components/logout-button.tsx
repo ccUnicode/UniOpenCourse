@@ -2,7 +2,7 @@ import { LogOut } from 'lucide-react';
 import { logout } from '@/lib/auth-cookies';
 const handleLogout = async () => {
   await logout();
-  window.location.replace('/login');
+  window.location.replace('/');
 };
 export default function LogoutButton({ message }: { message: string }) {
   return (

@@ -1,6 +1,8 @@
 import { Course } from '@/interfaces/course.interface';
 import Image from 'next/image';
 import Link from 'next/link';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export default function CourseCard({ course }: { course: Course }) {
   return (
     <Link href={`/cursos/${course.course_id}`} key={course.course_id}>
@@ -21,10 +23,11 @@ export default function CourseCard({ course }: { course: Course }) {
         </div>
         <figure className="w-full relative aspect-video">
           <Image
-            src={course.url_image}
+            src={`${API_URL}/storage/${course.url_image}`}
             alt={course.name}
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             fill
+            unoptimized={process.env.NODE_ENV === 'development'}
           />
         </figure>
         <div className="p-5 md:p-6 w-full flex flex-col gap-6 rounded-b-2xl">
@@ -36,10 +39,7 @@ export default function CourseCard({ course }: { course: Course }) {
             <span className="text-xs font-medium text-muted/90 uppercase tracking-wider">
               {course.course_code}
             </span>
-            <Link
-              href={`/cursos/${course.course_id}`}
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted/90"
-            >
+            <div className="inline-flex items-center gap-2 text-sm font-medium text-muted/90">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -55,7 +55,7 @@ export default function CourseCard({ course }: { course: Course }) {
               <p>
                 {course.teacher.name} {course.teacher.last_name}
               </p>
-            </Link>
+            </div>
           </div>
         </div>
       </div>

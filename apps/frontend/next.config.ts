@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+const apiUrl = new URL(process.env.API_URL || 'http://localhost:3001');
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -11,6 +12,14 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: apiUrl.protocol === 'https:' ? 'https' : 'http',
+        hostname: apiUrl.hostname,
+        ...(apiUrl.port && {
+          port: apiUrl.port,
+        }),
+        pathname: '/storage/**',
       },
     ],
   },
