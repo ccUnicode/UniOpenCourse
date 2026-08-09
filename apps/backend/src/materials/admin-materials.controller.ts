@@ -13,6 +13,8 @@ import {
   ParseIntPipe,
   UseGuards,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { storageConfig } from '../utils/storage.config';
@@ -24,6 +26,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 @Controller('admin/materials')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')

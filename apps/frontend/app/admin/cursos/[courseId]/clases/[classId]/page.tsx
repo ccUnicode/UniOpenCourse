@@ -11,13 +11,13 @@ import {
   Link as LinkIcon,
   BookOpen,
   Plus,
-  ArrowLeft
+  ArrowLeft,
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
 import { apiFetch, API_URL } from '@/lib/api-client';
 
-type MaterialType = "file" | "link" | "reference";
+type MaterialType = 'file' | 'link' | 'reference';
 
 interface ClassMaterial {
   id: number;
@@ -60,15 +60,15 @@ const TypeIconMap: Record<MaterialType, React.ElementType> = {
 };
 
 const TypeLabels: Record<MaterialType, string> = {
-  file: "Archivo PDF/Imagen",
-  link: "Enlace externo",
-  reference: "Referencia escrita",
+  file: 'Archivo PDF/Imagen',
+  link: 'Enlace externo',
+  reference: 'Referencia escrita',
 };
 
 const TypeHelpTexts: Record<MaterialType, string> = {
-  file: "Sube un archivo PDF o imagen (máx 5MB).",
-  link: "Enlace a un sitio web, video, o recurso externo.",
-  reference: "Información en texto o fuente bibliográfica.",
+  file: 'Sube un archivo PDF o imagen (máx 5MB).',
+  link: 'Enlace a un sitio web, video, o recurso externo.',
+  reference: 'Información en texto o fuente bibliográfica.',
 };
 
 const MaterialTypeBadge = ({ type }: { type: MaterialType }) => {
@@ -114,7 +114,10 @@ const fetchClassInfo = async (classId: number): Promise<ClassInfo> => {
   return await response.json();
 };
 
-const updateClass = async (classId: number, data: Partial<ClassInfo>): Promise<ClassInfo> => {
+const updateClass = async (
+  classId: number,
+  data: Partial<ClassInfo>,
+): Promise<ClassInfo> => {
   const response = await apiFetch(`admin/classes/${classId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -130,16 +133,26 @@ const deleteMaterialApi = async (id: number): Promise<void> => {
   if (!response.ok) throw new Error('Error al eliminar material');
 };
 
-const createLinkMaterialApi = async (classId: number, filename: string, url_link: string): Promise<ApiMaterial> => {
+const createLinkMaterialApi = async (
+  classId: number,
+  filename: string,
+  url_link: string,
+): Promise<ApiMaterial> => {
   const response = await apiFetch('admin/materials/link', {
     method: 'POST',
     body: JSON.stringify({ class_id: classId, filename, url_link }),
   });
-  if (!response.ok) throw new Error('Error al crear enlace');
+  if (!response.ok) {
+    throw new Error('Error al crear enlace');
+  }
   return await response.json();
 };
 
-const createReferenceMaterialApi = async (classId: number, filename: string, written_reference: string): Promise<ApiMaterial> => {
+const createReferenceMaterialApi = async (
+  classId: number,
+  filename: string,
+  written_reference: string,
+): Promise<ApiMaterial> => {
   const response = await apiFetch('admin/materials/reference', {
     method: 'POST',
     body: JSON.stringify({ class_id: classId, filename, written_reference }),
@@ -148,7 +161,11 @@ const createReferenceMaterialApi = async (classId: number, filename: string, wri
   return await response.json();
 };
 
-const createFileMaterialApi = async (classId: number, filename: string, file: File): Promise<ApiMaterial> => {
+const createFileMaterialApi = async (
+  classId: number,
+  filename: string,
+  file: File,
+): Promise<ApiMaterial> => {
   const formData = new FormData();
   formData.append('class_id', classId.toString());
   formData.append('filename', filename);
@@ -173,14 +190,18 @@ const mapApiMaterial = (m: ApiMaterial): ClassMaterial => ({
   type: m.material_type as MaterialType,
   url: m.url_link || undefined,
   reference: m.written_reference || undefined,
-  createdAt: new Date(m.material_creation_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+  createdAt: new Date(m.material_creation_date).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }),
 });
 
 // --- Page Component ---
 export default function AdminClassPage() {
   const params = useParams();
-  const courseId = params?.courseId as string || "1";
-  const classId = params?.classId as string || "1";
+  const courseId = (params?.courseId as string) || '1';
+  const classId = (params?.classId as string) || '1';
 
   const [course, setCourse] = useState<Course | null>(null);
   const [classData, setClassData] = useState<ClassInfo | null>(null);
@@ -211,8 +232,18 @@ export default function AdminClassPage() {
   const [materialToDelete, setMaterialToDelete] = useState<ClassMaterial | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<{ name: string; type: MaterialType | ""; url: string; reference: string; file: File | null }>({
-    name: '', type: '', url: '', reference: '', file: null
+  const [formData, setFormData] = useState<{
+    name: string;
+    type: MaterialType | '';
+    url: string;
+    reference: string;
+    file: File | null;
+  }>({
+    name: '',
+    type: '',
+    url: '',
+    reference: '',
+    file: null,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -257,7 +288,8 @@ export default function AdminClassPage() {
   const handleSaveClass = async () => {
     const errors: Record<string, string> = {};
     if (!classFormData.title.trim()) errors.title = 'El título es obligatorio';
-    if (!classFormData.description.trim()) errors.description = 'La descripción es obligatoria';
+    if (!classFormData.description.trim())
+      errors.description = 'La descripción es obligatoria';
     setClassFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -282,11 +314,13 @@ export default function AdminClassPage() {
 
   // Filtering
   const filteredMaterials = useMemo(() => {
-    return materials.filter(m => {
+    return materials.filter((m) => {
       const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
       let matchesType = true;
       if (typeFilter !== 'Todos los tipos') {
-        const typeKey = Object.keys(TypeLabels).find(key => TypeLabels[key as MaterialType] === typeFilter);
+        const typeKey = Object.keys(TypeLabels).find(
+          (key) => TypeLabels[key as MaterialType] === typeFilter,
+        );
         matchesType = m.type === typeKey;
       }
       return matchesSearch && matchesType;
@@ -319,7 +353,9 @@ export default function AdminClassPage() {
 
   // Edit is not supported by the API yet — inform user instead
   const openEditModal = (_material: ClassMaterial) => {
-    setFormErrors({ name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.' });
+    setFormErrors({
+      name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.',
+    });
     setIsFormModalOpen(false);
   };
 
@@ -333,7 +369,7 @@ export default function AdminClassPage() {
       try {
         await deleteMaterialApi(materialToDelete.id);
         // Only update local state if API confirms deletion
-        setMaterials(materials.filter(m => m.id !== materialToDelete.id));
+        setMaterials(materials.filter((m) => m.id !== materialToDelete.id));
         setIsDeleteModalOpen(false);
         setMaterialToDelete(null);
       } catch (error) {
@@ -353,7 +389,7 @@ export default function AdminClassPage() {
 
     if (!trimmedName) errors.name = 'El nombre es obligatorio';
     if (!formData.type) errors.type = 'Selecciona un tipo de material';
-    
+
     if (formData.type === 'link') {
       const trimmedUrl = formData.url.trim();
       if (!trimmedUrl) {
@@ -374,17 +410,31 @@ export default function AdminClassPage() {
     try {
       if (editingMaterial) {
         // Material editing is not supported by the backend API yet
-        setFormErrors({ name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.' });
+        setFormErrors({
+          name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.',
+        });
         setIsSubmitting(false);
         return;
       } else {
         let created;
         if (formData.type === 'link') {
-          created = await createLinkMaterialApi(parseInt(classId), trimmedName, formData.url.trim());
+          created = await createLinkMaterialApi(
+            parseInt(classId),
+            trimmedName,
+            formData.url.trim(),
+          );
         } else if (formData.type === 'reference') {
-          created = await createReferenceMaterialApi(parseInt(classId), trimmedName, formData.reference.trim());
+          created = await createReferenceMaterialApi(
+            parseInt(classId),
+            trimmedName,
+            formData.reference.trim(),
+          );
         } else if (formData.type === 'file' && formData.file) {
-          created = await createFileMaterialApi(parseInt(classId), trimmedName, formData.file);
+          created = await createFileMaterialApi(
+            parseInt(classId),
+            trimmedName,
+            formData.file,
+          );
         }
         if (created) {
           setMaterials([...materials, mapApiMaterial(created)]);
@@ -417,26 +467,37 @@ export default function AdminClassPage() {
 
         <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
           <div className="max-w-[1600px] mx-auto space-y-8">
-
             {/* Encabezado con breadcrumb */}
             <div>
               <div className="text-sm text-white/50 mb-4 flex items-center gap-2">
-                <Link href="/admin/cursos" className="hover:text-white transition-colors flex items-center gap-1">
+                <Link
+                  href="/admin/cursos"
+                  className="hover:text-white transition-colors flex items-center gap-1"
+                >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Cursos
                 </Link>
                 <span>/</span>
-                <Link href={`/admin/cursos/${courseId}`} className="hover:text-white transition-colors">
+                <Link
+                  href={`/admin/cursos/${courseId}`}
+                  className="hover:text-white transition-colors"
+                >
                   {course?.name || `Curso ${courseId}`}
                 </Link>
                 <span>/</span>
-                <span className="text-white">{classData?.title || `Clase ${classId}`}</span>
+                <span className="text-white">
+                  {classData?.title || `Clase ${classId}`}
+                </span>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Administrar clase</h1>
-                  <p className="mt-1 text-sm text-white/50">Edita la información de la clase y administra sus materiales.</p>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
+                    Administrar clase
+                  </h1>
+                  <p className="mt-1 text-sm text-white/50">
+                    Edita la información de la clase y administra sus materiales.
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
@@ -455,44 +516,69 @@ export default function AdminClassPage() {
                 </div>
               </div>
               {saveError && <p className="mt-2 text-sm text-red-400">{saveError}</p>}
-              {saveSuccess && <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>}
+              {saveSuccess && (
+                <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>
+              )}
             </div>
 
             {/* Información de la clase (inline edit) */}
             <section className="rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6">
-              <h2 className="text-lg font-bold text-white mb-6">Información de la clase</h2>
+              <h2 className="text-lg font-bold text-white mb-6">
+                Información de la clase
+              </h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-sm font-normal text-white/85">Título</label>
+                    <label className="mb-1.5 block text-sm font-normal text-white/85">
+                      Título
+                    </label>
                     <input
                       type="text"
                       value={classFormData.title}
-                      onChange={e => setClassFormData({ ...classFormData, title: e.target.value })}
+                      onChange={(e) =>
+                        setClassFormData({ ...classFormData, title: e.target.value })
+                      }
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
-                    {classFormErrors.title && <p className="mt-1 text-xs text-red-400">{classFormErrors.title}</p>}
+                    {classFormErrors.title && (
+                      <p className="mt-1 text-xs text-red-400">{classFormErrors.title}</p>
+                    )}
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-normal text-white/85">URL de YouTube (opcional)</label>
+                    <label className="mb-1.5 block text-sm font-normal text-white/85">
+                      URL de YouTube (opcional)
+                    </label>
                     <input
                       type="text"
                       value={classFormData.url_youtube}
-                      onChange={e => setClassFormData({ ...classFormData, url_youtube: e.target.value })}
+                      onChange={(e) =>
+                        setClassFormData({
+                          ...classFormData,
+                          url_youtube: e.target.value,
+                        })
+                      }
                       placeholder="https://youtube.com/watch?v=..."
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Descripción
+                  </label>
                   <textarea
                     value={classFormData.description}
-                    onChange={e => setClassFormData({ ...classFormData, description: e.target.value })}
+                    onChange={(e) =>
+                      setClassFormData({ ...classFormData, description: e.target.value })
+                    }
                     rows={5}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
-                  {classFormErrors.description && <p className="mt-1 text-xs text-red-400">{classFormErrors.description}</p>}
+                  {classFormErrors.description && (
+                    <p className="mt-1 text-xs text-red-400">
+                      {classFormErrors.description}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
@@ -502,7 +588,9 @@ export default function AdminClassPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-white">Materiales de la clase</h2>
-                  <p className="mt-1 text-sm text-white/50">Administra los recursos externos disponibles para los estudiantes.</p>
+                  <p className="mt-1 text-sm text-white/50">
+                    Administra los recursos externos disponibles para los estudiantes.
+                  </p>
                 </div>
                 <button
                   onClick={openCreateModal}
@@ -516,8 +604,13 @@ export default function AdminClassPage() {
               {materials.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-t border-[#2B332F]">
                   <FolderOpen className="w-12 h-12 text-white/10 mb-4" />
-                  <p className="text-lg font-medium text-white">Esta clase todavía no tiene materiales.</p>
-                  <p className="mt-1 text-sm text-white/50 max-w-sm">Agrega enlaces a documentos, presentaciones, referencias u otros recursos externos.</p>
+                  <p className="text-lg font-medium text-white">
+                    Esta clase todavía no tiene materiales.
+                  </p>
+                  <p className="mt-1 text-sm text-white/50 max-w-sm">
+                    Agrega enlaces a documentos, presentaciones, referencias u otros
+                    recursos externos.
+                  </p>
                   <button
                     onClick={openCreateModal}
                     className="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors cursor-pointer"
@@ -548,7 +641,11 @@ export default function AdminClassPage() {
                         className="h-11 rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                       >
                         <option value="Todos los tipos">Todos los tipos</option>
-                        {Object.values(TypeLabels).map(l => <option key={l} value={l}>{l}</option>)}
+                        {Object.values(TypeLabels).map((l) => (
+                          <option key={l} value={l}>
+                            {l}
+                          </option>
+                        ))}
                       </select>
 
                       <button
@@ -565,32 +662,62 @@ export default function AdminClassPage() {
                     <table className="w-full text-left border-collapse min-w-[800px]">
                       <thead>
                         <tr className="bg-[#151A17] border-b border-[#2B332F]">
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Material</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Tipo</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Recurso</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
-                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                            Material
+                          </th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                            Tipo
+                          </th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                            Recurso
+                          </th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                            Fecha de creación
+                          </th>
+                          <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">
+                            Acciones
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredMaterials.map((m) => (
-                          <tr key={m.id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
+                          <tr
+                            key={m.id}
+                            className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors"
+                          >
                             <td className="px-5 py-4 max-w-[250px]">
-                              <p className="text-sm font-semibold text-white truncate">{m.name}</p>
+                              <p className="text-sm font-semibold text-white truncate">
+                                {m.name}
+                              </p>
                             </td>
                             <td className="px-5 py-4">
                               <MaterialTypeBadge type={m.type} />
                             </td>
                             <td className="px-5 py-4">
                               {m.type === 'reference' ? (
-                                <p className="text-sm text-white/80 line-clamp-2 max-w-[300px]">{m.reference}</p>
+                                <p className="text-sm text-white/80 line-clamp-2 max-w-[300px]">
+                                  {m.reference}
+                                </p>
                               ) : (
                                 <>
-                                  <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors">
+                                  <a
+                                    href={
+                                      m.type === 'file'
+                                        ? getMaterialDownloadUrl(m.id)
+                                        : m.url
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D] transition-colors"
+                                  >
                                     Abrir recurso
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </a>
-                                  {m.type === 'link' && m.url && <p className="mt-0.5 text-xs text-white/30">{getDomain(m.url)}</p>}
+                                  {m.type === 'link' && m.url && (
+                                    <p className="mt-0.5 text-xs text-white/30">
+                                      {getDomain(m.url)}
+                                    </p>
+                                  )}
                                 </>
                               )}
                             </td>
@@ -599,12 +726,30 @@ export default function AdminClassPage() {
                             </td>
                             <td className="px-5 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                {m.type !== 'reference' && (m.type === 'file' || m.url) && (
-                                  <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" aria-label="Abrir material" title="Abrir material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors">
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
-                                )}
-                                <button onClick={() => confirmDelete(m)} type="button" aria-label="Eliminar material" title="Eliminar material" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                                {m.type !== 'reference' &&
+                                  (m.type === 'file' || m.url) && (
+                                    <a
+                                      href={
+                                        m.type === 'file'
+                                          ? getMaterialDownloadUrl(m.id)
+                                          : m.url
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      aria-label="Abrir material"
+                                      title="Abrir material"
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors"
+                                    >
+                                      <ExternalLink className="w-4 h-4" />
+                                    </a>
+                                  )}
+                                <button
+                                  onClick={() => confirmDelete(m)}
+                                  type="button"
+                                  aria-label="Eliminar material"
+                                  title="Eliminar material"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
@@ -613,7 +758,10 @@ export default function AdminClassPage() {
                         ))}
                         {filteredMaterials.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="px-5 py-8 text-center text-sm text-white/50">
+                            <td
+                              colSpan={6}
+                              className="px-5 py-8 text-center text-sm text-white/50"
+                            >
                               No se encontraron materiales que coincidan con la búsqueda.
                             </td>
                           </tr>
@@ -624,8 +772,11 @@ export default function AdminClassPage() {
 
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-4">
-                    {filteredMaterials.map(m => (
-                      <div key={m.id} className="rounded-xl border border-[#2B332F] bg-[#131716] p-4">
+                    {filteredMaterials.map((m) => (
+                      <div
+                        key={m.id}
+                        className="rounded-xl border border-[#2B332F] bg-[#131716] p-4"
+                      >
                         <div className="flex justify-between items-start gap-4 mb-3">
                           <div>
                             <p className="text-sm font-semibold text-white">{m.name}</p>
@@ -634,25 +785,43 @@ export default function AdminClassPage() {
                         {m.type === 'reference' ? (
                           <p className="text-xs text-white/60 mb-3">{m.reference}</p>
                         ) : (
-                          m.type === 'link' && m.url && <p className="mt-1 text-xs text-white/40 mb-3">{getDomain(m.url)}</p>
+                          m.type === 'link' &&
+                          m.url && (
+                            <p className="mt-1 text-xs text-white/40 mb-3">
+                              {getDomain(m.url)}
+                            </p>
+                          )
                         )}
                         <div className="mb-4">
                           <MaterialTypeBadge type={m.type} />
                         </div>
                         <div className="flex items-center justify-between border-t border-[#2B332F] pt-3">
                           {m.type !== 'reference' && (m.type === 'file' || m.url) ? (
-                            <a href={m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]">
+                            <a
+                              href={
+                                m.type === 'file' ? getMaterialDownloadUrl(m.id) : m.url
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm text-[#0C8A68] hover:text-[#13A47D]"
+                            >
                               Abrir recurso <ExternalLink className="w-3.5 h-3.5" />
                             </a>
-                          ) : <div />}
+                          ) : (
+                            <div />
+                          )}
                           <div className="flex items-center gap-1">
-                            <button onClick={() => confirmDelete(m)} className="p-2 text-white/35 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                            <button
+                              onClick={() => confirmDelete(m)}
+                              className="p-2 text-white/35 hover:text-red-400"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-
                 </div>
               )}
             </section>
@@ -664,55 +833,130 @@ export default function AdminClassPage() {
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
           <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-white">{editingMaterial ? 'Editar material' : 'Agregar material'}</h2>
-            <p className="mt-1 text-sm text-white/50">Registra un recurso externo para esta clase.</p>
+            <h2 className="text-xl font-bold text-white">
+              {editingMaterial ? 'Editar material' : 'Agregar material'}
+            </h2>
+            <p className="mt-1 text-sm text-white/50">
+              Registra un recurso externo para esta clase.
+            </p>
 
             <form onSubmit={handleFormSubmit} className="mt-6 space-y-4">
               <div>
-                <label htmlFor="name" className="mb-1.5 block text-sm font-normal text-white/85">Nombre del material</label>
-                <input type="text" id="name" placeholder="Ejemplo: Diapositivas de introducción" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-                {formErrors.name && <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>}
+                <label
+                  htmlFor="name"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  Nombre del material
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  placeholder="Ejemplo: Diapositivas de introducción"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                />
+                {formErrors.name && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="type" className="mb-1.5 block text-sm font-normal text-white/85">Tipo de material</label>
-                <select id="type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value as MaterialType })} className="h-11 w-full cursor-pointer rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20">
-                  <option value="" disabled>Selecciona un tipo</option>
+                <label
+                  htmlFor="type"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  Tipo de material
+                </label>
+                <select
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, type: e.target.value as MaterialType })
+                  }
+                  className="h-11 w-full cursor-pointer rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                >
+                  <option value="" disabled>
+                    Selecciona un tipo
+                  </option>
                   {Object.entries(TypeLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
                   ))}
                 </select>
-                {formData.type && <p className="mt-1.5 text-xs text-[#0C8A68]">{TypeHelpTexts[formData.type as MaterialType]}</p>}
-                {formErrors.type && <p className="mt-1 text-xs text-red-400">{formErrors.type}</p>}
+                {formData.type && (
+                  <p className="mt-1.5 text-xs text-[#0C8A68]">
+                    {TypeHelpTexts[formData.type as MaterialType]}
+                  </p>
+                )}
+                {formErrors.type && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.type}</p>
+                )}
               </div>
 
               {formData.type === 'link' && (
                 <div>
-                  <label htmlFor="url" className="mb-1.5 block text-sm font-normal text-white/85">URL del material</label>
-                  <input type="url" id="url" placeholder="https://" value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" />
-                  {formErrors.url && <p className="mt-1 text-xs text-red-400">{formErrors.url}</p>}
+                  <label
+                    htmlFor="url"
+                    className="mb-1.5 block text-sm font-normal text-white/85"
+                  >
+                    URL del material
+                  </label>
+                  <input
+                    type="url"
+                    id="url"
+                    placeholder="https://"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
+                  {formErrors.url && (
+                    <p className="mt-1 text-xs text-red-400">{formErrors.url}</p>
+                  )}
                 </div>
               )}
 
               {formData.type === 'reference' && (
                 <div>
-                  <label htmlFor="reference" className="mb-1.5 flex justify-between text-sm font-normal text-white/85">
+                  <label
+                    htmlFor="reference"
+                    className="mb-1.5 flex justify-between text-sm font-normal text-white/85"
+                  >
                     Referencia escrita
                   </label>
-                  <textarea id="reference" placeholder="Agrega la referencia, texto o fuente bibliográfica" value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} rows={4} className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none" />
-                  {formErrors.reference && <p className="mt-1 text-xs text-red-400">{formErrors.reference}</p>}
+                  <textarea
+                    id="reference"
+                    placeholder="Agrega la referencia, texto o fuente bibliográfica"
+                    value={formData.reference}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reference: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
+                  />
+                  {formErrors.reference && (
+                    <p className="mt-1 text-xs text-red-400">{formErrors.reference}</p>
+                  )}
                 </div>
               )}
 
               {formData.type === 'file' && !editingMaterial && (
                 <div>
-                  <span className="mb-1.5 block text-sm font-normal text-white/85">Archivo (PDF, PNG, JPG)</span>
+                  <span className="mb-1.5 block text-sm font-normal text-white/85">
+                    Archivo (PDF, PNG, JPG)
+                  </span>
                   <div className="flex flex-wrap items-center gap-3">
                     <input
                       type="file"
                       id="file"
                       accept="application/pdf,image/png,image/jpeg"
-                      onChange={(e) => setFormData({ ...formData, file: e.target.files ? e.target.files[0] : null })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          file: e.target.files ? e.target.files[0] : null,
+                        })
+                      }
                       className="sr-only"
                     />
                     <label
@@ -725,16 +969,30 @@ export default function AdminClassPage() {
                       {formData.file ? formData.file.name : 'Ningún archivo seleccionado'}
                     </span>
                   </div>
-                  {formErrors.file && <p className="mt-1 text-xs text-red-400">{formErrors.file}</p>}
+                  {formErrors.file && (
+                    <p className="mt-1 text-xs text-red-400">{formErrors.file}</p>
+                  )}
                 </div>
               )}
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
-                <button type="button" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => setIsFormModalOpen(false)}
+                  className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+                >
                   Cancelar
                 </button>
-                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-                  {isSubmitting ? 'Guardando...' : editingMaterial ? 'Guardar cambios' : 'Agregar material'}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmitting
+                    ? 'Guardando...'
+                    : editingMaterial
+                      ? 'Guardar cambios'
+                      : 'Agregar material'}
                 </button>
               </div>
             </form>
@@ -751,22 +1009,33 @@ export default function AdminClassPage() {
             </div>
             <h2 className="text-xl font-bold text-white">Eliminar material</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Deseas eliminar <span className="font-semibold text-white">&quot;{materialToDelete.name}&quot;</span>?
+              ¿Deseas eliminar{' '}
+              <span className="font-semibold text-white">
+                &quot;{materialToDelete.name}&quot;
+              </span>
+              ?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
 
             <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 w-full">
-              <button type="button" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors"
+              >
                 Cancelar
               </button>
-              <button onClick={handleDelete} type="button" className="w-full sm:w-auto rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors">
+              <button
+                onClick={handleDelete}
+                type="button"
+                className="w-full sm:w-auto rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors"
+              >
                 Eliminar material
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
