@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import CourseCard from '@/components/course-card';
+import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
 import { getCourseData } from '@/services/courses.service';
 import { Pagination } from '@/components/pagination';

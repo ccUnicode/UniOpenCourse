@@ -62,3 +62,10 @@ export const createCourse = async (
     throw error;
   }
 };
+
+export async function registerCourseVisit(courseId: string) {
+  const response = await apiFetch(`courses/${courseId}/visit`, {
+    method: 'POST'
+  });
+  return response;
+}

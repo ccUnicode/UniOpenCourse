@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getCarouselData } from '@/services/courses.service';
 import Carousel from '@/components/carousel';
-import { CourseSection } from '@/components/course-section';
+import { CourseSection } from '@/components/courses/course-section';
 
 export const dynamic = 'force-dynamic';
 export default async function Home() {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
-import CourseCard from '@/components/course-card';
+import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
 import { getUserDisplayName } from '@/lib/auth-cookies';
 import { apiFetch } from '@/lib/api-client';
@@ -144,7 +144,7 @@ export default function Dashboard() {
             <div className="rounded-2xl border border-[#2B332F] bg-[#1A201D] p-12 text-center">
               <BookOpen className="w-12 h-12 text-white/10 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white">
-                Aún no estás inscrito en ningún curso
+                Aún no has comenzado ningún curso
               </h3>
               <p className="mt-2 text-sm text-white/50 max-w-sm mx-auto">
                 Comienza tu viaje académico explorando nuestro catálogo de cursos

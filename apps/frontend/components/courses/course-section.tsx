@@ -1,9 +1,9 @@
 'use client';
-import CourseCard from '@/components/course-card';
+import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
 import { getCourseData } from '@/services/courses.service';
 import { useEffect, useState } from 'react';
-import { Pagination } from './pagination';
+import { Pagination } from '../pagination';
 export function CourseSection() {
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
