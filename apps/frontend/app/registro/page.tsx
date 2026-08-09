@@ -267,7 +267,6 @@ export default function Registro() {
                 />
                 <button
                   type="button"
-                  placeholder="••••••••"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors cursor-pointer"
