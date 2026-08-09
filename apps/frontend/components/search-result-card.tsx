@@ -2,6 +2,9 @@ import { SearchResult } from '@/interfaces/search.interface';
 import { formatType } from '@/services/search.service';
 import Image from 'next/image';
 import Link from 'next/link';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export default function SearchResultCard({ resultado }: { resultado: SearchResult }) {
   return (
     <Link
@@ -11,19 +14,21 @@ export default function SearchResultCard({ resultado }: { resultado: SearchResul
           : `/cursos/${resultado.secondary_id}/clases/${resultado.id}`
       }
     >
-      <div className="flex gap-8 items-center border rounded-xl border-border hover:border-button-border/50 duration-300 transition transition-colors px-4 py-5">
-        <Image
-          src={resultado.image}
-          alt={resultado.title}
-          width={300}
-          height={200}
-          className="object-cover rounded-xl"
-        />
-        <div className="flex flex-col gap-3">
-          <span className="px-3 py-2 w-17 font-bold bg-accent rounded-full text-xs text-center text-white uppercase">
+      <div className="gap-4 flex flex-wrap justify-between items-center border rounded-xl border-border hover:border-button-border/50 duration-300 transition transition-colors px-4 py-5">
+        <figure className="sm:min-w-75 w-60 h-40 sm:h-auto sm:w-1/4 sm:aspect-video relative mx-auto">
+          <Image
+            src={`${API_URL}/storage/${resultado.image}`}
+            alt={resultado.title}
+            fill
+            unoptimized={process.env.NODE_ENV === 'development'}
+            className="object-cover rounded-xl"
+          />
+        </figure>
+        <div className="flex flex-col gap-2 md:gap-3 lg:min-w-100 lg:w-[72%] mx-auto ">
+          <span className="px-1 md:px-3 py-1 md:py-2 w-17 font-bold bg-accent rounded-full text-xs text-center text-white uppercase">
             {formatType(resultado.type)}
           </span>
-          <h1 className="text-2xl font-semibold">{resultado.title}</h1>
+          <h1 className="text-xl md:text-2xl font-semibold">{resultado.title}</h1>
           <div className="flex gap-4">
             <div className="flex gap-2 items-center">
               {resultado.type === 'course' ? (
@@ -60,12 +65,17 @@ export default function SearchResultCard({ resultado }: { resultado: SearchResul
                   />
                 </svg>
               )}
-              <span>{resultado.subtitle}</span>
+              <span className="text-sm sm:text-base">{resultado.subtitle}</span>
             </div>
-            -<span className="text-button-border/70">{resultado.meta}</span>
+            -
+            <span className="text-sm sm:text-base text-button-border/70">
+              {resultado.meta}
+            </span>
           </div>
           {resultado.description && (
-            <p className="text-sm text-muted">{resultado.description}</p>
+            <p className="text-xs sm:text-sm text-muted line-clamp-5">
+              {resultado.description}
+            </p>
           )}
         </div>
       </div>
