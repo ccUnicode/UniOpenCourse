@@ -175,7 +175,10 @@ const createFileMaterialApi = async (
     method: 'POST',
     body: formData,
   });
-  if (!response.ok) throw new Error('Error al crear archivo');
+  if (!response.ok) {
+    console.log(response);
+    throw new Error('Error al crear archivo');
+  }
   return await response.json();
 };
 

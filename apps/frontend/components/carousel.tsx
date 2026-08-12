@@ -39,7 +39,7 @@ export default function Carousel({ data }: { data: Course[] }) {
             className="min-w-full"
           >
             <div className="group relative overflow-hidden min-w-full min-[470px]:min-w-98 md:min-w-128 w-full rounded-2xl border-border bg-background-secondary">
-              <div className="flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
+              <div className="z-50 flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"

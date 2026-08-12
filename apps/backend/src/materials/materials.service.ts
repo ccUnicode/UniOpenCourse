@@ -88,7 +88,7 @@ export class MaterialsService {
       data: {
         class_id: createFileDto.class_id,
         material_type: MaterialTypes.file,
-        filename: file.originalname,
+        filename: createFileDto.filename,
         file_path: file.filename,
       },
     });
