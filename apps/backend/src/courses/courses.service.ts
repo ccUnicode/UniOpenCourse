@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma/client';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 @Injectable()
 export class CoursesService {
@@ -292,5 +299,46 @@ export class CoursesService {
         },
       })),
     };
+  }
+
+  private readonly logger = new Logger(CoursesService.name);
+
+  async getEvaluationsFromTrikaweb(courseId: number) {
+    const course = await this.prisma.course.findUnique({
+      where: { course_id: courseId },
+      select: { url_trikaweb: true },
+    });
+
+    if (!course || !course.url_trikaweb) {
+      return [];
+    }
+
+    try {
+      const response = await axios.get<string>(course.url_trikaweb);
+      const html: string = response.data;
+      const $ = cheerio.load(html);
+
+      const evaluations: { id: string; label: string; link: string }[] = [];
+
+      $('section[id^="section-"]').each((_, element) => {
+        const id = $(element).attr('id');
+        if (id) {
+          const evalCode = id.replace('section-', '');
+          evaluations.push({
+            id: evalCode,
+            label: evalCode,
+            link: `${course.url_trikaweb}#${id}`,
+          });
+        }
+      });
+
+      return evaluations;
+    } catch (error) {
+      this.logger.error(
+        `Error scraping Trikaweb for course ${courseId}`,
+        error instanceof Error ? error.stack : error,
+      );
+      return [];
+    }
   }
 }
