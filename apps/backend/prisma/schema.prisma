@@ -39,6 +39,7 @@ model Course {
   name                 String            @db.VarChar(100)
   course_code          String            @unique @db.VarChar(10)
   url_image            String            @db.VarChar(255)
+  url_trikaweb         String?           @db.VarChar(255)
   description          String
   teacher_id           Int
   course_creation_date DateTime          @default(now())

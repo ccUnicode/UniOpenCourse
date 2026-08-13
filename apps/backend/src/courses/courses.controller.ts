@@ -55,4 +55,9 @@ export class CoursesController {
     const userId = Number(req.user.sub);
     return this.coursesService.registerVisit(id, userId);
   }
+
+  @Get(':id/evaluations')
+  getEvaluations(@Param('id', ParseIntPipe) id: number) {
+    return this.coursesService.getEvaluationsFromTrikaweb(id);
+  }
 }
