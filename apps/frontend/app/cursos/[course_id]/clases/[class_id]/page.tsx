@@ -41,7 +41,7 @@ export default async function Clase({
         teacher={course.teacher} 
       />
 
-      <div id="reproductor" className="px-4 md:px-12 pt-6 pb-4">
+      <div id="reproductor" className="px-4 md:px-12 pt-6 pb-4 scroll-mt-[72px]">
         <h1 className="text-3xl text-white font-bold mb-4">{clase.title}</h1>
         <p className="text-gray-400 mb-8">{clase.description}</p>
         
