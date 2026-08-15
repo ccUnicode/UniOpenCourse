@@ -464,11 +464,11 @@ export default function AdminClassPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111514] text-white font-sans">
-      <div className="flex min-h-[calc(100vh-70px)]">
+    <div className="min-h-screen bg-background-secondary text-white font-sans">
+      <div className="flex flex-1">
         <AdminSidebar />
 
-        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
+        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto space-y-8">
             {/* Encabezado con breadcrumb */}
             <div>

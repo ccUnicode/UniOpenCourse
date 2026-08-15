@@ -3,13 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  SquarePen,
-  Trash2,
-  Plus,
-  BookOpen,
-  ArrowLeft
-} from 'lucide-react';
+import { SquarePen, Trash2, Plus, BookOpen, ArrowLeft } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { apiFetch } from '@/lib/api-client';
 
@@ -46,7 +40,6 @@ interface Course {
   url_image?: string;
 }
 
-
 // --- API Functions ---
 
 const fetchCourse = async (courseId: number): Promise<Course> => {
@@ -67,16 +60,50 @@ const fetchClasses = async (courseId: number): Promise<Class[]> => {
   }
 };
 
-const updateCourse = async (id: number, courseData: Partial<Course>): Promise<Course> => {
+const updateCourse = async (
+  id: number,
+  courseData: {
+    name: string;
+    course_code: string;
+    description: string;
+    teacher_name?: string;
+    teacher_last_name?: string;
+    file?: File | null;
+  },
+) => {
+  const formData = new FormData();
+
+  formData.append('name', courseData.name);
+  formData.append('course_code', courseData.course_code);
+  formData.append('description', courseData.description);
+
+  if (courseData.teacher_name) {
+    formData.append('teacher_name', courseData.teacher_name);
+  }
+
+  if (courseData.teacher_last_name) {
+    formData.append('teacher_last_name', courseData.teacher_last_name);
+  }
+
+  if (courseData.file) {
+    formData.append('file', courseData.file);
+  }
+
   const response = await apiFetch(`admin/courses/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify(courseData),
+    body: formData,
   });
-  if (!response.ok) throw new Error('Error al actualizar curso');
+
+  if (!response.ok) {
+    throw new Error('Error al actualizar curso');
+  }
+
   return await response.json();
 };
 
-const createClass = async (classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>): Promise<Class> => {
+const createClass = async (
+  classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>,
+): Promise<Class> => {
   const response = await apiFetch('admin/classes', {
     method: 'POST',
     body: JSON.stringify(classData),
@@ -114,7 +141,7 @@ export default function AdminCourseDetailPage() {
     description: '',
     teacher_name: '',
     teacher_last_name: '',
-    url_image: '',
+    file: null as File | null,
   });
 
   // Delete modal
@@ -123,7 +150,11 @@ export default function AdminCourseDetailPage() {
 
   // Create modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newClass, setNewClass] = useState({ title: '', description: '', url_youtube: '' });
+  const [newClass, setNewClass] = useState({
+    title: '',
+    description: '',
+    url_youtube: '',
+  });
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -140,14 +171,16 @@ export default function AdminCourseDetailPage() {
       ]);
       setCourseInfo(courseData);
       // teacher comes as { name, last_name } from the backend
-      const teacherData = (courseData as unknown as { teacher?: { name: string; last_name: string } }).teacher;
+      const teacherData = (
+        courseData as unknown as { teacher?: { name: string; last_name: string } }
+      ).teacher;
       setCourseFormData({
         name: courseData.name,
         course_code: courseData.course_code,
         description: courseData.description || '',
         teacher_name: teacherData?.name || '',
         teacher_last_name: teacherData?.last_name || '',
-        url_image: courseData.url_image || '',
+        file: null,
       });
       setClasses(classesData);
     } catch (error) {
@@ -168,7 +201,7 @@ export default function AdminCourseDetailPage() {
         description: courseFormData.description,
         teacher_name: courseFormData.teacher_name || undefined,
         teacher_last_name: courseFormData.teacher_last_name || undefined,
-        url_image: courseFormData.url_image || undefined,
+        file: courseFormData.file,
       } as Parameters<typeof updateCourse>[1]);
       setCourseInfo(updated);
       setSaveSuccess('Datos guardados exitosamente');
@@ -191,7 +224,7 @@ export default function AdminCourseDetailPage() {
     if (classToDelete) {
       try {
         await deleteClass(classToDelete.class_id);
-        setClasses(classes.filter(c => c.class_id !== classToDelete.class_id));
+        setClasses(classes.filter((c) => c.class_id !== classToDelete.class_id));
         setIsDeleteModalOpen(false);
         setClassToDelete(null);
       } catch (error) {
@@ -236,17 +269,19 @@ export default function AdminCourseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111514] text-white font-sans">
+    <div className="min-h-screen bg-background-secondary text-white font-sans">
       <div className="flex min-h-[calc(100vh-70px)]">
         <AdminSidebar />
 
-        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
+        <div className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto space-y-8">
-
             {/* Encabezado con breadcrumb */}
             <div>
               <div className="text-sm text-white/50 mb-4 flex items-center gap-2">
-                <Link href="/admin/cursos" className="hover:text-white transition-colors flex items-center gap-1">
+                <Link
+                  href="/admin/cursos"
+                  className="hover:text-white transition-colors flex items-center gap-1"
+                >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Cursos
                 </Link>
@@ -256,8 +291,12 @@ export default function AdminCourseDetailPage() {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Administrar curso</h1>
-                  <p className="mt-1 text-sm text-white/50">Edita la información general y gestiona las clases del curso.</p>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
+                    Administrar curso
+                  </h1>
+                  <p className="mt-1 text-sm text-white/50">
+                    Edita la información general y gestiona las clases del curso.
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
@@ -276,7 +315,9 @@ export default function AdminCourseDetailPage() {
                 </div>
               </div>
               {saveError && <p className="mt-2 text-sm text-red-400">{saveError}</p>}
-              {saveSuccess && <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>}
+              {saveSuccess && (
+                <p className="mt-2 text-sm text-[#45D483]">{saveSuccess}</p>
+              )}
             </div>
 
             {/* Información del Curso (inline edit) */}
@@ -284,58 +325,105 @@ export default function AdminCourseDetailPage() {
               <h2 className="text-lg font-bold text-white mb-6">Información general</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Nombre del curso</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Nombre del curso
+                  </label>
                   <input
                     type="text"
                     value={courseFormData.name}
-                    onChange={e => setCourseFormData({ ...courseFormData, name: e.target.value })}
+                    onChange={(e) =>
+                      setCourseFormData({ ...courseFormData, name: e.target.value })
+                    }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Código</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Código
+                  </label>
                   <input
                     type="text"
                     value={courseFormData.course_code}
-                    onChange={e => setCourseFormData({ ...courseFormData, course_code: e.target.value.toUpperCase() })}
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        course_code: e.target.value.toUpperCase(),
+                      })
+                    }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Nombre del profesor</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Nombre del profesor
+                  </label>
                   <input
                     type="text"
                     placeholder="Ej: Carlos"
                     value={courseFormData.teacher_name}
-                    onChange={e => setCourseFormData({ ...courseFormData, teacher_name: e.target.value })}
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        teacher_name: e.target.value,
+                      })
+                    }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Apellido del profesor</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Apellido del profesor
+                  </label>
                   <input
                     type="text"
                     placeholder="Ej: López"
                     value={courseFormData.teacher_last_name}
-                    onChange={e => setCourseFormData({ ...courseFormData, teacher_last_name: e.target.value })}
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        teacher_last_name: e.target.value,
+                      })
+                    }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">URL de imagen (opcional)</label>
+                  <label
+                    htmlFor="file"
+                    className="mb-1.5 block text-sm font-normal text-white/85"
+                  >
+                    Imagen del curso
+                  </label>
+
                   <input
-                    type="text"
-                    value={courseFormData.url_image}
-                    onChange={e => setCourseFormData({ ...courseFormData, url_image: e.target.value })}
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    id="file"
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        file: e.target.files?.[0] ?? null,
+                      })
+                    }
+                    className="h-11 w-full bg-[#131716] py-1 px-4 cursor-pointer text-sm text-white outline-none rounded-lg border border-[#2B332F]"
                   />
+
+                  <p className="mt-1 text-xs text-white/40">
+                    Deja vacío para conservar la imagen actual.
+                  </p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Descripción
+                  </label>
                   <textarea
                     value={courseFormData.description}
-                    onChange={e => setCourseFormData({ ...courseFormData, description: e.target.value })}
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        description: e.target.value,
+                      })
+                    }
                     rows={3}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
@@ -348,7 +436,9 @@ export default function AdminCourseDetailPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-white">Clases del curso</h2>
-                  <p className="mt-1 text-sm text-white/50">Administra las clases y su contenido.</p>
+                  <p className="mt-1 text-sm text-white/50">
+                    Administra las clases y su contenido.
+                  </p>
                 </div>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
@@ -362,24 +452,41 @@ export default function AdminCourseDetailPage() {
               {classes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-t border-[#2B332F]">
                   <BookOpen className="w-12 h-12 text-white/10 mb-4" />
-                  <p className="text-lg font-medium text-white">No hay clases registradas.</p>
-                  <p className="mt-1 text-sm text-white/50 max-w-sm">Crea la primera clase para este curso.</p>
+                  <p className="text-lg font-medium text-white">
+                    No hay clases registradas.
+                  </p>
+                  <p className="mt-1 text-sm text-white/50 max-w-sm">
+                    Crea la primera clase para este curso.
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-xl border border-[#2B332F] bg-[#131716] overflow-x-auto">
                   <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead>
                       <tr className="bg-[#151A17] border-b border-[#2B332F]">
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título de la clase</th>
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
-                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
+                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                          Título de la clase
+                        </th>
+                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                          Fecha de creación
+                        </th>
+                        <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">
+                          Acciones
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {classes.map((cls) => (
-                        <tr key={cls.class_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors">
-                          <td className="px-5 py-4 text-sm font-semibold text-white">{cls.title}</td>
-                          <td className="px-5 py-4 text-sm text-white/50">{formatAdminDate(cls.class_creation_date)}</td>
+                        <tr
+                          key={cls.class_id}
+                          className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors"
+                        >
+                          <td className="px-5 py-4 text-sm font-semibold text-white">
+                            {cls.title}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-white/50">
+                            {formatAdminDate(cls.class_creation_date)}
+                          </td>
                           <td className="px-5 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Link
@@ -408,9 +515,8 @@ export default function AdminCourseDetailPage() {
                 </div>
               )}
             </section>
-
           </div>
-        </main>
+        </div>
       </div>
 
       {/* Modal Eliminar Clase */}
@@ -422,7 +528,11 @@ export default function AdminCourseDetailPage() {
             </div>
             <h2 className="text-xl font-bold text-white">Eliminar clase</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Deseas eliminar <span className="font-semibold text-white">&quot;{classToDelete.title}&quot;</span>?
+              ¿Deseas eliminar{' '}
+              <span className="font-semibold text-white">
+                &quot;{classToDelete.title}&quot;
+              </span>
+              ?
             </p>
             <p className="mt-1 text-sm text-white/50">Esta acción no podrá deshacerse.</p>
 
@@ -451,11 +561,15 @@ export default function AdminCourseDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
           <div className="w-full max-w-lg rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear nueva clase</h2>
-            <p className="mt-1 text-sm text-white/50">Agrega una clase al temario del curso.</p>
+            <p className="mt-1 text-sm text-white/50">
+              Agrega una clase al temario del curso.
+            </p>
 
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Título de la clase <span className="text-red-400">*</span></label>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">
+                  Título de la clase <span className="text-red-400">*</span>
+                </label>
                 <input
                   type="text"
                   placeholder="Ej: Estructuras de control"
@@ -467,11 +581,15 @@ export default function AdminCourseDetailPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Descripción <span className="text-red-400">*</span></label>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">
+                  Descripción <span className="text-red-400">*</span>
+                </label>
                 <textarea
                   placeholder="Explica brevemente de qué trata esta clase..."
                   value={newClass.description}
-                  onChange={(e) => setNewClass({ ...newClass, description: e.target.value })}
+                  onChange={(e) =>
+                    setNewClass({ ...newClass, description: e.target.value })
+                  }
                   required
                   rows={3}
                   className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
@@ -479,12 +597,16 @@ export default function AdminCourseDetailPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-normal text-white/85">Enlace de video <span className="text-white/35">(opcional)</span></label>
+                <label className="mb-1.5 block text-sm font-normal text-white/85">
+                  Enlace de video <span className="text-white/35">(opcional)</span>
+                </label>
                 <input
                   type="url"
                   placeholder="https://www.youtube.com/watch?v=..."
                   value={newClass.url_youtube}
-                  onChange={(e) => setNewClass({ ...newClass, url_youtube: e.target.value })}
+                  onChange={(e) =>
+                    setNewClass({ ...newClass, url_youtube: e.target.value })
+                  }
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
               </div>
@@ -492,14 +614,19 @@ export default function AdminCourseDetailPage() {
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
                 <button
                   type="button"
-                  onClick={() => { setIsCreateModalOpen(false); setNewClass({ title: '', description: '', url_youtube: '' }); }}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setNewClass({ title: '', description: '', url_youtube: '' });
+                  }}
                   className="w-full sm:w-auto rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreating || !newClass.title.trim() || !newClass.description.trim()}
+                  disabled={
+                    isCreating || !newClass.title.trim() || !newClass.description.trim()
+                  }
                   className="w-full sm:w-auto rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isCreating ? 'Creando...' : 'Crear clase'}
@@ -509,7 +636,6 @@ export default function AdminCourseDetailPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

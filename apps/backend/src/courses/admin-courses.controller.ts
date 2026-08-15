@@ -74,8 +74,34 @@ export class AdminCoursesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: CreateCourseDto) {
-    return this.service.update(id, dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: storageConfig,
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowed = ['image/png', 'image/jpeg'];
+
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Tipo de imagen no permitido. Solo se aceptan PNGs y JPEGs.',
+            ),
+            false,
+          );
+        }
+
+        cb(null, true);
+      },
+    }),
+  )
+  update(
+    @Param('id') id: string,
+    @Body() dto: CreateCourseDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.service.update(id, dto, file);
   }
 
   @Delete(':id')

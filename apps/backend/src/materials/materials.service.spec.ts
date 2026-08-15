@@ -50,7 +50,7 @@ describe('MaterialsService', () => {
 
   describe('createFile', () => {
     it('should create a material of type "file" with real uploaded file data', async () => {
-      const dto = { class_id: 1 };
+      const dto = { class_id: 1, filename: 'documento.pdf' };
       const mockFile = {
         originalname: 'documento.pdf',
         filename: 'documento-123.pdf',
@@ -60,7 +60,7 @@ describe('MaterialsService', () => {
         material_id: 1,
         class_id: dto.class_id,
         material_type: 'file',
-        filename: mockFile.originalname,
+        filename: dto.filename,
         file_path: mockFile.filename,
       };
 
@@ -73,14 +73,14 @@ describe('MaterialsService', () => {
         data: {
           class_id: dto.class_id,
           material_type: 'file',
-          filename: mockFile.originalname,
+          filename: dto.filename,
           file_path: mockFile.filename,
         },
       });
     });
 
     it('should throw BadRequestException if file is undefined', async () => {
-      const dto = { class_id: 1 };
+      const dto = { class_id: 1, filename: 'documento.pdf' };
       await expect(service.createFile(dto, undefined)).rejects.toThrow(
         BadRequestException,
       );

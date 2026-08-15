@@ -36,7 +36,7 @@ export default async function Clase({
   }
 
   return (
-    <div className="flex flex-col w-full bg-[#0f1714]">
+    <div className="flex flex-col w-full bg-background">
       <CourseVisitTracker courseId={course_id} />
       <CourseHero
         courseName={course.name}
