@@ -162,8 +162,8 @@ export default function AdminCoursesPage() {
   };
 
   return (
-    <div className="bg-background-secondary text-white font-sans">
-      <div className="flex">
+    <div className="bg-background-secondary text-white font-sans flex flex-column flex-1">
+      <div className="flex flex-1">
         <AdminSidebar />
         <main className="flex-1 bg-background overflow-x-hidden px-4 py-8 lg:px-10">
           <div className="max-w-[1600px] mx-auto">
