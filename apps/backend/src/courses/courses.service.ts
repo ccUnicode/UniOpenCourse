@@ -52,51 +52,76 @@ export class CoursesService {
   }
 
   async update(id: string, data: CreateCourseDto, file?: Express.Multer.File) {
-    let imagenAnterior: string | null = null;
-    const cursoActualizado = await this.prisma.$transaction(async (tx) => {
+    const resultado = await this.prisma.$transaction(async (tx) => {
       const cursoExistente = await tx.course.findUnique({
         where: { course_id: Number(id) },
       });
+
       if (!cursoExistente) {
         throw new NotFoundException(`El curso con ID ${id} no existe.`);
       }
-      imagenAnterior = cursoExistente.url_image;
+
       let docenteId = data.teacher_id;
+
       if (!docenteId && data.teacher_name && data.teacher_last_name) {
         const docenteExistente = await tx.teacher.findFirst({
-          where: { name: data.teacher_name, last_name: data.teacher_last_name },
+          where: {
+            name: data.teacher_name,
+            last_name: data.teacher_last_name,
+          },
         });
+
         if (docenteExistente) {
           docenteId = docenteExistente.teacher_id;
         } else {
           const nuevoDocente = await tx.teacher.create({
-            data: { name: data.teacher_name, last_name: data.teacher_last_name },
+            data: {
+              name: data.teacher_name,
+              last_name: data.teacher_last_name,
+            },
           });
+
           docenteId = nuevoDocente.teacher_id;
         }
       }
 
-      return await tx.course.update({
+      const cursoActualizado = await tx.course.update({
         where: { course_id: Number(id) },
         data: {
           name: data.name,
           course_code: data.course_code,
           description: data.description,
-          ...(docenteId && { teacher: { connect: { teacher_id: docenteId } } }),
+          ...(docenteId && {
+            teacher: {
+              connect: {
+                teacher_id: docenteId,
+              },
+            },
+          }),
           ...(file && {
             url_image: file.filename,
           }),
         },
       });
+
+      return {
+        cursoActualizado,
+        imagenAnterior: cursoExistente.url_image,
+      };
     });
-    if (file && imagenAnterior) {
+
+    if (file && resultado.imagenAnterior) {
       try {
-        await unlink(join(storageDir, imagenAnterior));
+        await unlink(join(storageDir, resultado.imagenAnterior));
       } catch (error) {
-        console.error(`No se pudo eliminar la imagen anterior: ${imagenAnterior}`, error);
+        console.error(
+          `No se pudo eliminar la imagen anterior: ${resultado.imagenAnterior}`,
+          error,
+        );
       }
     }
-    return cursoActualizado;
+
+    return resultado.cursoActualizado;
   }
 
   async remove(id: string) {

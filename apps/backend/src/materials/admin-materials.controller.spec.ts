@@ -43,7 +43,7 @@ describe('AdminMaterialsController', () => {
 
   describe('createFile', () => {
     it('should call service.createFile', async () => {
-      const dto = { class_id: 1 };
+      const dto = { class_id: 1, filename: 'test.pdf' };
 
       const mockFile = {
         originalname: 'test.pdf',

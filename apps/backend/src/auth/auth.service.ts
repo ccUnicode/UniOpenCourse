@@ -40,24 +40,20 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    try {
-      const user = await this.prisma.user.create({
-        data: {
-          email,
-          name: dto.name.trim(),
-          username,
-          last_name: dto.last_name ? dto.last_name.trim() : dto.last_name,
-          role: {
-            connect: { role_name: 'USER' },
-          },
-          password: hashedPassword,
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        name: dto.name.trim(),
+        username,
+        last_name: dto.last_name ? dto.last_name.trim() : dto.last_name,
+        role: {
+          connect: { role_name: 'USER' },
         },
-        include: { role: true }, // Incluir el rol para generar el token correctamente
-      });
-      return this.generateToken(user);
-    } catch (error) {
-      throw error;
-    }
+        password: hashedPassword,
+      },
+      include: { role: true }, // Incluir el rol para generar el token correctamente
+    });
+    return this.generateToken(user);
   }
   async login(dto: LoginDto) {
     const identifier = dto.email.trim().toLowerCase();
