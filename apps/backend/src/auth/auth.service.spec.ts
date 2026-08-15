@@ -138,10 +138,10 @@ describe('AuthService', () => {
 
       await service.register(registerDto);
 
-      const createdData = prismaMock.user.create.mock.calls[0][0].data as {
-        email_verified?: boolean;
-      };
-      expect(createdData.email_verified).toBeUndefined();
+      const [[createArgs]] = prismaMock.user.create.mock.calls as Array<
+        [{ data: { email_verified?: boolean } }]
+      >;
+      expect(createArgs.data.email_verified).toBeUndefined();
 
       expect(prismaMock.emailVerificationToken.create).toHaveBeenCalledWith({
         data: {
