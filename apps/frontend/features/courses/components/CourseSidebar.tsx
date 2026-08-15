@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -12,7 +12,11 @@ interface CourseSidebarProps {
   classes: ClassInterface[];
 }
 
-export default function CourseSidebar({ courseId, courseName, classes }: CourseSidebarProps) {
+export default function CourseSidebar({
+  courseId,
+  courseName,
+  classes,
+}: CourseSidebarProps) {
   const pathname = usePathname();
 
   const [evaluations, setEvaluations] = useState<{id: string, label: string, link: string}[]>([]);
@@ -144,18 +148,20 @@ export default function CourseSidebar({ courseId, courseName, classes }: CourseS
           {classes.map((cls, index) => {
             const currentId = cls.class_id;
             const isActive = pathname === `/cursos/${courseId}/clases/${currentId}`;
-            
+
             return (
               <li key={currentId}>
                 <Link
                   href={`/cursos/${courseId}/clases/${currentId}#reproductor`}
                   className={`block px-4 py-3 rounded-lg transition-colors flex justify-between items-center ${
-                    isActive 
-                      ? 'bg-[#0f1714] text-gray-300' 
+                    isActive
+                      ? 'bg-[#0f1714] text-gray-300'
                       : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
                   }`}
                 >
-                  <span>Clase {index + 1}: {cls.title}</span>
+                  <span>
+                    Clase {index + 1}: {cls.title}
+                  </span>
                   {isActive && <span>→</span>}
                 </Link>
               </li>

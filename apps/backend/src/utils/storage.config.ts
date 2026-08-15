@@ -2,7 +2,7 @@ import { diskStorage } from 'multer';
 import { parse } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
-const storageDir = process.env.STORAGE_PATH || './storage';
+export const storageDir = process.env.STORAGE_PATH || './storage';
 
 // Ensure the storage directory exists to prevent upload failures
 if (!existsSync(storageDir)) {

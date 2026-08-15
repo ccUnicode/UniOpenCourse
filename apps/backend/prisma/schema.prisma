@@ -39,11 +39,11 @@ model Course {
   name                 String            @db.VarChar(100)
   course_code          String            @unique @db.VarChar(10)
   url_image            String            @db.VarChar(255)
-  url_trikaweb         String?           @db.VarChar(255)
   description          String
   teacher_id           Int
   course_creation_date DateTime          @default(now())
   update_date          DateTime          @updatedAt
+  url_trikaweb         String?           @db.VarChar(255)
   classes              Class[]
   teacher              Teacher           @relation(fields: [teacher_id], references: [teacher_id])
   visiting_users       LastCourseVisit[]
@@ -77,12 +77,10 @@ model Material {
   filename               String        @db.VarChar(150)
   material_creation_date DateTime      @default(now())
   material_type          MaterialTypes
-  // Physical file stored in the server (Multer)
-  file_path              String?       @db.VarChar(255)
-  // External resource link (YouTube, Drive, etc.)
   url_link               String?
   written_reference      String?
   material_id            Int           @id @default(autoincrement())
+  file_path              String?       @db.VarChar(255)
   class                  Class         @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }
 
@@ -91,4 +89,3 @@ enum MaterialTypes {
   link
   reference
 }
-

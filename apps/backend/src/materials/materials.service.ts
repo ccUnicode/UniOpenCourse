@@ -163,10 +163,15 @@ export class MaterialsService {
     if (!fs.existsSync(filePath)) {
       throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
     }
+    const extension = path.extname(material.file_path);
+    let filename = material.filename || material.file_path;
 
+    if (!path.extname(filename)) {
+      filename += extension;
+    }
     return {
       stream: fs.createReadStream(filePath),
-      filename: material.filename || material.file_path,
+      filename,
     };
   }
 }
