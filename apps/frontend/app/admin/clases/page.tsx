@@ -33,17 +33,22 @@ const formatAdminDate = (date?: string) => {
   });
 };
 
-
 // --- API Functions ---
 
-const fetchClasses = async (search: string = '', page: number = 1, limit: number = 10): Promise<{ data: Class[]; total: number }> => {
+const fetchClasses = async (
+  search: string = '',
+  page: number = 1,
+  limit: number = 10,
+): Promise<{ data: Class[]; total: number }> => {
   try {
-    const response = await apiFetch(`admin/classes?search=${search}&page=${page}&limit=${limit}`);
-    
+    const response = await apiFetch(
+      `admin/classes?search=${search}&page=${page}&limit=${limit}`,
+    );
+
     if (!response.ok) {
       throw new Error('Error al obtener clases');
     }
-    
+
     const data = await response.json();
     return data;
   } catch (error) {
@@ -52,17 +57,22 @@ const fetchClasses = async (search: string = '', page: number = 1, limit: number
   }
 };
 
-const createClass = async (classData: { course_id: number; title: string; description: string; url_youtube?: string }): Promise<Class> => {
+const createClass = async (classData: {
+  course_id: number;
+  title: string;
+  description: string;
+  url_youtube?: string;
+}): Promise<Class> => {
   try {
     const response = await apiFetch('admin/classes', {
       method: 'POST',
       body: JSON.stringify(classData),
     });
-    
+
     if (!response.ok) {
       throw new Error('Error al crear clase');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error creating class:', error);
@@ -75,7 +85,7 @@ const deleteClass = async (id: number): Promise<void> => {
     const response = await apiFetch(`admin/classes/${id}`, {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       throw new Error('Error al eliminar clase');
     }
@@ -93,18 +103,18 @@ export default function AdminClassesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
-  
+
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState<Class | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({ 
-    course_id: '', 
-    title: '', 
-    description: '', 
-    url_youtube: '', 
+  const [formData, setFormData] = useState({
+    course_id: '',
+    title: '',
+    description: '',
+    url_youtube: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,8 +144,9 @@ export default function AdminClassesPage() {
     const errors: Record<string, string> = {};
     if (!formData.course_id.trim()) errors.course_id = 'El ID del curso es requerido';
     if (!formData.title.trim()) errors.title = 'El título de la clase es requerido';
-    if (!formData.description.trim()) errors.description = 'La descripción de la clase es requerida';
-    
+    if (!formData.description.trim())
+      errors.description = 'La descripción de la clase es requerida';
+
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -147,7 +158,7 @@ export default function AdminClassesPage() {
         description: formData.description.trim(),
         url_youtube: formData.url_youtube.trim() || undefined,
       });
-      
+
       setIsCreateModalOpen(false);
       setFormData({ course_id: '', title: '', description: '', url_youtube: '' });
       loadClasses();
@@ -169,7 +180,7 @@ export default function AdminClassesPage() {
     if (classToDelete) {
       try {
         await deleteClass(classToDelete.class_id);
-        setClasses(classes.filter(c => c.class_id !== classToDelete.class_id));
+        setClasses(classes.filter((c) => c.class_id !== classToDelete.class_id));
         setIsDeleteModalOpen(false);
         setClassToDelete(null);
         loadClasses();
@@ -180,20 +191,23 @@ export default function AdminClassesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#111514] text-white font-sans">
-      <div className="flex min-h-[calc(100vh-70px)]">
+    <div className="bg-background-secondary text-white font-sans flex-1">
+      <div className="flex">
         <AdminSidebar />
-        
-        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10">
+
+        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto">
-            
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">Administración de Clases</h1>
-                <p className="mt-1 text-sm text-white/50">Gestiona las clases de los cursos.</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
+                  Administración de Clases
+                </h1>
+                <p className="mt-1 text-sm text-white/50">
+                  Gestiona las clases de los cursos.
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200 cursor-pointer"
               >
@@ -208,7 +222,9 @@ export default function AdminClassesPage() {
                 <BookOpen className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-white/55">Clases registradas</p>
+                <p className="text-xs uppercase tracking-wide text-white/55">
+                  Clases registradas
+                </p>
                 <p className="mt-1 text-2xl font-bold text-white">{total}</p>
                 <p className="mt-1 text-sm text-white/40">Total en el sistema</p>
               </div>
@@ -218,16 +234,16 @@ export default function AdminClassesPage() {
             <div className="mt-8 flex flex-col xl:flex-row xl:items-center gap-4">
               <form onSubmit={handleSearch} className="relative w-full xl:w-[400px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar clases..." 
+                  placeholder="Buscar clases..."
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#1A201D] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 transition-colors duration-200"
                 />
               </form>
-              
-              <button 
+
+              <button
                 onClick={loadClasses}
                 className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
@@ -241,44 +257,62 @@ export default function AdminClassesPage() {
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Título</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Curso</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">Fecha de creación</th>
-                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">Acciones</th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                        Título
+                      </th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                        Curso
+                      </th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
+                        Fecha de creación
+                      </th>
+                      <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45 text-right">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {classes.map((classItem) => (
-                      <tr key={classItem.class_id} className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group">
+                      <tr
+                        key={classItem.class_id}
+                        className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group"
+                      >
                         <td className="px-5 py-4">
-                          <p className="text-sm font-semibold text-white">{classItem.title}</p>
-                          {classItem.description && <p className="mt-1 text-xs text-white/35">{classItem.description}</p>}
+                          <p className="text-sm font-semibold text-white">
+                            {classItem.title}
+                          </p>
+                          {classItem.description && (
+                            <p className="mt-1 text-xs text-white/35">
+                              {classItem.description}
+                            </p>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           <span className="text-sm font-medium text-white/85">
-                            {classItem.course 
+                            {classItem.course
                               ? `${classItem.course.name} (${classItem.course.course_code})`
-                              : `Curso #${classItem.course_id}`
-                            }
+                              : `Curso #${classItem.course_id}`}
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55">{formatAdminDate(classItem.class_creation_date)}</span>
+                          <span className="text-sm text-white/55">
+                            {formatAdminDate(classItem.class_creation_date)}
+                          </span>
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Link 
-                              href={`/admin/cursos/${classItem.course_id}/clases/${classItem.class_id}`} 
-                              aria-label="Editar clase" 
-                              title="Editar clase" 
+                            <Link
+                              href={`/admin/cursos/${classItem.course_id}/clases/${classItem.class_id}`}
+                              aria-label="Editar clase"
+                              title="Editar clase"
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-[#13A47D] transition-colors duration-200 cursor-pointer"
                             >
                               <SquarePen className="w-4 h-4" />
                             </Link>
-                            <button 
+                            <button
                               onClick={() => confirmDelete(classItem)}
-                              aria-label="Eliminar clase" 
-                              title="Eliminar clase" 
+                              aria-label="Eliminar clase"
+                              title="Eliminar clase"
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/35 hover:bg-white/5 hover:text-red-400 transition-colors duration-200 cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -300,17 +334,18 @@ export default function AdminClassesPage() {
             {total > 10 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-white/50">
-                  Mostrando {(currentPage - 1) * 10 + 1} - {Math.min(currentPage * 10, total)} de {total}
+                  Mostrando {(currentPage - 1) * 10 + 1} -{' '}
+                  {Math.min(currentPage * 10, total)} de {total}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Anterior
                   </button>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage * 10 >= total}
                     className="px-3 py-1.5 rounded-md text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
@@ -320,7 +355,6 @@ export default function AdminClassesPage() {
                 </div>
               </div>
             )}
-
           </div>
         </main>
       </div>
@@ -330,67 +364,101 @@ export default function AdminClassesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
           <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear clase</h2>
-            <p className="mt-1 text-sm text-white/50">Completa la información de la nueva clase.</p>
-            
+            <p className="mt-1 text-sm text-white/50">
+              Completa la información de la nueva clase.
+            </p>
+
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
-                <label htmlFor="course_id" className="mb-1.5 block text-sm font-normal text-white/85">ID del curso</label>
-                <input 
-                  type="number" 
-                  id="course_id" 
-                  value={formData.course_id} 
-                  onChange={(e) => setFormData({...formData, course_id: e.target.value})} 
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" 
+                <label
+                  htmlFor="course_id"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  ID del curso
+                </label>
+                <input
+                  type="number"
+                  id="course_id"
+                  value={formData.course_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, course_id: e.target.value })
+                  }
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
-                {formErrors.course_id && <p className="mt-1 text-xs text-red-400">{formErrors.course_id}</p>}
+                {formErrors.course_id && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.course_id}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="title" className="mb-1.5 block text-sm font-normal text-white/85">Título de la clase</label>
-                <input 
-                  type="text" 
-                  id="title" 
-                  value={formData.title} 
-                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" 
+                <label
+                  htmlFor="title"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  Título de la clase
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
-                {formErrors.title && <p className="mt-1 text-xs text-red-400">{formErrors.title}</p>}
+                {formErrors.title && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.title}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="description" className="mb-1.5 block text-sm font-normal text-white/85">Descripción</label>
-                <textarea 
-                  id="description" 
-                  value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                  rows={3} 
+                <label
+                  htmlFor="description"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  Descripción
+                </label>
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={3}
                   className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                 />
-                {formErrors.description && <p className="mt-1 text-xs text-red-400">{formErrors.description}</p>}
+                {formErrors.description && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.description}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="url_youtube" className="mb-1.5 block text-sm font-normal text-white/85">URL de YouTube (opcional)</label>
-                <input 
-                  type="text" 
-                  id="url_youtube" 
-                  value={formData.url_youtube} 
-                  onChange={(e) => setFormData({...formData, url_youtube: e.target.value})} 
-                  placeholder="https://youtube.com/watch?v=..." 
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20" 
+                <label
+                  htmlFor="url_youtube"
+                  className="mb-1.5 block text-sm font-normal text-white/85"
+                >
+                  URL de YouTube (opcional)
+                </label>
+                <input
+                  type="text"
+                  id="url_youtube"
+                  value={formData.url_youtube}
+                  onChange={(e) =>
+                    setFormData({ ...formData, url_youtube: e.target.value })
+                  }
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
               </div>
 
               <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">
-                <button 
-                  type="button" 
-                  onClick={() => setIsCreateModalOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
                   className="rounded-[10px] border border-[#2B332F] bg-transparent px-5 py-2.5 text-sm font-medium text-white/65 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isSubmitting}
                   className="rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
@@ -408,11 +476,12 @@ export default function AdminClassesPage() {
           <div className="w-full max-w-md rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Eliminar clase</h2>
             <p className="mt-2 text-sm text-white/70">
-              ¿Estás seguro de que deseas eliminar la clase &quot;{classToDelete.title}&quot;? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar la clase &quot;{classToDelete.title}
+              &quot;? Esta acción no se puede deshacer.
             </p>
-            
+
             <div className="mt-6 flex items-center justify-end gap-3">
-              <button 
+              <button
                 onClick={() => {
                   setIsDeleteModalOpen(false);
                   setClassToDelete(null);
@@ -421,7 +490,7 @@ export default function AdminClassesPage() {
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 className="rounded-[10px] bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus:ring-2 focus:ring-red-600/40 transition-colors cursor-pointer"
               >
