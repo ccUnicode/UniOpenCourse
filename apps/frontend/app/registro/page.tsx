@@ -49,6 +49,9 @@ export default function Registro() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/session', { credentials: 'include' })
@@ -106,8 +109,7 @@ export default function Registro() {
     setIsLoading(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,8 +126,7 @@ export default function Registro() {
       const data = await response.json();
 
       if (response.ok) {
-        // Registro exitoso, redirigir a login
-        router.push('/login?registered=true');
+        setRegisteredEmail(data.email || formData.email.trim().toLowerCase());
       } else {
         // Manejar errores del backend
         console.log(data);
@@ -148,6 +149,90 @@ export default function Registro() {
       setIsLoading(false);
     }
   };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setResendMessage('');
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registeredEmail }),
+      });
+      const data = await response.json();
+      setResendMessage(data.message || 'Te enviamos un nuevo enlace.');
+    } catch (error) {
+      console.error('Error al reenviar verificación:', error);
+      setResendMessage('No pudimos reenviar el correo. Inténtalo más tarde.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  if (registeredEmail) {
+    return (
+      <div className="flex-1 bg-[#111514] text-white font-sans flex flex-col items-center justify-center px-4 py-6 md:py-8">
+        <div className="w-full max-w-[480px]">
+          <div className="rounded-[20px] bg-[#1A201D] border border-white/10 px-6 py-8 md:px-10 md:py-10 text-center shadow-[0_10px_35px_rgba(0,0,0,0.15)]">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[#157347]/20">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#45D483"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
+            </div>
+
+            <h1 className="mb-3 text-2xl font-bold tracking-tight text-white">
+              Revisa tu correo
+            </h1>
+            <p className="mb-2 text-sm text-white/70">
+              Te enviamos un enlace de verificación a
+            </p>
+            <p className="mb-5 text-sm font-semibold text-[#45D483] break-all">
+              {registeredEmail}
+            </p>
+            <p className="mb-7 text-sm text-white/60">
+              Haz clic en el enlace para activar tu cuenta. Si no lo encuentras, revisa
+              tu carpeta de spam o correo no deseado.
+            </p>
+
+            {resendMessage && (
+              <p className="mb-4 rounded-lg bg-[#157347]/20 border border-[#157347]/40 p-3 text-xs text-[#45D483]">
+                {resendMessage}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={isResending}
+                className="flex h-11 w-full items-center justify-center rounded-[10px] border border-[#2B332F] bg-[#131716] text-sm font-semibold text-white hover:border-[#157347] disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200 cursor-pointer"
+              >
+                {isResending ? 'Reenviando...' : 'Reenviar correo'}
+              </button>
+              <Link
+                href="/login"
+                className="flex h-11 w-full items-center justify-center rounded-[10px] bg-[#157347] text-sm font-semibold text-white hover:bg-[#1A8A56] transition-colors duration-200"
+              >
+                Ir a iniciar sesión
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-[#111514] text-white font-sans flex flex-col items-center justify-center px-4 py-6 md:py-8">
