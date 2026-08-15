@@ -30,6 +30,7 @@ export default async function Clase({
   ) {
     notFound();
   }
+  console.log(course.url_image);
 
   if (clase.course_id && String(clase.course_id) !== String(course_id)) {
     notFound();
