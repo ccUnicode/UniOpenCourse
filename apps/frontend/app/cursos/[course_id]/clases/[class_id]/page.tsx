@@ -30,14 +30,13 @@ export default async function Clase({
   ) {
     notFound();
   }
-  console.log(course.url_image);
 
   if (clase.course_id && String(clase.course_id) !== String(course_id)) {
     notFound();
   }
 
   return (
-    <div className="flex flex-col w-full bg-[#0f1714]">
+    <div className="flex flex-col w-full bg-background">
       <CourseVisitTracker courseId={course_id} />
       <CourseHero
         courseName={course.name}
