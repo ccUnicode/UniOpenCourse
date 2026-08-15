@@ -2,6 +2,9 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma/client';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
+import { storageDir } from '../utils/storage.config';
 
 @Injectable()
 export class CoursesService {
@@ -48,8 +51,16 @@ export class CoursesService {
     });
   }
 
-  async update(id: string, data: CreateCourseDto) {
-    return await this.prisma.$transaction(async (tx) => {
+  async update(id: string, data: CreateCourseDto, file?: Express.Multer.File) {
+    let imagenAnterior: string | null = null;
+    const cursoActualizado = await this.prisma.$transaction(async (tx) => {
+      const cursoExistente = await tx.course.findUnique({
+        where: { course_id: Number(id) },
+      });
+      if (!cursoExistente) {
+        throw new NotFoundException(`El curso con ID ${id} no existe.`);
+      }
+      imagenAnterior = cursoExistente.url_image;
       let docenteId = data.teacher_id;
       if (!docenteId && data.teacher_name && data.teacher_last_name) {
         const docenteExistente = await tx.teacher.findFirst({
@@ -72,16 +83,47 @@ export class CoursesService {
           course_code: data.course_code,
           description: data.description,
           ...(docenteId && { teacher: { connect: { teacher_id: docenteId } } }),
+          ...(file && {
+            url_image: file.filename,
+          }),
         },
       });
     });
+    if (file && imagenAnterior) {
+      try {
+        await unlink(join(storageDir, imagenAnterior));
+      } catch (error) {
+        console.error(`No se pudo eliminar la imagen anterior: ${imagenAnterior}`, error);
+      }
+    }
+    return cursoActualizado;
   }
 
   async remove(id: string) {
     try {
-      return await this.prisma.course.delete({
+      const curso = await this.prisma.course.findUnique({
+        where: {
+          course_id: Number(id),
+        },
+        select: {
+          url_image: true,
+        },
+      });
+      if (!curso) {
+        throw new NotFoundException(`El curso con ID ${id} no existe.`);
+      }
+      const imagen = curso.url_image;
+      const cursoEliminado = await this.prisma.course.delete({
         where: { course_id: Number(id) },
       });
+      if (imagen) {
+        try {
+          await unlink(join(storageDir, imagen));
+        } catch (error) {
+          console.error(`No se pudo eliminar la imagen del curso: ${imagen}`, error);
+        }
+      }
+      return cursoEliminado;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
