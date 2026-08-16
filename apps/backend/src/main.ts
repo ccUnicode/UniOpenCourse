@@ -10,9 +10,6 @@ async function bootstrap() {
   dotenv.config();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(cookieParser());
-  app.useStaticAssets(join(process.cwd(), 'storage'), {
-    prefix: '/storage/',
-  });
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
