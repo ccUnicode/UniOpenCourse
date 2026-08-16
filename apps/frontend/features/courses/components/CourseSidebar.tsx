@@ -38,6 +38,10 @@ export default function CourseSidebar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+  }, [pathname]);
+
   const handleToggleEvaluations = async (e: React.MouseEvent) => {
     e.preventDefault();
     
@@ -48,12 +52,12 @@ export default function CourseSidebar({
         if (res.ok) {
           const data = await res.json();
           setEvaluations(data);
+          setHasFetched(true);
         }
       } catch (error) {
         console.error('Error fetching evaluations:', error);
       } finally {
         setIsLoading(false);
-        setHasFetched(true);
       }
     }
     

@@ -51,6 +51,7 @@ export class CoursesService {
           name: data.name,
           course_code: data.course_code,
           description: data.description,
+          url_trikaweb: data.url_trikaweb,
           url_image: file.filename,
           teacher: { connect: { teacher_id: docenteId } },
         },
@@ -98,6 +99,7 @@ export class CoursesService {
           name: data.name,
           course_code: data.course_code,
           description: data.description,
+          url_trikaweb: data.url_trikaweb,
           ...(docenteId && {
             teacher: {
               connect: {
@@ -381,7 +383,15 @@ export class CoursesService {
     }
 
     try {
-      const response = await axios.get<string>(course.url_trikaweb);
+      if (!course.url_trikaweb.startsWith('https://trikaweb.ccunicode.org/')) {
+        this.logger.warn(`Intento de SSRF detectado o URL inválida: ${course.url_trikaweb}`);
+        return [];
+      }
+
+      const response = await axios.get<string>(course.url_trikaweb, {
+        timeout: 5000,
+        maxContentLength: 2000000,
+      });
       const html: string = response.data;
       const $ = cheerio.load(html);
 

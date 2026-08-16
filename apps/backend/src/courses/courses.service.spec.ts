@@ -2,6 +2,10 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
+import axios from 'axios';
+
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('CoursesService', () => {
   let service: CoursesService;
@@ -197,6 +201,38 @@ describe('CoursesService', () => {
         name: 'Course C',
         course_code: 'CC101',
       });
+    });
+  });
+
+  describe('getEvaluationsFromTrikaweb', () => {
+    it('returns empty array if course not found or url missing', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue(null);
+      const result = await service.getEvaluationsFromTrikaweb(1);
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array if url is invalid (SSRF prevention)', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ url_trikaweb: 'http://localhost:5432' });
+      const result = await service.getEvaluationsFromTrikaweb(1);
+      expect(result).toEqual([]);
+      expect(mockedAxios.get).not.toHaveBeenCalled();
+    });
+
+    it('fetches and parses evaluations correctly', async () => {
+      mockPrisma.course.findUnique.mockResolvedValue({ url_trikaweb: 'https://trikaweb.ccunicode.org/test' });
+      const html = '<section id="section-EVAL1"></section><section id="section-EVAL2"></section>';
+      mockedAxios.get.mockResolvedValue({ data: html });
+
+      const result = await service.getEvaluationsFromTrikaweb(1);
+
+      expect(mockedAxios.get).toHaveBeenCalledWith('https://trikaweb.ccunicode.org/test', {
+        timeout: 5000,
+        maxContentLength: 2000000,
+      });
+      expect(result).toEqual([
+        { id: 'EVAL1', label: 'EVAL1', link: 'https://trikaweb.ccunicode.org/test#section-EVAL1' },
+        { id: 'EVAL2', label: 'EVAL2', link: 'https://trikaweb.ccunicode.org/test#section-EVAL2' },
+      ]);
     });
   });
 });
