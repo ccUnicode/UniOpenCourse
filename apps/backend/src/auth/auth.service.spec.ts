@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -19,11 +20,13 @@ describe('AuthService', () => {
       update: jest.Mock;
       findFirst: jest.Mock;
       findUnique: jest.Mock;
+      delete: jest.Mock;
     };
     emailVerificationToken: {
       create: jest.Mock;
       deleteMany: jest.Mock;
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -43,14 +46,21 @@ describe('AuthService', () => {
         create: jest.fn(),
         update: jest.fn(),
         findFirst: jest.fn(),
-        findUnique: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue(null),
+        delete: jest.fn(),
       },
       emailVerificationToken: {
         create: jest.fn(),
         deleteMany: jest.fn(),
         findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
-      $transaction: jest.fn().mockResolvedValue([]),
+      $transaction: jest.fn().mockImplementation(async (arg: unknown) => {
+        if (typeof arg === 'function') {
+          return (arg as (tx: typeof prismaMock) => Promise<unknown>)(prismaMock);
+        }
+        return Promise.all(arg as Promise<unknown>[]);
+      }),
     };
 
     jwtMock = {
@@ -62,7 +72,13 @@ describe('AuthService', () => {
     };
 
     configMock = {
-      get: jest.fn().mockReturnValue('48'),
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          EMAIL_VERIFICATION_EXPIRES_HOURS: '48',
+          EMAIL_RESEND_COOLDOWN_MINUTES: '3',
+        };
+        return values[key];
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -133,10 +149,12 @@ describe('AuthService', () => {
       expect(jwtMock.sign).not.toHaveBeenCalled();
     });
 
-    it('should create the user unverified and send a verification email', async () => {
+    it('should create the user and token atomically, then send a verification email', async () => {
       prismaMock.user.create.mockResolvedValue(mockCreatedUser);
 
       await service.register(registerDto);
+
+      expect(prismaMock.$transaction).toHaveBeenCalled();
 
       const [[createArgs]] = prismaMock.user.create.mock.calls as Array<
         [{ data: { email_verified?: boolean } }]
@@ -162,6 +180,42 @@ describe('AuthService', () => {
       mailMock.sendVerificationEmail.mockRejectedValue(new Error('Brevo down'));
 
       await expect(service.register(registerDto)).resolves.toHaveProperty('email');
+    });
+
+    it('should allow re-registration when an unverified account has expired tokens', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce({
+          user_id: 99,
+          email: 'test@example.com',
+          username: 'testuser',
+          email_verified: false,
+        })
+        .mockResolvedValueOnce(null);
+      prismaMock.emailVerificationToken.findFirst.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue(mockCreatedUser);
+
+      await service.register(registerDto);
+
+      expect(prismaMock.user.delete).toHaveBeenCalledWith({
+        where: { user_id: 99 },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalled();
+    });
+
+    it('should reject registration when an unverified account still has a valid token', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        user_id: 99,
+        email: 'test@example.com',
+        username: 'testuser',
+        email_verified: false,
+      });
+      prismaMock.emailVerificationToken.findFirst.mockResolvedValue({
+        id: 1,
+        expires_at: new Date(Date.now() + 60 * 60 * 1000),
+      });
+
+      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
     });
   });
 
@@ -289,6 +343,7 @@ describe('AuthService', () => {
 
       await service.resendVerificationEmail('Test@Example.com');
 
+      expect(prismaMock.$transaction).toHaveBeenCalled();
       expect(mailMock.sendVerificationEmail).toHaveBeenCalled();
     });
 
@@ -305,6 +360,24 @@ describe('AuthService', () => {
       const verified = await service.resendVerificationEmail('test@example.com');
 
       expect(unknown.message).toEqual(verified.message);
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should not send another email while the resend cooldown is active', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        user_id: 123,
+        email: 'test@example.com',
+        name: 'Test',
+        email_verified: false,
+      });
+      prismaMock.emailVerificationToken.findFirst.mockResolvedValue({
+        id: 1,
+        created_at: new Date(),
+      });
+
+      const result = await service.resendVerificationEmail('test@example.com');
+
+      expect(result.message).toContain('Si el correo existe');
       expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
   });

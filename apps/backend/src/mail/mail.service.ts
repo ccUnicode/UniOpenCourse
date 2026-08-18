@@ -1,96 +1,92 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { escapeHtml } from './html.utils';
 
-const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
-
-interface BrevoSender {
-  name?: string;
-  email: string;
-}
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const DEFAULT_BREVO_TIMEOUT_MS = 15_000;
 
 @Injectable()
 export class MailService {
-  private readonly logger = new Logger(MailService.name);
-
   constructor(private readonly config: ConfigService) {}
-
-  /**
-   * Parses MAIL_FROM in either `Name <address@host>` or plain `address@host` form.
-   */
-  private getSender(): BrevoSender {
-    const raw = this.config.get<string>('MAIL_FROM') ?? '';
-    const match = /^\s*(.*?)\s*<\s*(.+?)\s*>\s*$/.exec(raw);
-
-    if (match) {
-      return { name: match[1] || 'UniOpenCourse', email: match[2] };
-    }
-
-    return { name: 'UniOpenCourse', email: raw.trim() };
-  }
-
-  private buildVerificationHtml(name: string, verifyUrl: string, expiresHours: number) {
-    return `
-      <div style="font-family: Arial, Helvetica, sans-serif; color: #111514; line-height: 1.6;">
-        <h1 style="color: #157347; font-size: 22px;">Verifica tu correo</h1>
-        <p>Hola ${name},</p>
-        <p>Gracias por registrarte en UniOpenCourse. Haz clic en el siguiente botón para confirmar tu cuenta:</p>
-        <p style="margin: 24px 0;">
-          <a href="${verifyUrl}"
-             style="background-color: #157347; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
-            Verificar mi correo
-          </a>
-        </p>
-        <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
-        <p style="word-break: break-all; color: #0C8A68;">${verifyUrl}</p>
-        <p>Este enlace expira en ${expiresHours} horas.</p>
-        <hr style="border: none; border-top: 1px solid #dddddd; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #666666;">
-          Si no creaste esta cuenta, puedes ignorar este mensaje.
-        </p>
-      </div>
-    `;
-  }
 
   async sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
     const apiKey = this.config.get<string>('BREVO_API_KEY');
+    const mailFrom = this.config.get<string>('MAIL_FROM');
     const frontendUrl =
       this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
-    const expiresHours = Number(
-      this.config.get<string>('EMAIL_VERIFICATION_EXPIRES_HOURS') ?? 48,
+    const timeoutMs = Number(
+      this.config.get<string>('BREVO_REQUEST_TIMEOUT_MS') ?? DEFAULT_BREVO_TIMEOUT_MS,
     );
 
-    const verifyUrl = `${frontendUrl.replace(/\/$/, '')}/verificar-email?token=${token}`;
-
-    if (!apiKey) {
-      this.logger.error(
-        'BREVO_API_KEY no está configurada. No se envió el correo de verificación.',
+    if (!apiKey || !mailFrom) {
+      throw new InternalServerErrorException(
+        'Email service is not configured (BREVO_API_KEY / MAIL_FROM)',
       );
-      throw new Error('Email provider not configured');
     }
 
-    const response = await fetch(BREVO_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'api-key': apiKey,
-        'Content-Type': 'application/json',
-        accept: 'application/json',
-      },
-      body: JSON.stringify({
-        sender: this.getSender(),
-        to: [{ email: to, name }],
-        subject: 'Verifica tu correo - UniOpenCourse',
-        htmlContent: this.buildVerificationHtml(name, verifyUrl, expiresHours),
-      }),
-    });
+    const verifyUrl = `${frontendUrl}/verificar-email?token=${encodeURIComponent(token)}`;
+    const safeName = escapeHtml(name);
 
-    if (!response.ok) {
-      const details = await response.text();
-      this.logger.error(
-        `Brevo rechazó el envío a ${to}. Status ${response.status}: ${details}`,
-      );
-      throw new Error(`Brevo request failed with status ${response.status}`);
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Verifica tu correo electrónico</h2>
+        <p>Hola ${safeName},</p>
+        <p>Gracias por registrarte en UniOpenCourse. Haz clic en el botón para verificar tu cuenta:</p>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${verifyUrl}"
+             style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Verificar correo
+          </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">
+          Si no creaste esta cuenta, ignora este mensaje.
+        </p>
+        <p style="color: #666; font-size: 12px; word-break: break-all;">
+          Enlace alternativo: ${verifyUrl}
+        </p>
+      </div>
+    `;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(BREVO_API_URL, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { email: this.parseSenderEmail(mailFrom), name: 'UniOpenCourse' },
+          to: [{ email: to, name }],
+          subject: 'Verifica tu correo - UniOpenCourse',
+          htmlContent,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new InternalServerErrorException(
+          `Brevo API error (${response.status}): ${body}`,
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new InternalServerErrorException(
+          `Brevo API request timed out after ${timeoutMs}ms`,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }
 
-    this.logger.log(`Correo de verificación enviado a ${to}`);
+  private parseSenderEmail(mailFrom: string): string {
+    const match = mailFrom.match(/<([^>]+)>/);
+    return match ? match[1] : mailFrom;
   }
 }
