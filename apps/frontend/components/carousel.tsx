@@ -2,9 +2,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Course } from '../interfaces/course.interface';
+import { getStorageImageUrl } from '@/utils/image-url';
 import { useEffect, useState } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function Carousel({ data }: { data: Course[] }) {
   const courses_carousel = data;
@@ -55,7 +54,7 @@ export default function Carousel({ data }: { data: Course[] }) {
               </div>
               <figure className="relative h-40 min-[470px]:h-50 md:h-64 w-full">
                 <Image
-                  src={`${API_URL}/storage/${course.url_image}`}
+                  src={getStorageImageUrl(course.url_image)}
                   alt={course.name}
                   className="object-cover"
                   unoptimized={process.env.NODE_ENV === 'development'}

@@ -1,8 +1,8 @@
 import { Course } from '@/interfaces/course.interface';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getStorageImageUrl } from '@/utils/image-url';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export default function CourseCard({ course }: { course: Course }) {
   return (
     <Link
@@ -27,7 +27,7 @@ export default function CourseCard({ course }: { course: Course }) {
         </div>
         <figure className="w-full relative aspect-video">
           <Image
-            src={`${API_URL}/storage/${course.url_image}`}
+            src={getStorageImageUrl(course.url_image)}
             alt={course.name}
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             fill

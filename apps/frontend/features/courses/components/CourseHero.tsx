@@ -1,6 +1,5 @@
 import Image from 'next/image';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
+import { getStorageImageUrl } from '@/utils/image-url';
 interface Teacher {
   name: string;
   last_name: string;
@@ -52,7 +51,7 @@ export default function CourseHero({
 
         {imageUrl ? (
           <Image
-            src={`${API_URL}/storage/${imageUrl}`}
+            src={getStorageImageUrl(imageUrl)}
             fill
             alt="Course Background"
             unoptimized={process.env.NODE_ENV === 'development'}
