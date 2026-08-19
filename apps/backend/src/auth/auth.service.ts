@@ -71,6 +71,7 @@ export class AuthService {
         update: {
           token_hash: tokenHash,
           expires_at: expiresAt,
+          created_at: new Date(),
         },
       });
 
@@ -336,6 +337,7 @@ export class AuthService {
         update: {
           token_hash: tokenHash,
           expires_at: expiresAt,
+          created_at: new Date(),
         },
       });
 

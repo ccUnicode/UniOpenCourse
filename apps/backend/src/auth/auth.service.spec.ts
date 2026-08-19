@@ -175,6 +175,7 @@ describe('AuthService', () => {
         update: {
           token_hash: expect.any(String) as unknown as string,
           expires_at: expect.any(Date) as unknown as Date,
+          created_at: expect.any(Date) as unknown as Date,
         },
       });
       expect(mailMock.sendVerificationEmail).toHaveBeenCalledWith(
