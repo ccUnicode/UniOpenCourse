@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
+import * as path from 'path';
 import type { ReadStream } from 'fs';
 
 jest.mock('fs', () => ({
@@ -26,6 +27,15 @@ describe('MaterialsService', () => {
       findUnique: jest.fn(),
     },
   };
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'STORAGE_PATH') {
+        return path.join(process.cwd(), 'storage');
+      }
+
+      return undefined;
+    }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,9 +47,7 @@ describe('MaterialsService', () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn(),
-          },
+          useValue: mockConfigService,
         },
       ],
     }).compile();
