@@ -27,8 +27,10 @@ describe('AuthService', () => {
       deleteMany: jest.Mock;
       findUnique: jest.Mock;
       findFirst: jest.Mock;
+      upsert: jest.Mock;
     };
     $transaction: jest.Mock;
+    $executeRaw: jest.Mock;
   };
   let jwtMock: {
     sign: jest.Mock;
@@ -54,6 +56,7 @@ describe('AuthService', () => {
         deleteMany: jest.fn(),
         findUnique: jest.fn(),
         findFirst: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn(),
       },
       $transaction: jest.fn().mockImplementation(async (arg: unknown) => {
         if (typeof arg === 'function') {
@@ -61,6 +64,7 @@ describe('AuthService', () => {
         }
         return Promise.all(arg as Promise<unknown>[]);
       }),
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
     };
 
     jwtMock = {
@@ -161,9 +165,14 @@ describe('AuthService', () => {
       >;
       expect(createArgs.data.email_verified).toBeUndefined();
 
-      expect(prismaMock.emailVerificationToken.create).toHaveBeenCalledWith({
-        data: {
+      expect(prismaMock.emailVerificationToken.upsert).toHaveBeenCalledWith({
+        where: { user_id: 123 },
+        create: {
           user_id: 123,
+          token_hash: expect.any(String) as unknown as string,
+          expires_at: expect.any(Date) as unknown as Date,
+        },
+        update: {
           token_hash: expect.any(String) as unknown as string,
           expires_at: expect.any(Date) as unknown as Date,
         },
@@ -379,6 +388,63 @@ describe('AuthService', () => {
 
       expect(result.message).toContain('Si el correo existe');
       expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+      expect(prismaMock.emailVerificationToken.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should only send one email when two resends run concurrently', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        user_id: 123,
+        email: 'test@example.com',
+        name: 'Test',
+        email_verified: false,
+      });
+
+      let lockHeld = false;
+      const waiters: Array<() => void> = [];
+      let latestCreatedAt: Date | null = null;
+
+      const acquireLock = async () => {
+        while (lockHeld) {
+          await new Promise<void>((resolve) => {
+            waiters.push(resolve);
+          });
+        }
+        lockHeld = true;
+      };
+
+      const releaseLock = () => {
+        lockHeld = false;
+        const next = waiters.shift();
+        if (next) {
+          next();
+        }
+      };
+
+      prismaMock.$executeRaw.mockImplementation(async () => {
+        await acquireLock();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        releaseLock();
+      });
+
+      prismaMock.emailVerificationToken.findFirst.mockImplementation(() => {
+        if (!latestCreatedAt) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve({ id: 1, created_at: latestCreatedAt });
+      });
+
+      prismaMock.emailVerificationToken.upsert.mockImplementation(() => {
+        latestCreatedAt = new Date();
+        return Promise.resolve({ id: 1 });
+      });
+
+      await Promise.all([
+        service.resendVerificationEmail('test@example.com'),
+        service.resendVerificationEmail('test@example.com'),
+      ]);
+
+      expect(prismaMock.emailVerificationToken.upsert).toHaveBeenCalledTimes(1);
+      expect(mailMock.sendVerificationEmail).toHaveBeenCalledTimes(1);
     });
   });
 

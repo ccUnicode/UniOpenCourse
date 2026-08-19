@@ -57,12 +57,18 @@ export class AuthService {
         include: { role: true },
       });
 
-      await tx.emailVerificationToken.deleteMany({
+      await tx.$executeRaw`
+        SELECT user_id FROM "User" WHERE user_id = ${created.user_id} FOR UPDATE
+      `;
+
+      await tx.emailVerificationToken.upsert({
         where: { user_id: created.user_id },
-      });
-      await tx.emailVerificationToken.create({
-        data: {
+        create: {
           user_id: created.user_id,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+        },
+        update: {
           token_hash: tokenHash,
           expires_at: expiresAt,
         },
@@ -181,12 +187,11 @@ export class AuthService {
       return { message: GENERIC_RESEND_MESSAGE };
     }
 
-    if (await this.isWithinResendCooldown(user.user_id)) {
-      return { message: GENERIC_RESEND_MESSAGE };
-    }
-
     try {
-      await this.issueVerificationToken(user);
+      const rawToken = await this.rotateVerificationToken(user);
+      if (rawToken) {
+        await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
+      }
     } catch (error) {
       console.error('Failed to resend verification email:', error);
     }
@@ -295,44 +300,47 @@ export class AuthService {
     return activeToken !== null;
   }
 
-  private async isWithinResendCooldown(userId: number): Promise<boolean> {
-    const latestToken = await this.prisma.emailVerificationToken.findFirst({
-      where: { user_id: userId },
-      orderBy: { created_at: 'desc' },
-    });
-
-    if (!latestToken) {
-      return false;
-    }
-
-    return Date.now() - latestToken.created_at.getTime() < this.getResendCooldownMs();
-  }
-
-  private async issueVerificationToken(user: {
+  private async rotateVerificationToken(user: {
     user_id: number;
     email: string;
     name: string;
-  }): Promise<string> {
-    const rawToken = randomBytes(32).toString('hex');
-    const tokenHash = this.hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + this.getVerificationExpiresMs());
+  }): Promise<string | null> {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.$executeRaw`
+        SELECT user_id FROM "User" WHERE user_id = ${user.user_id} FOR UPDATE
+      `;
 
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.emailVerificationToken.deleteMany({
+      const latestToken = await tx.emailVerificationToken.findFirst({
         where: { user_id: user.user_id },
+        orderBy: { created_at: 'desc' },
       });
-      await tx.emailVerificationToken.create({
-        data: {
+
+      if (
+        latestToken &&
+        Date.now() - latestToken.created_at.getTime() < this.getResendCooldownMs()
+      ) {
+        return null;
+      }
+
+      const rawToken = randomBytes(32).toString('hex');
+      const tokenHash = this.hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + this.getVerificationExpiresMs());
+
+      await tx.emailVerificationToken.upsert({
+        where: { user_id: user.user_id },
+        create: {
           user_id: user.user_id,
           token_hash: tokenHash,
           expires_at: expiresAt,
         },
+        update: {
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+        },
       });
+
+      return rawToken;
     });
-
-    await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
-
-    return rawToken;
   }
 
   private hashToken(token: string): string {
