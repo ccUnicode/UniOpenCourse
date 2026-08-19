@@ -124,10 +124,7 @@ export class CoursesService {
         try {
           await unlink(join(storageDir, imagenAnterior));
         } catch (error) {
-          console.error(
-            `No se pudo eliminar la imagen anterior: ${imagenAnterior}`,
-            error,
-          );
+          console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
         }
       }
       return resultado;
@@ -137,7 +134,8 @@ export class CoursesService {
           await unlink(join(storageDir, file.filename));
         } catch (unlinkError) {
           console.error(
-            `No se pudo eliminar la imagen nueva: ${file.filename}`,
+            'No se pudo eliminar la imagen nueva:',
+            file.filename,
             unlinkError,
           );
         }
