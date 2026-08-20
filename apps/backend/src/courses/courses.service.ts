@@ -1,14 +1,20 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma/client';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
-import { storageDir } from '../utils/storage.config';
 
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly storageDir: string;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.storageDir = this.configService.get<string>('STORAGE_PATH', './storage');
+  }
 
   // --- Admin Methods ---
   async create(data: CreateCourseDto, file?: Express.Multer.File) {
@@ -52,7 +58,7 @@ export class CoursesService {
       });
     } catch (error) {
       try {
-        await unlink(join(storageDir, file.filename));
+        await unlink(join(this.storageDir, file.filename));
       } catch (unlinkError) {
         console.error(
           `No se pudo eliminar la imagen nueva: ${file.filename}`,
@@ -122,7 +128,7 @@ export class CoursesService {
       });
       if (file && imagenAnterior) {
         try {
-          await unlink(join(storageDir, imagenAnterior));
+          await unlink(join(this.storageDir, imagenAnterior));
         } catch (error) {
           console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
         }
@@ -131,7 +137,7 @@ export class CoursesService {
     } catch (error) {
       if (file) {
         try {
-          await unlink(join(storageDir, file.filename));
+          await unlink(join(this.storageDir, file.filename));
         } catch (unlinkError) {
           console.error(
             'No se pudo eliminar la imagen nueva:',
@@ -163,7 +169,7 @@ export class CoursesService {
       });
       if (imagen) {
         try {
-          await unlink(join(storageDir, imagen));
+          await unlink(join(this.storageDir, imagen));
         } catch (error) {
           console.error(`No se pudo eliminar la imagen del curso: ${imagen}`, error);
         }
