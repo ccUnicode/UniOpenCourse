@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('CoursesService', () => {
   let service: CoursesService;
@@ -17,12 +18,19 @@ describe('CoursesService', () => {
       findMany: jest.fn(),
     },
   };
+  const mockConfigService = {
+    get: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CoursesService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        CoursesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ConfigService, useValue: mockConfigService },
+      ],
     }).compile();
 
     service = module.get<CoursesService>(CoursesService);
