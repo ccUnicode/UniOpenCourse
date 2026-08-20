@@ -8,7 +8,11 @@ import {
   Body,
   Query,
   UseGuards,
+  UploadedFile,
+  BadRequestException,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,8 +26,33 @@ export class AdminCoursesController {
   constructor(private readonly service: CoursesService) {}
 
   @Post()
-  create(@Body() dto: CreateCourseDto) {
-    return this.service.create(dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowed = ['image/png', 'image/jpeg'];
+
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Tipo de imagen no permitido. Solo se aceptan PNGs y JPEGs.',
+            ),
+            false,
+          );
+        }
+
+        cb(null, true);
+      },
+    }),
+  )
+  create(@Body() dto: CreateCourseDto, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('La imagen del curso es obligatoria.');
+    }
+
+    return this.service.create(dto, file);
   }
 
   @Get()
@@ -43,8 +72,33 @@ export class AdminCoursesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: CreateCourseDto) {
-    return this.service.update(id, dto);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+      fileFilter: (req, file, cb) => {
+        const allowed = ['image/png', 'image/jpeg'];
+
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException(
+              'Tipo de imagen no permitido. Solo se aceptan PNGs y JPEGs.',
+            ),
+            false,
+          );
+        }
+
+        cb(null, true);
+      },
+    }),
+  )
+  update(
+    @Param('id') id: string,
+    @Body() dto: CreateCourseDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.service.update(id, dto, file);
   }
 
   @Delete(':id')

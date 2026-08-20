@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Course } from '../interfaces/course.interface';
+import { getStorageImageUrl } from '@/utils/image-url';
 import { useEffect, useState } from 'react';
 
 export default function Carousel({ data }: { data: Course[] }) {
@@ -24,17 +25,20 @@ export default function Carousel({ data }: { data: Course[] }) {
   const prev = () => {
     setCurrent((prev) => (prev - 1 + courses_length) % courses_length);
   };
-  console.log(courses_carousel);
   return (
-    <div className="overflow-hidden w-128">
+    <div className="overflow-hidden w-full min-[470px]:w-98 md:w-128">
       <div
         style={{ transform: `translateX(-${current * 100}%)` }}
         className="flex transition-transform duration-600 ease-in-out w-full flex-nowrap cursor-pointer"
       >
         {courses_carousel.map((course: Course) => (
-          <Link href={`/cursos/${course.course_id}`} key={course.course_id}>
-            <div className="group relative overflow-hidden min-w-128 w-full rounded-2xl border-border bg-background-secondary">
-              <div className="flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
+          <Link
+            href={`/cursos/${course.course_id}`}
+            key={course.course_id}
+            className="min-w-full"
+          >
+            <div className="group relative overflow-hidden min-w-full min-[470px]:min-w-98 md:min-w-128 w-full rounded-2xl border-border bg-background-secondary">
+              <div className="z-50 flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -48,22 +52,27 @@ export default function Carousel({ data }: { data: Course[] }) {
                 </svg>
                 <p>Ir al curso</p>
               </div>
-              <figure className="relative h-64 w-full">
+              <figure className="relative h-40 min-[470px]:h-50 md:h-64 w-full">
                 <Image
-                  src={course.url_image}
+                  src={getStorageImageUrl(course.url_image)}
                   alt={course.name}
                   className="object-cover"
+                  unoptimized={process.env.NODE_ENV === 'development'}
                   fill
                 />
               </figure>
-              <div className="p-6 w-full flex flex-col gap-2 border-border border rounded-b-2xl">
+              <div className="p-4 min-[470px]:p-6 w-full flex flex-col gap-2 border-border border rounded-b-2xl">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold">{course.name}</h2>
-                  <span className="px-4 py-1 bg-accent rounded-full text-xs">
+                  <h2 className="text-xl min-[470px]:text-2xl font-semibold">
+                    {course.name}
+                  </h2>
+                  <span className="px-2 min-[470px]:px-4 py-1 bg-accent rounded-full text-xs">
                     {course.course_code}
                   </span>
                 </div>
-                <p className="line-clamp-2">{course.description}</p>
+                <p className="line-clamp-2 text-muted text-sm min-[470px]:text-base">
+                  {course.description}
+                </p>
               </div>
             </div>
           </Link>

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsInt } from 'class-validator';
+import { IsNotEmpty, IsInt, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /** DTO for uploading a physical file */
@@ -7,4 +7,8 @@ export class CreateFileDto {
   @Type(() => Number)
   @IsInt()
   class_id: number;
+
+  @IsString()
+  @IsNotEmpty()
+  filename: string;
 }

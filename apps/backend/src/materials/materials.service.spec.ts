@@ -2,8 +2,10 @@ import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
+import * as path from 'path';
 import type { ReadStream } from 'fs';
 
 jest.mock('fs', () => ({
@@ -25,6 +27,15 @@ describe('MaterialsService', () => {
       findUnique: jest.fn(),
     },
   };
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'STORAGE_PATH') {
+        return path.join(process.cwd(), 'storage');
+      }
+
+      return undefined;
+    }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,6 +44,10 @@ describe('MaterialsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -50,7 +65,7 @@ describe('MaterialsService', () => {
 
   describe('createFile', () => {
     it('should create a material of type "file" with real uploaded file data', async () => {
-      const dto = { class_id: 1 };
+      const dto = { class_id: 1, filename: 'documento.pdf' };
       const mockFile = {
         originalname: 'documento.pdf',
         filename: 'documento-123.pdf',
@@ -60,7 +75,7 @@ describe('MaterialsService', () => {
         material_id: 1,
         class_id: dto.class_id,
         material_type: 'file',
-        filename: mockFile.originalname,
+        filename: dto.filename,
         file_path: mockFile.filename,
       };
 
@@ -73,14 +88,14 @@ describe('MaterialsService', () => {
         data: {
           class_id: dto.class_id,
           material_type: 'file',
-          filename: mockFile.originalname,
+          filename: dto.filename,
           file_path: mockFile.filename,
         },
       });
     });
 
     it('should throw BadRequestException if file is undefined', async () => {
-      const dto = { class_id: 1 };
+      const dto = { class_id: 1, filename: 'documento.pdf' };
       await expect(service.createFile(dto, undefined)).rejects.toThrow(
         BadRequestException,
       );

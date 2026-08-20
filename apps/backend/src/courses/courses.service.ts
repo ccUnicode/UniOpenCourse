@@ -1,85 +1,180 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma/client';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  // --- Admin Methods ---
-  async create(data: CreateCourseDto) {
-    return await this.prisma.$transaction(async (tx) => {
-      let docenteId = data.teacher_id;
-      if (!docenteId) {
-        if (!data.teacher_name || !data.teacher_last_name) {
-          throw new Error(
-            'Debe proporcionar el teacher_id o el nombre_docente y apellido_docente',
-          );
-        }
-        const docenteExistente = await tx.teacher.findFirst({
-          where: { name: data.teacher_name, last_name: data.teacher_last_name },
-        });
-
-        if (docenteExistente) {
-          docenteId = docenteExistente.teacher_id;
-        } else {
-          const nuevoDocente = await tx.teacher.create({
-            data: { name: data.teacher_name, last_name: data.teacher_last_name },
-          });
-          docenteId = nuevoDocente.teacher_id;
-        }
-      }
-      if (!docenteId) {
-        throw new Error('No se pudo determinar el ID del docente');
-      }
-      return await tx.course.create({
-        data: {
-          name: data.name,
-          course_code: data.course_code,
-          description: data.description,
-          url_image: data.url_image || '',
-          teacher: { connect: { teacher_id: docenteId } },
-        },
-      });
-    });
+  private readonly storageDir: string;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.storageDir = this.configService.get<string>('STORAGE_PATH', './storage');
   }
 
-  async update(id: string, data: CreateCourseDto) {
-    return await this.prisma.$transaction(async (tx) => {
-      let docenteId = data.teacher_id;
-      if (!docenteId && data.teacher_name && data.teacher_last_name) {
-        const docenteExistente = await tx.teacher.findFirst({
-          where: { name: data.teacher_name, last_name: data.teacher_last_name },
-        });
-        if (docenteExistente) {
-          docenteId = docenteExistente.teacher_id;
-        } else {
-          const nuevoDocente = await tx.teacher.create({
-            data: { name: data.teacher_name, last_name: data.teacher_last_name },
+  // --- Admin Methods ---
+  async create(data: CreateCourseDto, file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Debes adjuntar una imagen .jpeg o .png');
+    }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        let docenteId = data.teacher_id;
+        if (!docenteId) {
+          if (!data.teacher_name || !data.teacher_last_name) {
+            throw new BadRequestException(
+              'Debe proporcionar el teacher_id o el nombre_docente y apellido_docente',
+            );
+          }
+          const docenteExistente = await tx.teacher.findFirst({
+            where: { name: data.teacher_name, last_name: data.teacher_last_name },
           });
-          docenteId = nuevoDocente.teacher_id;
+
+          if (docenteExistente) {
+            docenteId = docenteExistente.teacher_id;
+          } else {
+            const nuevoDocente = await tx.teacher.create({
+              data: { name: data.teacher_name, last_name: data.teacher_last_name },
+            });
+            docenteId = nuevoDocente.teacher_id;
+          }
+        }
+        if (!docenteId) {
+          throw new BadRequestException('No se pudo determinar el ID del docente');
+        }
+        return await tx.course.create({
+          data: {
+            name: data.name,
+            course_code: data.course_code,
+            description: data.description,
+            url_image: file.filename,
+            teacher: { connect: { teacher_id: docenteId } },
+          },
+        });
+      });
+    } catch (error) {
+      try {
+        await unlink(join(this.storageDir, file.filename));
+      } catch (unlinkError) {
+        console.error(
+          `No se pudo eliminar la imagen nueva: ${file.filename}`,
+          unlinkError,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async update(id: string, data: CreateCourseDto, file?: Express.Multer.File) {
+    let imagenAnterior: string | null = null;
+    try {
+      const resultado = await this.prisma.$transaction(async (tx) => {
+        const cursoExistente = await tx.course.findUnique({
+          where: { course_id: Number(id) },
+        });
+
+        if (!cursoExistente) {
+          throw new NotFoundException(`El curso con ID ${id} no existe.`);
+        }
+
+        let docenteId = data.teacher_id;
+
+        if (!docenteId && data.teacher_name && data.teacher_last_name) {
+          const docenteExistente = await tx.teacher.findFirst({
+            where: {
+              name: data.teacher_name,
+              last_name: data.teacher_last_name,
+            },
+          });
+
+          if (docenteExistente) {
+            docenteId = docenteExistente.teacher_id;
+          } else {
+            const nuevoDocente = await tx.teacher.create({
+              data: {
+                name: data.teacher_name,
+                last_name: data.teacher_last_name,
+              },
+            });
+
+            docenteId = nuevoDocente.teacher_id;
+          }
+        }
+
+        const cursoActualizado = await tx.course.update({
+          where: { course_id: Number(id) },
+          data: {
+            name: data.name,
+            course_code: data.course_code,
+            description: data.description,
+            ...(docenteId && {
+              teacher: {
+                connect: {
+                  teacher_id: docenteId,
+                },
+              },
+            }),
+            ...(file && {
+              url_image: file.filename,
+            }),
+          },
+        });
+        imagenAnterior = cursoExistente.url_image;
+        return cursoActualizado;
+      });
+      if (file && imagenAnterior) {
+        try {
+          await unlink(join(this.storageDir, imagenAnterior));
+        } catch (error) {
+          console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
         }
       }
-
-      return await tx.course.update({
-        where: { course_id: Number(id) },
-        data: {
-          name: data.name,
-          course_code: data.course_code,
-          description: data.description,
-          url_image: data.url_image,
-          ...(docenteId && { teacher: { connect: { teacher_id: docenteId } } }),
-        },
-      });
-    });
+      return resultado;
+    } catch (error) {
+      if (file) {
+        try {
+          await unlink(join(this.storageDir, file.filename));
+        } catch (unlinkError) {
+          console.error(
+            'No se pudo eliminar la imagen nueva:',
+            file.filename,
+            unlinkError,
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   async remove(id: string) {
     try {
-      return await this.prisma.course.delete({
+      const curso = await this.prisma.course.findUnique({
+        where: {
+          course_id: Number(id),
+        },
+        select: {
+          url_image: true,
+        },
+      });
+      if (!curso) {
+        throw new NotFoundException(`El curso con ID ${id} no existe.`);
+      }
+      const imagen = curso.url_image;
+      const cursoEliminado = await this.prisma.course.delete({
         where: { course_id: Number(id) },
       });
+      if (imagen) {
+        try {
+          await unlink(join(this.storageDir, imagen));
+        } catch (error) {
+          console.error(`No se pudo eliminar la imagen del curso: ${imagen}`, error);
+        }
+      }
+      return cursoEliminado;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {

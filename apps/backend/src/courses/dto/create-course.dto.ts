@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -24,10 +23,6 @@ export class CreateCourseDto {
   @IsString()
   @IsNotEmpty({ message: 'La descripción del curso es obligatoria' })
   description: string;
-
-  @IsUrl({}, { message: 'La URL de la imagen debe ser una URL válida' })
-  @IsOptional()
-  url_image?: string;
 
   @Type(() => Number)
   @IsInt({ message: 'El ID del docente debe ser un número entero' })

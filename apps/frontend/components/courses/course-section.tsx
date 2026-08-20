@@ -1,9 +1,9 @@
 'use client';
-import CourseCard from '@/components/course-card';
+import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
 import { getCourseData } from '@/services/courses.service';
 import { useEffect, useState } from 'react';
-import { Pagination } from './pagination';
+import { Pagination } from '../pagination';
 export function CourseSection() {
   const [busqueda, setBusqueda] = useState('');
   const [page, setPage] = useState(1);
@@ -17,16 +17,16 @@ export function CourseSection() {
   }, [busqueda, page]);
 
   return (
-    <section className="courses px-16 mb-8">
+    <section className="courses px-8 md:px-16 mb-4 md:mb-8">
       <div className="mb-4">
-        <h2 className=" mb-2 text-md font-bold text-muted uppercase font-semibold">
+        <h2 className=" mb-2 text-sm md:text-md font-bold text-muted uppercase font-semibold">
           Descubre contenido universitario gratuito
         </h2>
-        <h1 className="text-2xl font-bold text-primary uppercase">
+        <h1 className="text-xl md:text-2xl font-bold text-primary uppercase">
           Empieza ahora buscando tu curso
         </h1>
       </div>
-      <div className="flex h-12 w-112 items-center gap-4 rounded-lg border border-border px-4 mb-8">
+      <div className="flex h-12 w-full md:w-112 items-center gap-4 rounded-lg border border-border px-2 md:px-4 mb-8">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="18"

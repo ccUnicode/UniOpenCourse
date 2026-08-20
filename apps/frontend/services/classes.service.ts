@@ -1,4 +1,4 @@
-const baseUrl = process.env.API_URL || 'http://localhost:3001';
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 function getEmbedUrl(youtubeUrl: string) {
   if (!youtubeUrl) {
@@ -44,7 +44,7 @@ export async function getClassData(class_id: string) {
   const response = await fetch(`${baseUrl}/classes/${class_id}`);
   const clase = await handleResponse(response);
   if (clase.error) return clase;
-  
+
   clase.url_youtube = getEmbedUrl(clase.url_youtube);
   return clase;
 }

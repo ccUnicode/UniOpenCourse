@@ -50,8 +50,8 @@ export default async function Busqueda({
 
   // Renderizar resultados de búsqueda
   return (
-    <div className="flex-1 flex flex-col gap-4 px-10 py-7">
-      <h1 className="text-2xl font-bold">Resultados de búsqueda</h1>
+    <div className="flex-1 flex flex-col gap-4 p-4 md:px-10 md:py-7">
+      <h1 className="text-xl sm:text-2xl font-bold">Resultados de búsqueda</h1>
       {data.map((resultado: SearchResult) => {
         return (
           <SearchResultCard
