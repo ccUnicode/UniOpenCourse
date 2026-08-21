@@ -212,26 +212,44 @@ describe('CoursesService', () => {
     });
 
     it('returns empty array if url is invalid (SSRF prevention)', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ url_trikaweb: 'http://localhost:5432' });
+      mockPrisma.course.findUnique.mockResolvedValue({
+        url_trikaweb: 'http://localhost:5432',
+      });
       const result = await service.getEvaluationsFromTrikaweb(1);
       expect(result).toEqual([]);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockedAxios.get).not.toHaveBeenCalled();
     });
 
     it('fetches and parses evaluations correctly', async () => {
-      mockPrisma.course.findUnique.mockResolvedValue({ url_trikaweb: 'https://trikaweb.ccunicode.org/test' });
-      const html = '<section id="section-EVAL1"></section><section id="section-EVAL2"></section>';
+      mockPrisma.course.findUnique.mockResolvedValue({
+        url_trikaweb: 'https://trikaweb.ccunicode.org/test',
+      });
+      const html =
+        '<section id="section-EVAL1"></section><section id="section-EVAL2"></section>';
       mockedAxios.get.mockResolvedValue({ data: html });
 
       const result = await service.getEvaluationsFromTrikaweb(1);
 
-      expect(mockedAxios.get).toHaveBeenCalledWith('https://trikaweb.ccunicode.org/test', {
-        timeout: 5000,
-        maxContentLength: 2000000,
-      });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        'https://trikaweb.ccunicode.org/test',
+        {
+          timeout: 5000,
+          maxContentLength: 2000000,
+        },
+      );
       expect(result).toEqual([
-        { id: 'EVAL1', label: 'EVAL1', link: 'https://trikaweb.ccunicode.org/test#section-EVAL1' },
-        { id: 'EVAL2', label: 'EVAL2', link: 'https://trikaweb.ccunicode.org/test#section-EVAL2' },
+        {
+          id: 'EVAL1',
+          label: 'EVAL1',
+          link: 'https://trikaweb.ccunicode.org/test#section-EVAL1',
+        },
+        {
+          id: 'EVAL2',
+          label: 'EVAL2',
+          link: 'https://trikaweb.ccunicode.org/test#section-EVAL2',
+        },
       ]);
     });
   });

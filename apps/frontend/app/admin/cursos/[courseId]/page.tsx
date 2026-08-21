@@ -36,6 +36,7 @@ interface Course {
   name: string;
   course_code: string;
   description: string;
+  url_trikaweb?: string;
   teacher_name?: string;
   url_image?: string;
 }
@@ -66,6 +67,7 @@ const updateCourse = async (
     name: string;
     course_code: string;
     description: string;
+    url_trikaweb?: string;
     teacher_name?: string;
     teacher_last_name?: string;
     file?: File | null;
@@ -83,6 +85,10 @@ const updateCourse = async (
 
   if (courseData.teacher_last_name) {
     formData.append('teacher_last_name', courseData.teacher_last_name);
+  }
+
+  if (courseData.url_trikaweb) {
+    formData.append('url_trikaweb', courseData.url_trikaweb);
   }
 
   if (courseData.file) {
@@ -139,6 +145,7 @@ export default function AdminCourseDetailPage() {
     name: '',
     course_code: '',
     description: '',
+    url_trikaweb: '',
     teacher_name: '',
     teacher_last_name: '',
     file: null as File | null,
@@ -178,6 +185,7 @@ export default function AdminCourseDetailPage() {
         name: courseData.name,
         course_code: courseData.course_code,
         description: courseData.description || '',
+        url_trikaweb: courseData.url_trikaweb || '',
         teacher_name: teacherData?.name || '',
         teacher_last_name: teacherData?.last_name || '',
         file: null,
@@ -199,6 +207,7 @@ export default function AdminCourseDetailPage() {
         name: courseFormData.name,
         course_code: courseFormData.course_code,
         description: courseFormData.description,
+        url_trikaweb: courseFormData.url_trikaweb || undefined,
         teacher_name: courseFormData.teacher_name || undefined,
         teacher_last_name: courseFormData.teacher_last_name || undefined,
         file: courseFormData.file,
@@ -382,6 +391,23 @@ export default function AdminCourseDetailPage() {
                       setCourseFormData({
                         ...courseFormData,
                         teacher_last_name: e.target.value,
+                      })
+                    }
+                    className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-normal text-white/85">
+                    Enlace de Trikaweb
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://trikaweb.ccunicode.org/..."
+                    value={courseFormData.url_trikaweb}
+                    onChange={(e) =>
+                      setCourseFormData({
+                        ...courseFormData,
+                        url_trikaweb: e.target.value,
                       })
                     }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"

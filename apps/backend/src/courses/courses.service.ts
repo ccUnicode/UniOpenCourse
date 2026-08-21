@@ -384,7 +384,9 @@ export class CoursesService {
 
     try {
       if (!course.url_trikaweb.startsWith('https://trikaweb.ccunicode.org/')) {
-        this.logger.warn(`Intento de SSRF detectado o URL inválida: ${course.url_trikaweb}`);
+        this.logger.warn(
+          `Intento de SSRF detectado o URL inválida: ${course.url_trikaweb}`,
+        );
         return [];
       }
 

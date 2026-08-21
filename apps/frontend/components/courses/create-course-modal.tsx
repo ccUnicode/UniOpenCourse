@@ -30,6 +30,7 @@ export default function CreateCourseModal({
         name: formData.name,
         course_code: formData.course_code,
         description: formData.description,
+        url_trikaweb: formData.url_trikaweb,
         teacher_name: formData.teacher_name,
         teacher_last_name: formData.teacher_last_name,
         file: formData.file,
@@ -38,6 +39,7 @@ export default function CreateCourseModal({
         name: '',
         course_code: '',
         description: '',
+        url_trikaweb: '',
         teacher_name: '',
         teacher_last_name: '',
         file: null,
@@ -60,6 +62,7 @@ export default function CreateCourseModal({
     name: '',
     course_code: '',
     description: '',
+    url_trikaweb: '',
     teacher_name: '',
     teacher_last_name: '',
     file: null as File | null,
@@ -162,6 +165,25 @@ export default function CreateCourseModal({
             {formErrors.teacher_last_name && (
               <p className="mt-1 text-xs text-red-400">{formErrors.teacher_last_name}</p>
             )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="url_trikaweb"
+              className="mb-1.5 block text-sm font-normal text-white/85"
+            >
+              Enlace de Trikaweb
+            </label>
+            <input
+              type="url"
+              id="url_trikaweb"
+              placeholder="https://trikaweb.ccunicode.org/..."
+              value={formData.url_trikaweb}
+              onChange={(e) =>
+                setFormData({ ...formData, url_trikaweb: e.target.value })
+              }
+              className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+            />
           </div>
 
           <div>
