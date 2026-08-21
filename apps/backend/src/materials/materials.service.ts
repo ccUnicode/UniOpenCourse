@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
@@ -17,7 +18,10 @@ import * as path from 'path';
 export class MaterialsService {
   private readonly logger = new Logger(MaterialsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
 
   /**
    * Retrieves paginated materials, optionally filtered by class_id or filename search
@@ -123,9 +127,12 @@ export class MaterialsService {
     if (!material) {
       throw new NotFoundException('Material no encontrado.');
     }
-
+    const storagePath = this.configService.get<string>(
+      'STORAGE_PATH',
+      path.join(process.cwd(), 'storage'),
+    );
     if (material.material_type === MaterialTypes.file && material.file_path) {
-      const filePath = path.join('./storage', material.file_path);
+      const filePath = path.join(storagePath, material.file_path);
       try {
         if (fs.existsSync(filePath)) {
           await fs.promises.unlink(filePath);
@@ -153,12 +160,14 @@ export class MaterialsService {
       throw new NotFoundException('Material no encontrado.');
     }
 
-    // Usamos file_path en lugar de url_link como estaba en la rama anterior
     if (material.material_type !== MaterialTypes.file || !material.file_path) {
       throw new BadRequestException('Este material no es un archivo descargable.');
     }
-
-    const filePath = path.join(process.cwd(), 'storage', material.file_path);
+    const storagePath = this.configService.get<string>(
+      'STORAGE_PATH',
+      path.join(process.cwd(), 'storage'),
+    );
+    const filePath = path.join(storagePath, material.file_path);
 
     if (!fs.existsSync(filePath)) {
       throw new NotFoundException('El archivo físico no se encuentra en el servidor.');

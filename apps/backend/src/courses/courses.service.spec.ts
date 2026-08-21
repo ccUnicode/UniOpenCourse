@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
 import axios from 'axios';
+import { ConfigService } from '@nestjs/config';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -21,12 +22,19 @@ describe('CoursesService', () => {
       findMany: jest.fn(),
     },
   };
+  const mockConfigService = {
+    get: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CoursesService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        CoursesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ConfigService, useValue: mockConfigService },
+      ],
     }).compile();
 
     service = module.get<CoursesService>(CoursesService);

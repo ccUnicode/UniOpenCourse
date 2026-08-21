@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UnauthorizedException, ConflictException } from '@nestjs/common';
 import { User } from './interfaces/user.interface';
+import { Prisma } from 'src/generated/prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -40,20 +41,47 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        name: dto.name.trim(),
-        username,
-        last_name: dto.last_name ? dto.last_name.trim() : dto.last_name,
-        role: {
-          connect: { role_name: 'USER' },
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          name: dto.name.trim(),
+          username,
+          last_name: dto.last_name ? dto.last_name.trim() : dto.last_name,
+          role: {
+            connect: { role_name: 'USER' },
+          },
+          password: hashedPassword,
         },
-        password: hashedPassword,
-      },
-      include: { role: true }, // Incluir el rol para generar el token correctamente
-    });
-    return this.generateToken(user);
+        include: { role: true }, // Incluir el rol para generar el token correctamente
+      });
+      return this.generateToken(user);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const target = error.meta?.target;
+
+        if (Array.isArray(target) && target.includes('email')) {
+          throw new ConflictException({
+            message: 'El correo electrónico ya está registrado',
+            field: 'email',
+          });
+        }
+
+        if (Array.isArray(target) && target.includes('username')) {
+          throw new ConflictException({
+            message: 'El nombre de usuario ya está registrado',
+            field: 'username',
+          });
+        }
+
+        throw new ConflictException('El usuario ya está registrado');
+      }
+
+      throw error;
+    }
   }
   async login(dto: LoginDto) {
     const identifier = dto.email.trim().toLowerCase();

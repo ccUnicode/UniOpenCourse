@@ -17,7 +17,6 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { storageConfig } from '../utils/storage.config';
 import { MaterialsService } from './materials.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -64,7 +63,6 @@ export class AdminMaterialsController {
   @Post('file')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: storageConfig,
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
         const allowed = ['application/pdf', 'image/png', 'image/jpeg'];
