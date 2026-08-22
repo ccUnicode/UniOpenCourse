@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -445,7 +446,7 @@ export class CoursesService {
         `Error scraping Trikaweb for course ${courseId}`,
         error instanceof Error ? error.stack : error,
       );
-      return [];
+      throw new ServiceUnavailableException('No se pudieron obtener las evaluaciones');
     }
   }
 }

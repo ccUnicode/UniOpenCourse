@@ -23,6 +23,7 @@ export default function CourseSidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [error, setError] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -42,26 +43,35 @@ export default function CourseSidebar({
     setIsMobileDrawerOpen(false);
   }, [pathname]);
 
-  const handleToggleEvaluations = async (e: React.MouseEvent) => {
+  const fetchEvaluations = async () => {
+    setIsLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`${API_URL}/courses/${courseId}/evaluations`);
+      if (res.ok) {
+        const data = await res.json();
+        setEvaluations(data);
+        setHasFetched(true);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      console.error('Error fetching evaluations:', err);
+      setError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleEvaluations = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    if (!isOpen && !hasFetched && !isLoading) {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/courses/${courseId}/evaluations`);
-        if (res.ok) {
-          const data = await res.json();
-          setEvaluations(data);
-          setHasFetched(true);
-        }
-      } catch (error) {
-        console.error('Error fetching evaluations:', error);
-      } finally {
-        setIsLoading(false);
-      }
+    const nextIsOpen = !isOpen;
+    setIsOpen(nextIsOpen);
+
+    if (nextIsOpen && !hasFetched && !isLoading) {
+      fetchEvaluations();
     }
-    
-    setIsOpen(!isOpen);
   };
 
   return (
@@ -124,6 +134,16 @@ export default function CourseSidebar({
           <div className="mt-4 bg-[#0f1714] border border-border/50 rounded-lg shadow-inner overflow-hidden">
             {isLoading ? (
               <div className="p-4 text-center text-sm text-gray-400">Cargando...</div>
+            ) : error ? (
+              <div className="p-4 flex flex-col items-center justify-center text-sm text-red-400 gap-3">
+                <span>Error al cargar las evaluaciones.</span>
+                <button 
+                  onClick={(e) => { e.preventDefault(); fetchEvaluations(); }} 
+                  className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md transition-colors border border-red-500/20"
+                >
+                  Reintentar
+                </button>
+              </div>
             ) : evaluations.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-400">Evaluaciones no disponibles aún.</div>
             ) : (
