@@ -245,6 +245,7 @@ describe('CoursesService', () => {
         {
           timeout: 5000,
           maxContentLength: 2000000,
+          maxRedirects: 0,
         },
       );
       expect(result).toEqual([

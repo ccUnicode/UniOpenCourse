@@ -207,6 +207,7 @@ export class CoursesService {
         name: true,
         course_code: true,
         description: true,
+        url_trikaweb: true,
         url_image: true,
         teacher_id: true,
         teacher: {
@@ -419,6 +420,7 @@ export class CoursesService {
       const response = await axios.get<string>(course.url_trikaweb, {
         timeout: 5000,
         maxContentLength: 2000000,
+        maxRedirects: 0,
       });
       const html: string = response.data;
       const $ = cheerio.load(html);
