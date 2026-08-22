@@ -2,8 +2,7 @@ import { SearchResult } from '@/interfaces/search.interface';
 import { formatType } from '@/services/search.service';
 import Image from 'next/image';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getStorageImageUrl } from '@/utils/image-url';
 
 export default function SearchResultCard({ resultado }: { resultado: SearchResult }) {
   return (
@@ -17,7 +16,7 @@ export default function SearchResultCard({ resultado }: { resultado: SearchResul
       <div className="gap-4 flex flex-wrap justify-between items-center border rounded-xl border-border hover:border-button-border/50 duration-300 transition transition-colors px-4 py-5">
         <figure className="sm:min-w-75 w-60 h-40 sm:h-auto sm:w-1/4 sm:aspect-video relative mx-auto">
           <Image
-            src={`${API_URL}/storage/${resultado.image}`}
+            src={getStorageImageUrl(resultado.image)}
             alt={resultado.title}
             fill
             unoptimized={process.env.NODE_ENV === 'development'}

@@ -18,7 +18,6 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { storageConfig } from '../utils/storage.config';
 
 @Controller('admin/courses')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,7 +28,6 @@ export class AdminCoursesController {
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: storageConfig,
       limits: {
         fileSize: 5 * 1024 * 1024,
       },
@@ -76,7 +74,6 @@ export class AdminCoursesController {
   @Patch(':id')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: storageConfig,
       limits: {
         fileSize: 5 * 1024 * 1024,
       },

@@ -6,7 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CoursesModule } from './courses/courses.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClassesModule } from './classes/classes.module';
 import { AuthModule } from './auth/auth.module';
 import { MaterialsModule } from './materials/materials.module';
@@ -23,9 +23,18 @@ import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
         limit: 5,
       },
     ]),
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'storage'),
-      serveRoot: '/storage',
+    ServeStaticModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          rootPath: configService.get<string>(
+            'STORAGE_PATH',
+            join(process.cwd(), 'storage'),
+          ),
+          serveRoot: '/storage',
+        },
+      ],
     }),
     PrismaModule,
     CoursesModule,
