@@ -19,8 +19,11 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  
+  const [successMessage, setSuccessMessage] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+
   const [errors, setErrors] = useState({ identifier: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,8 +42,13 @@ export default function Login() {
       .catch(() => {});
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get('registered') === 'true') {
-      setShowSuccessMessage(true);
+    if (params.get('verified') === 'true') {
+      setSuccessMessage('¡Correo verificado! Ya puedes iniciar sesión.');
+      router.replace('/login');
+    } else if (params.get('registered') === 'true') {
+      setSuccessMessage(
+        'Registro recibido. Verifica tu correo antes de iniciar sesión.',
+      );
       router.replace('/login');
     }
   }, [router]);
@@ -65,7 +73,9 @@ export default function Login() {
     if (hasErrors) return;
 
     setIsLoading(true);
-    
+    setUnverifiedEmail('');
+    setResendMessage('');
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -87,6 +97,8 @@ export default function Login() {
         } else {
           window.location.replace('/dashboard');
         }
+      } else if (data.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(data.email || identifier.trim());
       } else {
         // Manejar errores del backend
         if (data.message) {
@@ -105,14 +117,54 @@ export default function Login() {
     }
   };
 
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    setResendMessage('');
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      const data = await response.json();
+      setResendMessage(data.message || 'Te enviamos un nuevo enlace.');
+    } catch (error) {
+      console.error('Error al reenviar verificación:', error);
+      setResendMessage('No pudimos reenviar el correo. Inténtalo más tarde.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
     <div className="flex-1 bg-[#111514] text-white font-sans flex flex-col justify-center">
       <main className="flex flex-col items-center justify-center px-4 py-10 md:py-14">
         <div className="w-full max-w-[435px]">
           
-          {showSuccessMessage && (
+          {successMessage && (
             <div className="mb-4 rounded-lg bg-[#157347]/25 border border-[#157347]/45 p-3 text-sm text-[#45D483] text-center font-medium shadow-md">
-              ¡Registro completado con éxito! Por favor, inicia sesión.
+              {successMessage}
+            </div>
+          )}
+
+          {unverifiedEmail && (
+            <div className="mb-4 rounded-lg bg-amber-500/15 border border-amber-500/40 p-4 text-center">
+              <p className="mb-3 text-sm font-medium text-amber-300">
+                Debes verificar tu correo antes de iniciar sesión.
+              </p>
+              {resendMessage ? (
+                <p className="text-xs text-amber-200/80">{resendMessage}</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="text-sm font-semibold text-[#45D483] hover:text-[#6BE3A1] disabled:opacity-50 transition-colors duration-200 cursor-pointer"
+                >
+                  {isResending ? 'Enviando...' : 'Reenviar correo de verificación'}
+                </button>
+              )}
             </div>
           )}
 
