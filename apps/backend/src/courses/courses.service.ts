@@ -400,7 +400,36 @@ export class CoursesService {
 
   private readonly logger = new Logger(CoursesService.name);
 
+  private readonly scrapeCache = new Map<
+    number,
+    {
+      promise: Promise<{ id: string; label: string; link: string }[]>;
+      expiresAt: number;
+    }
+  >();
+
   async getEvaluationsFromTrikaweb(courseId: number) {
+    const now = Date.now();
+    const cached = this.scrapeCache.get(courseId);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.promise;
+    }
+
+    const promise = this._performScraping(courseId).catch((err) => {
+      this.scrapeCache.delete(courseId);
+      throw err;
+    });
+
+    this.scrapeCache.set(courseId, {
+      promise,
+      expiresAt: now + 5 * 60 * 1000,
+    });
+
+    return promise;
+  }
+
+  private async _performScraping(courseId: number) {
     const course = await this.prisma.course.findUnique({
       where: { course_id: courseId },
       select: { url_trikaweb: true },
