@@ -144,7 +144,7 @@ export class CoursesService {
         }
       }
       this.scrapeCache.delete(Number(id));
-      
+
       return resultado;
     } catch (error) {
       if (file) {

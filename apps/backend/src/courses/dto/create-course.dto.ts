@@ -44,7 +44,7 @@ export class CreateCourseDto {
 
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? null : value))
+  @Transform(({ value }) => (value === '' ? null : (value as string | undefined)))
   @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })
   @Matches(/^https:\/\/trikaweb\.ccunicode\.org\//, {
     message: 'La URL debe ser segura (HTTPS) y pertenecer a trikaweb.ccunicode.org',
