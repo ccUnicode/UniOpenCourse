@@ -7,7 +7,7 @@ import {
   MinLength,
   Matches,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class CreateCourseDto {
   @IsString()
@@ -44,6 +44,8 @@ export class CreateCourseDto {
 
   @IsString()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })
   @Matches(/^https:\/\/trikaweb\.ccunicode\.org\//, {
     message: 'La URL debe ser segura (HTTPS) y pertenecer a trikaweb.ccunicode.org',
   })
