@@ -87,7 +87,7 @@ const updateCourse = async (
     formData.append('teacher_last_name', courseData.teacher_last_name);
   }
 
-  if (courseData.url_trikaweb) {
+  if (courseData.url_trikaweb !== undefined) {
     formData.append('url_trikaweb', courseData.url_trikaweb);
   }
 

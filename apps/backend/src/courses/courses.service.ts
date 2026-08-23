@@ -120,7 +120,7 @@ export class CoursesService {
             name: data.name,
             course_code: data.course_code,
             description: data.description,
-            url_trikaweb: data.url_trikaweb,
+            url_trikaweb: data.url_trikaweb === '' ? null : data.url_trikaweb,
             ...(docenteId && {
               teacher: {
                 connect: {
