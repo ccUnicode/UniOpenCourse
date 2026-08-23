@@ -11,6 +11,8 @@ import {
   UploadedFile,
   BadRequestException,
   UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CoursesService } from './courses.service';
@@ -22,6 +24,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('admin/courses')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
+@UsePipes(new ValidationPipe({ transform: true }))
 export class AdminCoursesController {
   constructor(private readonly service: CoursesService) {}
 
