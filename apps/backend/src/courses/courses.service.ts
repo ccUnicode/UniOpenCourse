@@ -143,6 +143,8 @@ export class CoursesService {
           console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
         }
       }
+      this.scrapeCache.delete(Number(id));
+      
       return resultado;
     } catch (error) {
       if (file) {
