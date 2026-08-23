@@ -45,6 +45,10 @@ export const createCourse = async (
       formData.append('teacher_last_name', courseData.teacher_last_name);
     }
 
+    if (courseData.url_trikaweb) {
+      formData.append('url_trikaweb', courseData.url_trikaweb);
+    }
+
     formData.append('file', courseData.file);
 
     const response = await apiFetch('admin/courses', {

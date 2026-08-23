@@ -29,6 +29,7 @@ export interface CreateCourse {
   teacher_name?: string;
   teacher?: { name: string; last_name: string };
   description: string;
+  url_trikaweb?: string;
   file?: string;
   status?: CourseStatus;
   course_creation_date?: string;
@@ -39,6 +40,7 @@ export interface CreateCoursePayload {
   name: string;
   course_code: string;
   description: string;
+  url_trikaweb?: string;
   teacher_name?: string;
   teacher_last_name?: string;
   file: File;

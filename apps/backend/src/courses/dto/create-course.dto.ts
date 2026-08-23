@@ -5,8 +5,9 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  Matches,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class CreateCourseDto {
   @IsString()
@@ -40,4 +41,13 @@ export class CreateCourseDto {
     message: 'El apellido del docente no puede exceder los 50 caracteres',
   })
   teacher_last_name?: string;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : (value as string | undefined)))
+  @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })
+  @Matches(/^https:\/\/trikaweb\.ccunicode\.org\//, {
+    message: 'La URL debe ser segura (HTTPS) y pertenecer a trikaweb.ccunicode.org',
+  })
+  url_trikaweb?: string;
 }

@@ -1,8 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma/client';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 
@@ -51,6 +59,7 @@ export class CoursesService {
             name: data.name,
             course_code: data.course_code,
             description: data.description,
+            url_trikaweb: data.url_trikaweb,
             url_image: file.filename,
             teacher: { connect: { teacher_id: docenteId } },
           },
@@ -111,6 +120,7 @@ export class CoursesService {
             name: data.name,
             course_code: data.course_code,
             description: data.description,
+            url_trikaweb: data.url_trikaweb === '' ? null : data.url_trikaweb,
             ...(docenteId && {
               teacher: {
                 connect: {
@@ -133,6 +143,8 @@ export class CoursesService {
           console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
         }
       }
+      this.scrapeCache.delete(Number(id));
+
       return resultado;
     } catch (error) {
       if (file) {
@@ -198,6 +210,7 @@ export class CoursesService {
         name: true,
         course_code: true,
         description: true,
+        url_trikaweb: true,
         url_image: true,
         teacher_id: true,
         teacher: {
@@ -385,5 +398,86 @@ export class CoursesService {
         },
       })),
     };
+  }
+
+  private readonly logger = new Logger(CoursesService.name);
+
+  private readonly scrapeCache = new Map<
+    number,
+    {
+      promise: Promise<{ id: string; label: string; link: string }[]>;
+      expiresAt: number;
+    }
+  >();
+
+  async getEvaluationsFromTrikaweb(courseId: number) {
+    const now = Date.now();
+    const cached = this.scrapeCache.get(courseId);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.promise;
+    }
+
+    const promise = this._performScraping(courseId).catch((err) => {
+      this.scrapeCache.delete(courseId);
+      throw err;
+    });
+
+    this.scrapeCache.set(courseId, {
+      promise,
+      expiresAt: now + 5 * 60 * 1000,
+    });
+
+    return promise;
+  }
+
+  private async _performScraping(courseId: number) {
+    const course = await this.prisma.course.findUnique({
+      where: { course_id: courseId },
+      select: { url_trikaweb: true },
+    });
+
+    if (!course || !course.url_trikaweb) {
+      return [];
+    }
+
+    try {
+      if (!course.url_trikaweb.startsWith('https://trikaweb.ccunicode.org/')) {
+        this.logger.warn(
+          `Intento de SSRF detectado o URL inválida: ${course.url_trikaweb}`,
+        );
+        return [];
+      }
+
+      const response = await axios.get<string>(course.url_trikaweb, {
+        timeout: 5000,
+        maxContentLength: 2000000,
+        maxRedirects: 0,
+      });
+      const html: string = response.data;
+      const $ = cheerio.load(html);
+
+      const evaluations: { id: string; label: string; link: string }[] = [];
+
+      $('section[id^="section-"]').each((_, element) => {
+        const id = $(element).attr('id');
+        if (id) {
+          const evalCode = id.replace('section-', '');
+          evaluations.push({
+            id: evalCode,
+            label: evalCode,
+            link: `${course.url_trikaweb}#${id}`,
+          });
+        }
+      });
+
+      return evaluations;
+    } catch (error) {
+      this.logger.error(
+        `Error scraping Trikaweb for course ${courseId}`,
+        error instanceof Error ? error.stack : error,
+      );
+      throw new ServiceUnavailableException('No se pudieron obtener las evaluaciones');
+    }
   }
 }
