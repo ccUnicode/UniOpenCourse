@@ -75,7 +75,7 @@ next-env.d.ts
 # =========================
 *.pem
 
-# =========================
-# Notas personales
-# =========================
-mi_diario_local.md
+# Storage / Uploads
+apps/backend/storage/*
+!apps/backend/storage/.gitkeep
+

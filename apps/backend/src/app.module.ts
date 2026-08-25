@@ -1,25 +1,47 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AdminModule } from './admin/admin.module';
 import { CoursesModule } from './courses/courses.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClassesModule } from './classes/classes.module';
-import { MaterialsModule } from './materials/materials.module';
 import { AuthModule } from './auth/auth.module';
+import { MaterialsModule } from './materials/materials.module';
+import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
+
 @Module({
   imports: [
-    PrismaModule,
-    AdminModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    CoursesModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 600_000,
+        limit: 5,
+      },
+    ]),
+    ServeStaticModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          rootPath: configService.get<string>(
+            'STORAGE_PATH',
+            join(process.cwd(), 'storage'),
+          ),
+          serveRoot: '/storage',
+        },
+      ],
+    }),
     PrismaModule,
+    CoursesModule,
     ClassesModule,
     MaterialsModule,
     AuthModule,
+    GlobalSearcherModule,
   ],
   controllers: [AppController],
   providers: [AppService],

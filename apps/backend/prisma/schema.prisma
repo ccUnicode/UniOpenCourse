@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client-js"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -9,81 +9,97 @@ datasource db {
 }
 
 model Role {
-  role_id     Int       @id @default(autoincrement())
-  role_name String    @unique @db.VarChar(50)
-  users   User[]
+  role_id   Int    @id @default(autoincrement())
+  role_name String @unique @db.VarChar(50)
+  users     User[]
 }
 
 model User {
-  user_id       Int                   @id @default(autoincrement())
-  email          String                @unique @db.VarChar(75)
-  name          String                @db.VarChar(50)
-  last_name        String                @db.VarChar(50)
-  username   String                @unique @db.VarChar(70)
-  password       String                @db.VarChar(255)
-  role_id           Int
-  register_date   DateTime              @default(now())
-  role              Role                  @relation(fields: [role_id], references: [role_id])
-  visited_courses LastCourseVisit[]
+  user_id             Int                      @id @default(autoincrement())
+  email               String                   @unique @db.VarChar(75)
+  name                String                   @db.VarChar(50)
+  last_name           String                   @db.VarChar(50)
+  username            String                   @unique @db.VarChar(70)
+  password            String                   @db.VarChar(255)
+  role_id             Int
+  register_date       DateTime                 @default(now())
+  email_verified      Boolean                  @default(false)
+  email_verified_at   DateTime?
+  visited_courses     LastCourseVisit[]
+  verification_tokens EmailVerificationToken[]
+  role                Role                     @relation(fields: [role_id], references: [role_id])
+}
+
+// SHA-256 hex digest of the emailed token. Deterministic hashing (not bcrypt) so
+// the token can be looked up in a single indexed query on verification.
+model EmailVerificationToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique
+  token_hash String   @unique @db.VarChar(64)
+  expires_at DateTime
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model Teacher {
-  teacher_id  Int     @id @default(autoincrement())
-  name     String  @db.VarChar(50)
-  last_name   String  @db.VarChar(50)
-  courses      Course[]
+  teacher_id Int      @id @default(autoincrement())
+  name       String   @db.VarChar(50)
+  last_name  String   @db.VarChar(50)
+  courses    Course[]
 }
 
 model Course {
-  course_id             Int                   @id @default(autoincrement())
-  name               String                @db.VarChar(100)
-  course_code         String                @unique @db.VarChar(10)
-  url_image         String                @db.VarChar(255)
+  course_id            Int               @id @default(autoincrement())
+  name                 String            @db.VarChar(100)
+  course_code          String            @unique @db.VarChar(10)
+  url_image            String            @db.VarChar(255)
   description          String
-  teacher_id          Int
-  course_creation_date DateTime              @default(now())
-  update_date  DateTime              @updatedAt
-  teacher              Teacher               @relation(fields: [teacher_id], references: [teacher_id])
-  classes               Class[]
-  visiting_users  LastCourseVisit[]
+  teacher_id           Int
+  course_creation_date DateTime          @default(now())
+  update_date          DateTime          @updatedAt
+  url_trikaweb         String?           @db.VarChar(255)
+  classes              Class[]
+  teacher              Teacher           @relation(fields: [teacher_id], references: [teacher_id])
+  visiting_users       LastCourseVisit[]
 }
 
 model LastCourseVisit {
-  user_course_id    Int      @id @default(autoincrement())
-  user_id          Int
-  course_id            Int
-  start_date        DateTime @default(now())
+  user_course_id  Int      @id @default(autoincrement())
+  user_id         Int
+  course_id       Int
+  start_date      DateTime @default(now())
   last_visit_date DateTime @updatedAt
-  user             User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  course               Course    @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  course          Course   @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  user            User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
   @@unique([user_id, course_id])
 }
 
 model Class {
-  class_id             Int        @id @default(autoincrement())
-  course_id             Int
+  class_id            Int        @id @default(autoincrement())
+  course_id           Int
   title               String     @db.VarChar(150)
-  description          String
-  url_youtube          String     @db.VarChar(150)
+  description         String
+  url_youtube         String?    @db.VarChar(150)
   class_creation_date DateTime   @default(now())
-  course                Course      @relation(fields: [course_id], references: [course_id])
-  materials          Material[]
+  course              Course     @relation(fields: [course_id], references: [course_id])
+  materials           Material[]
+}
+
+model Material {
+  class_id               Int
+  filename               String        @db.VarChar(150)
+  material_creation_date DateTime      @default(now())
+  material_type          MaterialTypes
+  url_link               String?
+  written_reference      String?
+  material_id            Int           @id @default(autoincrement())
+  file_path              String?       @db.VarChar(255)
+  class                  Class         @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }
 
 enum MaterialTypes {
   file
   link
   reference
-}
-
-model Material {
-  material_id        Int      @id @default(autoincrement())
-  class_id           Int
-  material_type      MaterialTypes
-  filename     String   @db.VarChar(150)
-  url_link         String?
-  written_reference String?
-  material_creation_date       DateTime @default(now())
-  class              Class    @relation(fields: [class_id], references: [class_id], onDelete: Cascade)
 }

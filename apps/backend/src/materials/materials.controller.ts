@@ -1,34 +1,39 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { MaterialService } from './materials.service';
-import { CreateMaterialDto } from './dto/create-material.dto';
-import { UpdateMaterialDto } from './dto/update-material.dto';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { MaterialsService } from './materials.service';
+import * as path from 'path';
 
-@Controller('material')
-export class MaterialController {
-  constructor(private readonly materialService: MaterialService) {}
+@Controller('materials')
+export class MaterialsController {
+  constructor(private readonly materialsService: MaterialsService) {}
 
-  @Post()
-  create(@Body() createMaterialDto: CreateMaterialDto) {
-    return this.materialService.create(createMaterialDto);
-  }
+  @Get(':id/download')
+  async download(
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { stream, filename } = await this.materialsService.getDownloadableFile(id);
+    const extension = path.extname(filename).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+    };
 
-  @Get()
-  findAll() {
-    return this.materialService.findAll();
-  }
+    // Obliga al navegador a descargar el archivo con el nombre original
+    res.set({
+      'Content-Type': mimeTypes[extension] || 'application/octet-stream',
+    });
+    res.attachment(filename);
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.materialService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMaterialDto: UpdateMaterialDto) {
-    return this.materialService.update(+id, updateMaterialDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.materialService.remove(+id);
+    return new StreamableFile(stream);
   }
 }

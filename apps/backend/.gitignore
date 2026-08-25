@@ -7,6 +7,7 @@
 # Logs
 logs
 *.log
+*.txt
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
@@ -57,3 +58,8 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Storage / Uploads
+/storage/*
+!/storage/.gitkeep
+
