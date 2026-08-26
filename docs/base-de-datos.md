@@ -8,7 +8,7 @@ Documentación técnica del **modelo de datos** usado por el backend, a partir d
 
 La base de datos soporta los flujos centrales de la plataforma:
 
-- **Autenticación y autorización**: usuarios, roles y verificación de correo electrónico.
+- **Autenticación y autorización**: usuarios y roles.
 - **Catálogo académico**: docentes, cursos y clases.
 - **Seguimiento**: última visita de un usuario a un curso.
 - **Recursos**: materiales asociados a clases.
@@ -48,16 +48,6 @@ erDiagram
         String password
         Int role_id FK
         DateTime register_date
-        Boolean email_verified
-        DateTime email_verified_at
-    }
-
-    EMAIL_VERIFICATION_TOKEN {
-        Int id PK
-        Int user_id UK
-        String token_hash UK
-        DateTime expires_at
-        DateTime created_at
     }
 
     TEACHER {
@@ -107,7 +97,6 @@ erDiagram
     }
 
     ROLE ||--o{ USER : assigns
-    USER ||--o| EMAIL_VERIFICATION_TOKEN : has
     TEACHER ||--o{ COURSE : teaches
     COURSE ||--o{ CLASE : contains
     CLASE ||--o{ MATERIAL : has
@@ -117,22 +106,20 @@ erDiagram
 
 ### Entidades principales
 
-| Entidad                    | Descripción breve                                               |
-| -------------------------- | --------------------------------------------------------------- |
-| `Role`                     | Define roles para control de acceso (asignación a usuarios).    |
-| `User`                     | Usuarios registrados; credenciales, rol y estado de verificación de correo. |
-| `EmailVerificationToken`   | Token de verificación de correo (hash SHA-256); relación 1:1 con `User`. |
-| `Teacher`                  | Docentes responsables de cursos.                                |
-| `Course`                   | Cursos publicados; enlaza docente y agrupa clases.              |
-| `Class`                    | Clases/unidades dentro de un curso (contenido + video).         |
-| `Material`                 | Recursos asociados a una clase (archivo/enlace/referencia).     |
-| `LastCourseVisit`          | Relación usuario–curso con marcas de tiempo de visita.          |
-| `MaterialTypes`            | Enum de tipos de material (`file`, `link`, `reference`).        |
+| Entidad           | Descripción breve                                               |
+| ----------------- | --------------------------------------------------------------- |
+| `Role`            | Define roles para control de acceso (asignación a usuarios).    |
+| `User`            | Usuarios registrados; contiene credenciales y referencia a rol. |
+| `Teacher`         | Docentes responsables de cursos.                                |
+| `Course`          | Cursos publicados; enlaza docente y agrupa clases.              |
+| `Class`           | Clases/unidades dentro de un curso (contenido + video).         |
+| `Material`        | Recursos asociados a una clase (archivo/enlace/referencia).     |
+| `LastCourseVisit` | Relación usuario–curso con marcas de tiempo de visita.          |
+| `MaterialTypes`   | Enum de tipos de material (`file`, `link`, `reference`).        |
 
 ### Relaciones
 
 - `Role` **1:N** `User` (un rol puede asignarse a muchos usuarios).
-- `User` **1:0..1** `EmailVerificationToken` (como máximo un token activo por usuario; constraint único en `user_id`).
 - `Teacher` **1:N** `Course` (un docente tiene muchos cursos).
 - `Course` **1:N** `Class` (un curso tiene muchas clases).
 - `Class` **1:N** `Material` (una clase tiene muchos materiales).
@@ -181,58 +168,18 @@ Almacena la identidad y credenciales de acceso de las personas. Es el punto de e
 | `last_name` | String | Apellidos del usuario. |
 | `username` | String | (UK) Alias único, usado como alternativa de identificación. |
 | `password` | String | Hash encriptado de la contraseña (nunca texto plano). |
-| `role_id`           | Int       | (FK) Identificador del rol asignado. |
-| `register_date`     | DateTime  | Fecha y hora de creación de la cuenta. |
-| `email_verified`    | Boolean   | Indica si el correo fue confirmado (`default: false`). |
-| `email_verified_at` | DateTime? | Fecha de verificación; `null` si aún no verificó. |
+| `role_id` | Int | (FK) Identificador del rol asignado. |
+| `register_date` | DateTime | Fecha y hora de creación de la cuenta. |
 
 ### Relaciones
 
 - Un usuario posee obligatoriamente un rol (`N:1`).
-- Un usuario puede tener como máximo un token de verificación activo (`1:0..1` con `EmailVerificationToken`).
 - Un usuario puede registrar visitas e historial en múltiples cursos.
 
 ### Reglas
 
 - Los campos `email` y `username` son estrictamente únicos.
-- El login de usuarios con rol `USER` exige `email_verified = true` (validado en `AuthService`, no con constraint en BD).
-- Al eliminar un usuario, sus tokens de verificación y todo su historial en `LastCourseVisit` se eliminan en cascada.
-
----
-
-## EmailVerificationToken
-
-### Propósito
-
-Persiste el enlace de verificación de correo enviado al registrarse o al solicitar reenvío. El token en texto plano viaja por correo; en base de datos solo se guarda su hash SHA-256 (64 caracteres hex), lo que permite búsqueda indexada sin almacenar el secreto en claro.
-
-### Campos principales
-
-| Campo        | Tipo     | Descripción |
-| ------------ | -------- | ----------- |
-| `id`         | Int      | (PK) Identificador interno del registro. |
-| `user_id`    | Int      | (FK, UK) Usuario dueño del token; relación 1:1. |
-| `token_hash` | String   | (UK) Hash SHA-256 del token enviado por correo (`VarChar(64)`). |
-| `expires_at` | DateTime | Fecha límite de validez del enlace. |
-| `created_at` | DateTime | Fecha de emisión; usada para el cooldown de reenvío en la aplicación. |
-
-### Relaciones
-
-- Pertenece a un único usuario (`N:1`); al borrar el usuario, el token se elimina en cascada (`onDelete: Cascade`).
-
-### Reglas
-
-- **`user_id` único**: solo puede existir un token por usuario; los reenvíos hacen upsert sobre la misma fila.
-- **`token_hash` único**: evita colisiones entre tokens distintos.
-- Tras verificar el correo con éxito, la aplicación elimina todos los tokens del usuario.
-- La expiración se valida en aplicación (`expires_at < now()`); no hay job automático en BD que limpie tokens vencidos.
-- Al rotar token en reenvío, `created_at` se actualiza para calcular el cooldown (`EMAIL_RESEND_COOLDOWN_MINUTES`).
-
-### Uso en la aplicación
-
-- **Registro**: se crea usuario y token en la misma transacción Prisma.
-- **Verificación**: búsqueda por `token_hash`; si es válido y no expiró, se marca `User.email_verified` y se borran los tokens.
-- **Reenvío**: transacción con `SELECT ... FOR UPDATE` sobre el usuario antes de rotar el hash y la fecha de expiración.
+- Al eliminar un usuario, todo su historial de visitas en `LastCourseVisit` se debe eliminar en cascada.
 
 ---
 
@@ -382,18 +329,5 @@ Representa los recursos adicionales de apoyo vinculados a una clase. Soporta tre
 ## Migraciones y seed data
 
 - **Migraciones**: existen en `apps/backend/prisma/migrations/` y representan la evolución del esquema.
-
-### Migraciones relevantes — verificación de correo
-
-| Migración | Cambios |
-| --------- | ------- |
-| `20260815050418_add_email_verification` | Añade `email_verified` y `email_verified_at` a `User`. Crea tabla `EmailVerificationToken` con índice único en `token_hash` e índice en `user_id`. **Backfill**: usuarios existentes quedan con `email_verified = true` y `email_verified_at = NOW()` para no bloquear cuentas creadas antes del feature. |
-| `20260819200000_unique_verification_token_per_user` | Elimina tokens duplicados por usuario (conserva el más reciente). Reemplaza índice no único en `user_id` por constraint **único** (`user_id` UK), garantizando un solo token activo por usuario. |
-
 - **Seed data**: en el repositorio actual **no** se encontró un archivo de seed (`prisma/seed.*` o `seed.ts`).
   - Si se requiere precargar roles (p.ej. `ADMIN`/`USER`), debe implementarse explícitamente un proceso de seed o una estrategia de bootstrap en la aplicación.
-
-### Enlaces relacionados
-
-- Lógica de negocio Auth: [`backend.md`](./backend.md) (módulos Auth y Mail).
-- Contratos HTTP: [`endpoints.md`](./endpoints.md) (sección Auth).
