@@ -22,6 +22,8 @@ Swagger (OpenAPI) permite **explorar y probar** los endpoints del backend NestJS
 **Swagger aún no está configurado** en `apps/backend/src/main.ts`.  
 La API funciona con normalidad; la documentación escrita vive en [`endpoints.md`](./endpoints.md).
 
+La decisión de no integrarlo en esta fase está registrada en [ADR-008](./adr/ADR-008-no-implementar-swagger-openapi.md).
+
 Cuando se integre, la configuración típica en NestJS será:
 
 1. Instalar `@nestjs/swagger`.
