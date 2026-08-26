@@ -2,8 +2,6 @@
 
 Guía rápida para que el equipo pueda enviar correos de verificación al registrarse en UniOpenCourse.
 
-Para entender qué es Brevo, cómo se integra en el backend y qué más permite la plataforma, ver [`brevo.md`](./brevo.md).
-
 **Plan usado:** Brevo Free (~300 emails/día) — suficiente para desarrollo y uso inicial en la facultad.
 
 ---

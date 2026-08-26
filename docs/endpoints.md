@@ -635,296 +635,130 @@ Material eliminado.
 
 ## Auth Endpoints
 
----
-
 ## POST /auth/register
-
 ### Descripción
-
-Registra un nuevo usuario con rol `USER`. Normaliza `email` y `username` a minúsculas. Crea la cuenta con `email_verified = false`, genera un token de verificación y envía un correo con enlace de activación. **No devuelve JWT**; el acceso queda habilitado tras verificar el correo.
-
-Si el correo o username pertenecen a una cuenta no verificada cuyo token ya expiró, la cuenta previa se elimina y se permite un nuevo registro.
-
-Configuración del envío de correo: [`BREVO-TUTORIAL.md`](./BREVO-TUTORIAL.md). Qué hace Brevo en el proyecto: [`brevo.md`](./brevo.md).
-
+Endpoint enfocado en dar de alta a un estudiante o visitante nuevo dentro del ecosistema. Inyecta por defecto a nivel base de datos el rol `USER`.
 ### Autenticación
-
 No requiere autenticación.
-
 ### Roles permitidos
-
 Público.
-
 ### Parámetros de cuerpo (Body)
-
-| Parámetro  | Tipo   | Requerido | Descripción                                              |
-| ---------- | ------ | --------- | -------------------------------------------------------- |
-| email      | string | Sí        | Correo electrónico (único, máx. 75 caracteres).          |
-| name       | string | Sí        | Nombre (máx. 50 caracteres).                             |
-| last_name  | string | Sí        | Apellido (máx. 50 caracteres).                           |
-| username   | string | Sí        | Nombre de usuario (único, máx. 70 caracteres).           |
-| password   | string | Sí        | Contraseña (máx. 255 caracteres; se almacena hasheada).  |
-
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Correo electrónico (Deberá ser globalmente único dentro del servicio). |
+| name | string | Sí | Nombres reales del portador. |
+| last_name | string | Sí | Apellidos o familia. |
+| username | string | Sí | Identificador público (Nick). No puede hallarse duplicado. |
+| password | string | Sí | Clave segura para acceso (Será truncada y firmada remotamente). |
 ### Respuesta 201
-
+Retorna el token de acceso.
 ```json
 {
-  "message": "Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.",
-  "email": "usuario@ejemplo.com"
+  "access_token": "..."
 }
 ```
-
 ### Errores
-
-| Código | Caso                                                                                         |
-| ------ | -------------------------------------------------------------------------------------------- |
-| 400    | Body inválido (validación de DTO).                                                           |
-| 409    | Correo o username ya registrados (cuenta verificada o pendiente con token vigente).          |
-
-## POST /auth/verify-email
-
-### Descripción
-
-Valida el token recibido en el enlace de verificación del correo. Marca al usuario como verificado (`email_verified = true`) y elimina sus tokens de verificación.
-
-### Roles permitidos
-
-Público.
-
-### Parámetros de cuerpo (Body)
-
-| Parámetro | Tipo   | Requerido | Descripción                                      |
-| --------- | ------ | --------- | ------------------------------------------------ |
-| token     | string | Sí        | Token enviado por correo (máx. 255 caracteres).  |
-
-### Respuesta 200
-
-Cuenta verificada correctamente:
-
-```json
-{
-  "message": "Correo verificado correctamente. Ya puedes iniciar sesión."
-}
-```
-
-Si el correo ya estaba verificado:
-
-```json
-{
-  "message": "Tu correo ya estaba verificado. Puedes iniciar sesión."
-}
-```
-
-### Errores
-
-| Código | Caso                                              |
-| ------ | ------------------------------------------------- |
-| 400    | Token inválido, inexistente o expirado.           |
-
-### Requerimientos relacionados
-
-- RF-06
-- RF-07
-
----
-
-## POST /auth/resend-verification
-
-### Descripción
-
-Reenvía el correo de verificación a cuentas con `email_verified = false`. Responde siempre con un mensaje genérico, independientemente de si el correo existe o ya está verificado.
-
-Limitaciones de uso:
-
-- Cooldown por correo: intervalo mínimo entre envíos (variable `EMAIL_RESEND_COOLDOWN_MINUTES`, por defecto 3 minutos).
-- Rate limit por IP: máximo 5 solicitudes cada 10 minutos (`ThrottlerGuard`).
-
-### Autenticación
-
-No requiere autenticación.
-
-### Roles permitidos
-
-Público.
-
-### Parámetros de cuerpo (Body)
-
-| Parámetro | Tipo   | Requerido | Descripción                         |
-| --------- | ------ | --------- | ----------------------------------- |
-| email     | string | Sí        | Correo electrónico (máx. 75 caracteres). |
-
-### Respuesta 200
-
-```json
-{
-  "message": "Si el correo existe y aún no está verificado, recibirás un enlace de verificación."
-}
-```
-
-### Errores
-
-| Código | Caso                                      |
-| ------ | ----------------------------------------- |
-| 400    | Body inválido (validación de DTO).        |
-| 429    | Demasiadas solicitudes desde la misma IP. |
-
+| Código | Caso |
+|---|---|
+| 400 | Bad Request (Faltan llaves obligatorias o mal formato) |
+| 409 | Conflict (Correo o nombre de usuario ya existen) |
 
 ---
 
 ## POST /auth/login
-
 ### Descripción
-
-Autentica usuarios con rol `USER`. Acepta correo o username en el campo `email` (búsqueda insensible a mayúsculas). Requiere que la cuenta tenga el correo verificado.
-
+Autoriza de forma remota un canal directo para las cuentas ya existentes que operan bajo permiso `USER`.
+### Autenticación
+No requiere autenticación.
 ### Roles permitidos
-
 Público.
-
 ### Parámetros de cuerpo (Body)
-
-| Parámetro | Tipo   | Requerido | Descripción                                              |
-| --------- | ------ | --------- | -------------------------------------------------------- |
-| email     | string | Sí        | Correo electrónico o nombre de usuario (máx. 75 caracteres). |
-| password  | string | Sí        | Contraseña.                                              |
-
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Criterio de búsqueda (Correo original con el que completaron la fase `Registro`). |
+| password | string | Sí | Credencial de acceso. |
 ### Respuesta 200
-
+Retorna el token de acceso.
 ```json
 {
-  "access_token": "...",
-  "user": {
-    "user_id": 1,
-    "email": "usuario@ejemplo.com",
-    "username": "usuario",
-    "name": "Nombre",
-    "last_name": "Apellido",
-    "role": "USER"
-  }
+  "access_token": "..."
 }
 ```
-
 ### Errores
-
-| Código | Caso                                                                 |
-| ------ | -------------------------------------------------------------------- |
-| 401    | Credenciales inválidas.                                              |
-| 403    | Correo no verificado (`code`: `EMAIL_NOT_VERIFIED`, incluye `email`). |
-
+| Código | Caso |
+|---|---|
+| 401 | Unauthorized (Email no consta en las tablas o la clave es incorrecta) |
 
 ---
 
 ## POST /auth/admin/login
-
 ### Descripción
-
-Autentica usuarios con rol `ADMIN`. Acepta correo o username en el campo `email`. **No exige** verificación de correo electrónico.
-
+Vía exclusiva destinada únicamente para proveer acceso hacia cuentas integradas que portan nativamente el nivel de permiso `ADMIN`.
 ### Autenticación
-
 No requiere autenticación.
-
 ### Roles permitidos
-
 Público.
-
 ### Parámetros de cuerpo (Body)
-
-| Parámetro | Tipo   | Requerido | Descripción                                              |
-| --------- | ------ | --------- | -------------------------------------------------------- |
-| email     | string | Sí        | Correo electrónico o nombre de usuario (máx. 75 caracteres). |
-| password  | string | Sí        | Contraseña.                                              |
-
+| Parámetro | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| email | string | Sí | Correo corporativo del moderador. |
+| password | string | Sí | Credencial robusta. |
 ### Respuesta 200
-
+Retorna el token de acceso.
 ```json
 {
-  "access_token": "...",
-  "user": {
-    "user_id": 1,
-    "email": "admin@ejemplo.com",
-    "username": "admin",
-    "name": "Nombre",
-    "last_name": "Apellido",
-    "role": "ADMIN"
-  }
+  "access_token": "..."
 }
 ```
-
 ### Errores
-
-| Código | Caso                                                         |
-| ------ | ------------------------------------------------------------ |
-| 401    | Credenciales inválidas o el usuario no tiene rol `ADMIN`.    |
-
+| Código | Caso |
+|---|---|
+| 401 | Unauthorized (Credenciales incorrectas o el rol del usuario no es ADMIN) |
 
 ---
 
 ## POST /auth/logout
-
 ### Descripción
-
-Indica el cierre de sesión en backend. Con JWT stateless, la invalidación efectiva del token corresponde al cliente (eliminar cookie o almacenamiento local).
-
+Limpia la presencia actual en estado backend indicando el fin de la sesión.
 ### Autenticación
-
 No requiere autenticación.
-
 ### Roles permitidos
-
 Público.
-
 ### Parámetros
-
 No aplica.
-
 ### Respuesta 200
-
 ```json
 {
   "message": "Logout exitoso"
 }
 ```
-
 ### Errores
-
 | Código | Caso |
-| ------ | ---- |
-| N/A    | Ninguno especificado. |
-
+|---|---|
+| N/A | Ninguno especificado |
 
 ---
 
-## Composición del token (JWT)
+## Composición Interna y Naturaleza del Token (JWT)
 
-Tras un login exitoso (`POST /auth/login` o `POST /auth/admin/login`), la API devuelve un JWT firmado. El payload incluye:
+Tras certificar un origen humano positivo (sea por creación o reapertura), la API remite a ese cliente un comprobante criptográfico JWT empaquetado bajo tres segmentos. Si se asomara al payload descifrado, obtendría este molde vital:
 
 ```json
 {
-  "sub": 142,
-  "email": "user@ejemplo.com",
-  "role": "USER",
-  "iat": 1712000000,
-  "exp": 1712086400
+  "sub": 142, // ID Fiel e inmodificable del usuario (Primary Key)
+  "email": "user@ejemplo.com", // Criterio extra perenne de validación
+  "role": "USER", // Constante que fija y enmarca toda su capacidad de uso y veto. (USER o ADMIN)
+  "iat": 1712000000, // Variable Unix (Creación actual)
+  "exp": 1712086400 // Variable Unix (Fecha prevista para inadmisión total - caducidad)
 }
 ```
 
-| Campo   | Descripción                                      |
-| ------- | ------------------------------------------------ |
-| `sub`   | ID del usuario (`user_id`).                      |
-| `email` | Correo electrónico del usuario.                  |
-| `role`  | Rol asignado (`USER` o `ADMIN`).                 |
-| `iat`   | Timestamp de emisión.                            |
-| `exp`   | Timestamp de expiración.                         |
+> **Implementación Inteligente:** Este bloque informativo miniatura `payload` es decodificado y pegado directamente junto a los objetos locales de Petición por parte del Backend, lo que ahorra la necesidad constante de consultar y saturar la base central al examinar "¿Quién pide esto?", ya poseyendo certeza confiable dentro de su rol de Guard en memoria de caché de Node.
 
-> **Nota:** El registro (`POST /auth/register`) no emite JWT. El token se obtiene únicamente tras verificar el correo e iniciar sesión.
+## Protocolo de Incorporación para Servicios Restringidos
 
-## Uso del token en rutas protegidas
-
-Para endpoints que requieren autenticación, incluir el header:
+Para cualquier petición subsiguiente fuera de esta franja de `/auth`, las Apps terceras, Clientes móviles e Interfases Web, deben someter de manera obligatoria el pase devuelto bajo las Cabeceras nativas (`Headers` HTTP) en modalidad Portador Libre ("Bearer"):
 
 ```http
-Authorization: Bearer <access_token>
+Authorization: Bearer <CADENA_ALFANUMERICA_BASE64_FIRMADA_AQUI_CON_PUNTOS_INTERNOS>
 ```
-
-Los guards `JwtAuthGuard` y, cuando aplique, `RolesGuard` validan el token y el rol antes de ejecutar el handler.
