@@ -54,7 +54,7 @@ UniOpenCourse/
 
 ## Instalación
 
-#### Instalación de dependencias
+### Instalación de dependencias
 
 Desde la raíz del proyecto:
 
@@ -67,7 +67,7 @@ Esto instalará las dependencias de:
 - frontend
 - backend
 
-#### Configuración de variables de entorno
+### Configuración de variables de entorno
 
 #### Backend
 
@@ -110,29 +110,15 @@ Copiar el archivo de ejemplo:
 cp apps/frontend/.env.example apps/frontend/.env
 ```
 
-Editar `.env` con tus credenciales.
+Editar `.env` con tus credenciales de conexión para con el API y el entorno de node.
 
 Ejemplo:
 
 ```env
-JWT_SECRET = "clave_super_secreta_para_jwt"
-FRONTEND_URL="http://localhost:3000"
-
-DATABASE_URL="postgresql://uniopencourse_user:tu_contraseña@localhost:5432/uniopencourse"
-
-SEED_ADMIN_EMAIL="admin@test.com"
-SEED_ADMIN_PASSWORD="tu_contraseña_segura"
-SEED_ADMIN_USERNAME="admin"
-
-STORAGE_PATH="./storage"
-
-# Email (Brevo) - required for the registration verification link
-BREVO_API_KEY="xkeysib-tu-api-key"
-MAIL_FROM="UniOpenCourse <tu-remitente-verificado@ejemplo.com>"
-EMAIL_VERIFICATION_EXPIRES_HOURS="48"
-EMAIL_RESEND_COOLDOWN_MINUTES="3"
-BREVO_REQUEST_TIMEOUT_MS="15000"
-
+NEXT_PUBLIC_API_URL="http://localhost:3001"
+NODE_ENV="development"
+JWT_SECRET="your-jwt-secret-must-match-backend"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 ### Configuración de base de datos (Prisma)
@@ -156,6 +142,14 @@ npx prisma migrate dev
 ```
 
 Esto creará todas las tablas en la base de datos configurada.
+
+Ejecutar el seed de prisma:
+
+```bash
+npx prisma db seed
+```
+
+Esto creará al usuario administrador y los roles del sistema.
 
 ---
 
@@ -191,7 +185,7 @@ npx prisma migrate dev
 (Opcional) Generar el cliente manualmente si no se generó o si hiciste cambios sin migraciones:
 
 ```bash
-npx prisma migrate dev
+npx prisma generate
 ```
 
 ## Documentación
