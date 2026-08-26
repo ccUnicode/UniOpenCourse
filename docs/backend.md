@@ -43,12 +43,15 @@ Gestionar cursos, búsqueda, detalle, visitas y operaciones administrativas.
 - RF-12
 - RF-16
 - RF-17
+- RF-12.8
+- RF-12.9
 
 ### Archivos principales
 
 - courses.controller.ts
 - courses.service.ts
 - create-course.dto.ts
+- update-course.dto.ts
 
 ### Reglas de negocio
 
@@ -57,6 +60,9 @@ Gestionar cursos, búsqueda, detalle, visitas y operaciones administrativas.
 - `POST /courses/:id/visit` hace upsert en `LastCourseVisit`: si ya existe visita para el par usuario-curso, actualiza `last_visit_date`; si no, crea el registro con `start_date` y `last_visit_date`.
 - `GET /courses/dashboard` y `POST /courses/:id/visit` extraen el `userId` exclusivamente del JWT (`sub`). No se acepta `userId` desde la URL ni el body (mitigación IDOR).
 - En el controlador, las rutas literales `carrusel` y `dashboard` se declaran antes de `GET /courses/:id` para evitar conflictos de enrutamiento en NestJS.
+- El endpoint de evaluaciones (`GET /courses/:id/evaluations`) emplea web scraping (Axios + Cheerio) para extraer datos externos, implementando protección SSRF al validar estrictamente el prefijo de la URL y bloqueando redirecciones (`maxRedirects: 0`).
+- El scraping implementa un "Caché de Promesas" en memoria (5 minutos) para deduplicar peticiones simultáneas y mitigar ataques Proxy DDoS; este caché se invalida inmediatamente al modificar un curso.
+- En los DTOs, enviar un string vacío `""` para `url_trikaweb` es interceptado y transformado a `null` (`@Transform`) antes de validar, permitiendo la eliminación segura del enlace en BD.
 
 ### Dependencias
 
@@ -71,6 +77,7 @@ Gestionar cursos, búsqueda, detalle, visitas y operaciones administrativas.
 - `GET /courses/:id`
 - `GET /courses/:id/visits`
 - `POST /courses/:id/visit`
+- `GET /courses/:id/evaluations`
 
 ---
 
