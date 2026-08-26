@@ -22,10 +22,10 @@ Público.
 
 ### Parámetros de consulta (Query)
 
-| Parámetro | Tipo   | Requerido | Descripción                                              |
-| --------- | ------ | --------- | -------------------------------------------------------- |
-| page      | number | No        | Número de página (por defecto `1`, mínimo `1`).          |
-| limit     | number | No        | Tamaño de página (por defecto `6`, entre `1` y `50`).    |
+| Parámetro | Tipo   | Requerido | Descripción                                                    |
+| --------- | ------ | --------- | -------------------------------------------------------------- |
+| page      | number | No        | Número de página (por defecto `1`, mínimo `1`).                |
+| limit     | number | No        | Tamaño de página (por defecto `6`, entre `1` y `50`).          |
 | q         | string | No        | Filtro por nombre o `course_code` (sin distinguir mayúsculas). |
 
 ### Respuesta 200
@@ -35,9 +35,6 @@ Objeto paginado con `data`, `total`, `page`, `limit` y `totalPages`. Orden: `cou
 ### Requerimientos relacionados
 
 - RF-03
-- RF-10
-
----
 
 ## GET /courses/carrusel
 
@@ -59,9 +56,7 @@ Arreglo de hasta 5 cursos ordenados por popularidad (más visitado primero).
 
 ### Requerimientos relacionados
 
-- RF-11
-
----
+- RF-02
 
 ## GET /courses/dashboard
 
@@ -87,15 +82,13 @@ Objeto con `userId`, `totalCourses` y arreglo `courses` (datos del curso más `s
 
 ### Errores
 
-| Código | Caso                    |
-| ------ | ----------------------- |
+| Código | Caso                     |
+| ------ | ------------------------ |
 | 401    | Token ausente o inválido |
 
 ### Requerimientos relacionados
 
-- RF-12
-
----
+- RF-10
 
 ## GET /courses/:id
 
@@ -131,8 +124,6 @@ Ejemplo JSON.
 
 - RF-12
 
----
-
 ## GET /courses/:id/visits
 
 ### Descripción
@@ -166,9 +157,7 @@ Objeto con `curso`, `total` y arreglo `detalle` de visitas ordenadas por `last_v
 
 ### Requerimientos relacionados
 
-- RF-12
-
----
+- RF-10.9
 
 ## POST /courses/:id/visit
 
@@ -200,17 +189,15 @@ Registro de visita creado o actualizado (`LastCourseVisit`).
 
 ### Errores
 
-| Código | Caso                    |
-| ------ | ----------------------- |
+| Código | Caso                     |
+| ------ | ------------------------ |
 | 401    | Token ausente o inválido |
-| 404    | Curso no encontrado     |
-| 400    | ID no numérico          |
+| 404    | Curso no encontrado      |
+| 400    | ID no numérico           |
 
 ### Requerimientos relacionados
 
-- RF-12
-
----
+- RF-10.9
 
 ## GET /courses/:id/evaluations
 
@@ -237,6 +224,7 @@ Público.
 Arreglo de objetos con las evaluaciones extraídas o un arreglo vacío `[]` si el curso no tiene una URL de Trikaweb configurada.
 
 Ejemplo:
+
 ```json
 [
   {
@@ -249,17 +237,14 @@ Ejemplo:
 
 ### Errores
 
-| Código | Caso                                           |
-| ------ | ---------------------------------------------- |
-| 400    | ID no numérico                                 |
+| Código | Caso                                            |
+| ------ | ----------------------------------------------- |
+| 400    | ID no numérico                                  |
 | 503    | Servicio no disponible (Trikaweb caído/timeout) |
 
 ### Requerimientos relacionados
 
 - RF-12.8
-- RF-12.9
-
----
 
 ## GET /courses/:id/classes
 
@@ -295,8 +280,6 @@ Arreglo de objetos tipo Class.
 
 - RF-12.7
 
----
-
 ## GET /classes/:id
 
 ### Descripción
@@ -330,11 +313,7 @@ Objeto JSON con el detalle de la clase.
 
 ### Requerimientos relacionados
 
-- RF-12.10
-- RF-12.11
-- RF-12.12
-
----
+- - RF-12.10
 
 ## GET /classes/:id/materials
 
@@ -362,16 +341,13 @@ Arreglo de materiales.
 
 ### Errores
 
-| Código | Caso                                    |
-| ------ | --------------------------------------- |
-| 400    | ID de clase no numérico                 |
+| Código | Caso                    |
+| ------ | ----------------------- |
+| 400    | ID de clase no numérico |
 
 ### Requerimientos relacionados
 
-- RF-12.11
-- RF-12.12
-
----
+- - RF-12.11
 
 ## POST /admin/classes
 
@@ -402,10 +378,7 @@ JSON de la clase creada.
 
 ### Requerimientos relacionados
 
-- RF-17.2
-- RF-17.2.4
-
----
+- RF-18.1
 
 ## GET /admin/classes
 
@@ -435,8 +408,6 @@ Arreglo paginado de clases.
 ### Requerimientos relacionados
 
 - RF-17.2
-
----
 
 ## PATCH /admin/classes/:id
 
@@ -471,12 +442,7 @@ Clase actualizada.
 
 ### Requerimientos relacionados
 
-- RF-17.2.1
-- RF-17.2.3
-- RF-18
 - RF-18.1
-
----
 
 ## DELETE /admin/classes/:id
 
@@ -507,9 +473,7 @@ Confirmación de eliminación.
 
 ### Requerimientos relacionados
 
-- RF-17.2.1
-
----
+- RF-18.1
 
 ## POST /admin/materials/file
 
@@ -539,11 +503,6 @@ Material creado, incluyendo el `file_path` autogenerado con seguridad.
 ### Requerimientos relacionados
 
 - RF-18.2
-- RF-18.2.1
-- RF-18.2.2
-- RF-18.2.3
-
----
 
 ## POST /admin/materials/link
 
@@ -568,10 +527,7 @@ Material de tipo link creado.
 
 ### Requerimientos relacionados
 
-- RF-18.3
-- RF-18.3.2
-
----
+- RF-18.2
 
 ## POST /admin/materials/reference
 
@@ -596,10 +552,7 @@ Material de tipo referencia creado.
 
 ### Requerimientos relacionados
 
-- RF-18.3
-- RF-18.3.1
-
----
+- RF-18.2
 
 ## DELETE /admin/materials/:id
 
@@ -630,12 +583,7 @@ Material eliminado.
 
 ### Requerimientos relacionados
 
-- RF-18.3
 - RF-18.3.3
-
-## Auth Endpoints
-
----
 
 ## POST /auth/register
 
@@ -657,13 +605,13 @@ Público.
 
 ### Parámetros de cuerpo (Body)
 
-| Parámetro  | Tipo   | Requerido | Descripción                                              |
-| ---------- | ------ | --------- | -------------------------------------------------------- |
-| email      | string | Sí        | Correo electrónico (único, máx. 75 caracteres).          |
-| name       | string | Sí        | Nombre (máx. 50 caracteres).                             |
-| last_name  | string | Sí        | Apellido (máx. 50 caracteres).                           |
-| username   | string | Sí        | Nombre de usuario (único, máx. 70 caracteres).           |
-| password   | string | Sí        | Contraseña (máx. 255 caracteres; se almacena hasheada).  |
+| Parámetro | Tipo   | Requerido | Descripción                                             |
+| --------- | ------ | --------- | ------------------------------------------------------- |
+| email     | string | Sí        | Correo electrónico (único, máx. 75 caracteres).         |
+| name      | string | Sí        | Nombre (máx. 50 caracteres).                            |
+| last_name | string | Sí        | Apellido (máx. 50 caracteres).                          |
+| username  | string | Sí        | Nombre de usuario (único, máx. 70 caracteres).          |
+| password  | string | Sí        | Contraseña (máx. 255 caracteres; se almacena hasheada). |
 
 ### Respuesta 201
 
@@ -676,10 +624,14 @@ Público.
 
 ### Errores
 
-| Código | Caso                                                                                         |
-| ------ | -------------------------------------------------------------------------------------------- |
-| 400    | Body inválido (validación de DTO).                                                           |
-| 409    | Correo o username ya registrados (cuenta verificada o pendiente con token vigente).          |
+| Código | Caso                                                                                |
+| ------ | ----------------------------------------------------------------------------------- |
+| 400    | Body inválido (validación de DTO).                                                  |
+| 409    | Correo o username ya registrados (cuenta verificada o pendiente con token vigente). |
+
+### Requerimientos relacionados
+
+- RF-07
 
 ## POST /auth/verify-email
 
@@ -693,9 +645,9 @@ Público.
 
 ### Parámetros de cuerpo (Body)
 
-| Parámetro | Tipo   | Requerido | Descripción                                      |
-| --------- | ------ | --------- | ------------------------------------------------ |
-| token     | string | Sí        | Token enviado por correo (máx. 255 caracteres).  |
+| Parámetro | Tipo   | Requerido | Descripción                                     |
+| --------- | ------ | --------- | ----------------------------------------------- |
+| token     | string | Sí        | Token enviado por correo (máx. 255 caracteres). |
 
 ### Respuesta 200
 
@@ -717,16 +669,13 @@ Si el correo ya estaba verificado:
 
 ### Errores
 
-| Código | Caso                                              |
-| ------ | ------------------------------------------------- |
-| 400    | Token inválido, inexistente o expirado.           |
+| Código | Caso                                    |
+| ------ | --------------------------------------- |
+| 400    | Token inválido, inexistente o expirado. |
 
 ### Requerimientos relacionados
 
-- RF-06
-- RF-07
-
----
+- No hay requerimiento relacionado
 
 ## POST /auth/resend-verification
 
@@ -749,8 +698,8 @@ Público.
 
 ### Parámetros de cuerpo (Body)
 
-| Parámetro | Tipo   | Requerido | Descripción                         |
-| --------- | ------ | --------- | ----------------------------------- |
+| Parámetro | Tipo   | Requerido | Descripción                              |
+| --------- | ------ | --------- | ---------------------------------------- |
 | email     | string | Sí        | Correo electrónico (máx. 75 caracteres). |
 
 ### Respuesta 200
@@ -768,8 +717,11 @@ Público.
 | 400    | Body inválido (validación de DTO).        |
 | 429    | Demasiadas solicitudes desde la misma IP. |
 
-
 ---
+
+### Requerimientos relacionados
+
+- No hay requerimiento relacionado
 
 ## POST /auth/login
 
@@ -783,10 +735,10 @@ Público.
 
 ### Parámetros de cuerpo (Body)
 
-| Parámetro | Tipo   | Requerido | Descripción                                              |
-| --------- | ------ | --------- | -------------------------------------------------------- |
+| Parámetro | Tipo   | Requerido | Descripción                                                  |
+| --------- | ------ | --------- | ------------------------------------------------------------ |
 | email     | string | Sí        | Correo electrónico o nombre de usuario (máx. 75 caracteres). |
-| password  | string | Sí        | Contraseña.                                              |
+| password  | string | Sí        | Contraseña.                                                  |
 
 ### Respuesta 200
 
@@ -806,13 +758,16 @@ Público.
 
 ### Errores
 
-| Código | Caso                                                                 |
-| ------ | -------------------------------------------------------------------- |
-| 401    | Credenciales inválidas.                                              |
+| Código | Caso                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| 401    | Credenciales inválidas.                                               |
 | 403    | Correo no verificado (`code`: `EMAIL_NOT_VERIFIED`, incluye `email`). |
 
-
 ---
+
+### Requerimientos relacionados
+
+- RF-06
 
 ## POST /auth/admin/login
 
@@ -830,10 +785,10 @@ Público.
 
 ### Parámetros de cuerpo (Body)
 
-| Parámetro | Tipo   | Requerido | Descripción                                              |
-| --------- | ------ | --------- | -------------------------------------------------------- |
+| Parámetro | Tipo   | Requerido | Descripción                                                  |
+| --------- | ------ | --------- | ------------------------------------------------------------ |
 | email     | string | Sí        | Correo electrónico o nombre de usuario (máx. 75 caracteres). |
-| password  | string | Sí        | Contraseña.                                              |
+| password  | string | Sí        | Contraseña.                                                  |
 
 ### Respuesta 200
 
@@ -853,12 +808,15 @@ Público.
 
 ### Errores
 
-| Código | Caso                                                         |
-| ------ | ------------------------------------------------------------ |
-| 401    | Credenciales inválidas o el usuario no tiene rol `ADMIN`.    |
-
+| Código | Caso                                                      |
+| ------ | --------------------------------------------------------- |
+| 401    | Credenciales inválidas o el usuario no tiene rol `ADMIN`. |
 
 ---
+
+### Requerimientos relacionados
+
+- RF-06
 
 ## POST /auth/logout
 
@@ -888,10 +846,9 @@ No aplica.
 
 ### Errores
 
-| Código | Caso |
-| ------ | ---- |
+| Código | Caso                  |
+| ------ | --------------------- |
 | N/A    | Ninguno especificado. |
-
 
 ---
 
@@ -909,13 +866,13 @@ Tras un login exitoso (`POST /auth/login` o `POST /auth/admin/login`), la API de
 }
 ```
 
-| Campo   | Descripción                                      |
-| ------- | ------------------------------------------------ |
-| `sub`   | ID del usuario (`user_id`).                      |
-| `email` | Correo electrónico del usuario.                  |
-| `role`  | Rol asignado (`USER` o `ADMIN`).                 |
-| `iat`   | Timestamp de emisión.                            |
-| `exp`   | Timestamp de expiración.                         |
+| Campo   | Descripción                      |
+| ------- | -------------------------------- |
+| `sub`   | ID del usuario (`user_id`).      |
+| `email` | Correo electrónico del usuario.  |
+| `role`  | Rol asignado (`USER` o `ADMIN`). |
+| `iat`   | Timestamp de emisión.            |
+| `exp`   | Timestamp de expiración.         |
 
 > **Nota:** El registro (`POST /auth/register`) no emite JWT. El token se obtiene únicamente tras verificar el correo e iniciar sesión.
 
@@ -928,3 +885,446 @@ Authorization: Bearer <access_token>
 ```
 
 Los guards `JwtAuthGuard` y, cuando aplique, `RolesGuard` validan el token y el rol antes de ejecutar el handler.
+
+### Requerimientos relacionados
+
+- RF-06
+
+---
+
+## GET /search
+
+### Descripción
+
+Busca cursos y clases globalmente.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de ruta
+
+Ninguno.
+
+### Query params
+
+| Parámetro | Tipo   | Requerido | Descripción         |
+| --------- | ------ | --------- | ------------------- |
+| q         | string | No        | Término de búsqueda |
+| page      | number | No        | Página (default 1)  |
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Resultados unificados y paginados.
+
+### Errores posibles
+
+Ninguno documentado.
+
+### Requerimientos relacionados
+
+- RF-01.7
+
+---
+
+## POST /auth/admin/login
+
+### Descripción
+
+Inicia sesión para administradores.
+
+### Autenticación
+
+No requerida.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de ruta
+
+Ninguno.
+
+### Query params
+
+Ninguno.
+
+### Body
+
+| Campo    | Tipo   | Requerido | Descripción      |
+| -------- | ------ | --------- | ---------------- |
+| email    | string | Sí        | Correo o usuario |
+| password | string | Sí        | Contraseña       |
+
+### Respuesta 200
+
+Token JWT e información del admin.
+
+### Errores posibles
+
+| Código | Caso                                     |
+| ------ | ---------------------------------------- |
+| 401    | Credenciales inválidas o rol no es ADMIN |
+
+### Requerimientos relacionados
+
+- RF-13
+
+---
+
+## GET /admin/classes/:id
+
+### Descripción
+
+Obtiene el detalle administrativo de una clase.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción    |
+| --------- | ------ | --------- | -------------- |
+| id        | number | Sí        | ID de la clase |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Detalle de la clase y sus materiales.
+
+### Errores posibles
+
+| Código | Caso                |
+| ------ | ------------------- |
+| 404    | Clase no encontrada |
+
+### Requerimientos relacionados
+
+- RF-12.7
+
+---
+
+## POST /admin/courses
+
+### Descripción
+
+Crea un nuevo curso.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+Ninguno.
+
+### Query params
+
+Ninguno.
+
+### Body
+
+| Campo       | Tipo   | Requerido | Descripción      |
+| ----------- | ------ | --------- | ---------------- |
+| name        | string | Sí        | Nombre del curso |
+| course_code | string | Sí        | Código único     |
+| description | string | Sí        | Descripción      |
+| url_image   | string | Sí        | URL imagen       |
+| teacher_id  | number | Sí        | ID Docente       |
+
+### Respuesta 201
+
+Curso creado.
+
+### Errores posibles
+
+| Código | Caso                  |
+| ------ | --------------------- |
+| 409    | course_code ya existe |
+
+### Requerimientos relacionados
+
+- RF-16.1
+
+---
+
+## GET /admin/courses
+
+### Descripción
+
+Lista cursos para administración con paginación.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+Ninguno.
+
+### Query params
+
+| Parámetro | Tipo   | Requerido | Descripción                    |
+| --------- | ------ | --------- | ------------------------------ |
+| page      | number | No        | Página (default 1)             |
+| limit     | number | No        | Límite por página (default 10) |
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Listado paginado de cursos.
+
+### Errores posibles
+
+Ninguno.
+
+### Requerimientos relacionados
+
+- RF-16.1
+
+---
+
+## GET /admin/courses/:id
+
+### Descripción
+
+Obtiene el detalle administrativo de un curso.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Detalle completo del curso.
+
+### Errores posibles
+
+| Código | Caso                |
+| ------ | ------------------- |
+| 404    | Curso no encontrado |
+
+### Requerimientos relacionados
+
+- RF-16.1
+
+---
+
+## PATCH /admin/courses/:id
+
+### Descripción
+
+Actualiza los datos de un curso.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Atributos opcionales de Course.
+
+### Respuesta 200
+
+Curso actualizado.
+
+### Errores posibles
+
+| Código | Caso                |
+| ------ | ------------------- |
+| 404    | Curso no encontrado |
+
+### Requerimientos relacionados
+
+- RF-16.1
+
+---
+
+## DELETE /admin/courses/:id
+
+### Descripción
+
+Elimina un curso.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Curso eliminado exitosamente.
+
+### Errores posibles
+
+| Código | Caso                |
+| ------ | ------------------- |
+| 404    | Curso no encontrado |
+
+### Requerimientos relacionados
+
+- RF-16.1
+
+---
+
+## GET /admin/materials
+
+### Descripción
+
+Lista todos los materiales globalmente para el panel administrativo.
+
+### Autenticación
+
+Requerida.
+
+### Roles permitidos
+
+Administrador.
+
+### Parámetros de ruta
+
+Ninguno.
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Listado de materiales.
+
+### Errores posibles
+
+Ninguno.
+
+### Requerimientos relacionados
+
+- RF-18.3.3
+
+---
+
+## GET /materials/:id/download
+
+### Descripción
+
+Descarga o visualiza un material físico.
+
+### Autenticación
+
+No requerida.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción     |
+| --------- | ------ | --------- | --------------- |
+| id        | number | Sí        | ID del material |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Stream del archivo binario.
+
+### Errores posibles
+
+| Código | Caso                                    |
+| ------ | --------------------------------------- |
+| 404    | Material o archivo físico no encontrado |
+
+### Requerimientos relacionados
+
+- RF-12.11
