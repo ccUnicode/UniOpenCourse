@@ -1,4 +1,4 @@
-# Brevo — UniOpenCourse
+brevo-tutorial# Brevo — UniOpenCourse
 
 Documentación sobre **qué es Brevo**, **cómo se usa en el proyecto** y **qué permite hacer** la plataforma. Para configurar una cuenta paso a paso, ver [`BREVO-TUTORIAL.md`](./BREVO-TUTORIAL.md).
 
@@ -16,10 +16,10 @@ En UniOpenCourse actúa como **servicio externo de envío**: el backend no tiene
 
 Brevo interviene **solo** en el flujo de **verificación de correo al registrarse** (y en los **reenvíos** del mismo enlace).
 
-| Momento | Quién dispara el envío | Qué recibe el usuario |
-| ------- | ---------------------- | --------------------- |
-| Registro exitoso | `AuthService.register()` → `MailService.sendVerificationEmail()` | Correo HTML con botón “Verificar correo” |
-| Reenvío desde login o `/verificar-email` | `AuthService.resendVerificationEmail()` → mismo método | Nuevo correo con enlace actualizado |
+| Momento                                  | Quién dispara el envío                                           | Qué recibe el usuario                    |
+| ---------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- |
+| Registro exitoso                         | `AuthService.register()` → `MailService.sendVerificationEmail()` | Correo HTML con botón “Verificar correo” |
+| Reenvío desde login o `/verificar-email` | `AuthService.resendVerificationEmail()` → mismo método           | Nuevo correo con enlace actualizado      |
 
 El enlace apunta a:
 
@@ -39,12 +39,12 @@ AuthService  →  MailService  →  POST https://api.brevo.com/v3/smtp/email
               BREVO_API_KEY, MAIL_FROM, FRONTEND_URL
 ```
 
-| Pieza | Ubicación |
-| ----- | --------- |
-| Envío | `apps/backend/src/mail/mail.service.ts` |
-| Módulo | `apps/backend/src/mail/mail.module.ts` |
-| Escape HTML del nombre | `apps/backend/src/mail/html.utils.ts` |
-| Consumidor | `apps/backend/src/auth/auth.service.ts` |
+| Pieza                  | Ubicación                               |
+| ---------------------- | --------------------------------------- |
+| Envío                  | `apps/backend/src/mail/mail.service.ts` |
+| Módulo                 | `apps/backend/src/mail/mail.module.ts`  |
+| Escape HTML del nombre | `apps/backend/src/mail/html.utils.ts`   |
+| Consumidor             | `apps/backend/src/auth/auth.service.ts` |
 
 **Detalles de implementación:**
 
@@ -62,12 +62,12 @@ Documentación técnica del módulo: [`backend.md`](./backend.md) (Módulo Mail)
 
 ## Variables de entorno
 
-| Variable | Obligatoria | Descripción |
-| -------- | ----------- | ----------- |
-| `BREVO_API_KEY` | Sí | Clave de API de la cuenta Brevo |
-| `MAIL_FROM` | Sí | Remitente verificado en Brevo (ej. `UniOpenCourse <tu@gmail.com>`) |
-| `FRONTEND_URL` | Sí* | Base del enlace de verificación (*default `http://localhost:3000` en código) |
-| `BREVO_REQUEST_TIMEOUT_MS` | No | Timeout de la petición (default 15000) |
+| Variable                   | Obligatoria | Descripción                                                                   |
+| -------------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `BREVO_API_KEY`            | Sí          | Clave de API de la cuenta Brevo                                               |
+| `MAIL_FROM`                | Sí          | Remitente verificado en Brevo (ej. `UniOpenCourse <tu@gmail.com>`)            |
+| `FRONTEND_URL`             | Sí\*        | Base del enlace de verificación (\*default `http://localhost:3000` en código) |
+| `BREVO_REQUEST_TIMEOUT_MS` | No          | Timeout de la petición (default 15000)                                        |
 
 Otras variables del flujo de verificación (expiración del token, cooldown de reenvío) las controla `AuthService`, no Brevo directamente: ver [`backend.md`](./backend.md).
 
@@ -75,15 +75,15 @@ Otras variables del flujo de verificación (expiración del token, cooldown de r
 
 ## Qué hace Brevo hoy en el proyecto
 
-| Capacidad | ¿Usado? | Notas |
-| --------- | ------- | ----- |
-| Email transaccional vía API REST | Sí | Endpoint `/v3/smtp/email` |
-| Plantillas guardadas en Brevo | No | HTML inline en `MailService` |
-| SMTP relay | No | Solo API HTTP |
-| Campañas / email marketing | No | Fuera del alcance actual |
-| SMS / WhatsApp | No | Brevo los ofrece; no integrados |
-| Webhooks de entrega (delivered, bounce) | No | Posible extensión futura |
-| Listas de contactos / CRM | No | No sincronizamos usuarios con Brevo |
+| Capacidad                               | ¿Usado? | Notas                               |
+| --------------------------------------- | ------- | ----------------------------------- |
+| Email transaccional vía API REST        | Sí      | Endpoint `/v3/smtp/email`           |
+| Plantillas guardadas en Brevo           | No      | HTML inline en `MailService`        |
+| SMTP relay                              | No      | Solo API HTTP                       |
+| Campañas / email marketing              | No      | Fuera del alcance actual            |
+| SMS / WhatsApp                          | No      | Brevo los ofrece; no integrados     |
+| Webhooks de entrega (delivered, bounce) | No      | Posible extensión futura            |
+| Listas de contactos / CRM               | No      | No sincronizamos usuarios con Brevo |
 
 ---
 
@@ -105,7 +105,7 @@ Cualquier extensión implicaría nuevos métodos en `MailService` (o un servicio
 ## Requisitos de Brevo para que el envío funcione
 
 1. **Cuenta activa** con API key válida.
-2. **Remitente verificado** — el email en `MAIL_FROM` debe coincidir con un sender *Verified* en el panel.
+2. **Remitente verificado** — el email en `MAIL_FROM` debe coincidir con un sender _Verified_ en el panel.
 3. **IP autorizada** (desarrollo) — en local suele hacer falta desactivar el bloqueo de IP desconocida para API keys; ver tutorial paso 4.
 
 Sin API key o remitente, `MailService` lanza `InternalServerErrorException` antes de llamar a la red.
@@ -114,12 +114,12 @@ Sin API key o remitente, `MailService` lanza `InternalServerErrorException` ante
 
 ## Límites y entorno
 
-| Aspecto | Detalle |
-| ------- | ------- |
-| Plan usado en dev | Brevo Free (~300 emails/día) |
-| Uso típico del equipo | Registro + reenvíos ocasionales; suficiente para facultad y pruebas |
-| Producción | Evaluar dominio verificado, límites del plan y restricción de IP activada solo en servidor |
-| Privacidad | Cada desarrollador puede usar su propia cuenta Brevo en local; las keys no van al repositorio |
+| Aspecto               | Detalle                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Plan usado en dev     | Brevo Free (~300 emails/día)                                                                  |
+| Uso típico del equipo | Registro + reenvíos ocasionales; suficiente para facultad y pruebas                           |
+| Producción            | Evaluar dominio verificado, límites del plan y restricción de IP activada solo en servidor    |
+| Privacidad            | Cada desarrollador puede usar su propia cuenta Brevo en local; las keys no van al repositorio |
 
 ---
 
@@ -145,10 +145,10 @@ sequenceDiagram
 
 ## Enlaces relacionados
 
-| Documento | Contenido |
-| --------- | --------- |
-| [`BREVO-TUTORIAL.md`](./BREVO-TUTORIAL.md) | Configuración paso a paso (cuenta, API key, remitente, `.env`, pruebas) |
-| [`backend.md`](./backend.md) | Módulos Auth y Mail, reglas de reenvío y cooldown |
-| [`frontend.md`](./frontend.md) | Pantallas `/registro`, `/verificar-email`, reenvío desde login |
-| [`endpoints.md`](./endpoints.md) | Contratos HTTP de auth |
-| [`base-de-datos.md`](./base-de-datos.md) | Tabla `EmailVerificationToken` |
+| Documento                                  | Contenido                                                               |
+| ------------------------------------------ | ----------------------------------------------------------------------- |
+| [`brevo-tutorial.md`](./brevo-tutorial.md) | Configuración paso a paso (cuenta, API key, remitente, `.env`, pruebas) |
+| [`backend.md`](./backend.md)               | Módulos Auth y Mail, reglas de reenvío y cooldown                       |
+| [`frontend.md`](./frontend.md)             | Pantallas `/registro`, `/verificar-email`, reenvío desde login          |
+| [`endpoints.md`](./endpoints.md)           | Contratos HTTP de auth                                                  |
+| [`base-de-datos.md`](./base-de-datos.md)   | Tabla `EmailVerificationToken`                                          |
