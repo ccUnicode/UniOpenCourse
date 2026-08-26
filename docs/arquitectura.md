@@ -55,6 +55,14 @@ graph TD
 - **Cookies `HttpOnly`**: Se delegó la seguridad del JWT a cookies configuradas desde un proxy (en `lib/api-client.ts`), en lugar de dejar el token en el _LocalStorage_ del navegador.
 - **Almacenamiento local**: Inicialmente se optó por guardar archivos en el sistema de archivos del servidor backend mediante _Multer_ por simplicidad y reducción de costos iniciales, con URLs que hacen proxy hacia ellos (`/storage/**`).
 
+### Registros de decisiones (ADR)
+
+Decisiones de arquitectura con contexto, alternativas evaluadas y consecuencias:
+
+| ADR | Título |
+| --- | ------ |
+| [ADR-0001](./adr/0001-no-implementar-swagger-openapi.md) | No implementar Swagger/OpenAPI en la fase actual del proyecto |
+
 ## Riesgos técnicos
 
 - **Cuello de botella en Almacenamiento (Storage)**: Como los archivos se guardan físicamente en el servidor backend, dificultará en un futuro el escalamiento horizontal (añadir más servidores). Si el servidor falla, se pierde el acceso a las imágenes y materiales. (Se recomienda migrar a un S3-compatible en el futuro).
