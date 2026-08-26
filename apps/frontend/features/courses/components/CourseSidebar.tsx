@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { ClassInterface } from '@/interfaces/class.interface';
-import { API_URL } from '@/lib/api-client';
+import { getCourseEvaluations } from '@/services/courses.service';
 
 interface CourseSidebarProps {
   courseId: string;
@@ -47,14 +47,9 @@ export default function CourseSidebar({
     setIsLoading(true);
     setError(false);
     try {
-      const res = await fetch(`${API_URL}/courses/${courseId}/evaluations`);
-      if (res.ok) {
-        const data = await res.json();
-        setEvaluations(data);
-        setHasFetched(true);
-      } else {
-        setError(true);
-      }
+      const data = await getCourseEvaluations(courseId);
+      setEvaluations(data);
+      setHasFetched(true);
     } catch (err) {
       console.error('Error fetching evaluations:', err);
       setError(true);
