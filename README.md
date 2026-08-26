@@ -2,7 +2,7 @@
 
 ## Descripción
 
-UniOpenCourse es una plataforma educativa que permite gestionar y acceder a cursos universitarios pertenecientes a la Facultad de Ingeniería Industrial y de Sistemas (FIIS) de la Universidad Nacional de Ingeniería (UNI) de manera abierta, facilitando la organización de contenidos, usuarios y procesos académicos en un entorno digital estructurado.
+UniOpenCourse es una plataforma educativa que permite gestionar y acceder a cursos universitarios pertenecientes a la Facultad de Ingeniería Industrial y de Sistemas (FIIS) de la Universidad Nacional de Ingeniería (UNI) de manera abierta, facilitando la organización de contenidos, usuarios en un entorno digital estructurado.
 
 ---
 
@@ -39,12 +39,13 @@ UniOpenCourse/
 │     ├── frontend.md
 │     ├── backend.md
 │     ├── base-de-datos.md
+│     ├── brevo-tutorial.md # Configuración servicio de email
 │     └── endpoints.md
 ├── README.md
 ├── CONTRIBUTING.md
 ├── package.json
 ├── package-lock.json
-├── .prettierrc     # Configuración global de formato
+├── .prettierrc
 ├── .prettierignore
 └── .gitignore
 ```
@@ -52,6 +53,8 @@ UniOpenCourse/
 ---
 
 ## Instalación
+
+#### Instalación de dependencias
 
 Desde la raíz del proyecto:
 
@@ -64,7 +67,9 @@ Esto instalará las dependencias de:
 - frontend
 - backend
 
-### Configuración de variables de entorno
+#### Configuración de variables de entorno
+
+#### Backend
 
 Copiar el archivo de ejemplo:
 
@@ -72,18 +77,62 @@ Copiar el archivo de ejemplo:
 cp apps/backend/.env.example apps/backend/.env
 ```
 
-Editar `.env` con tus credenciales de base de datos.
+Editar `.env` con tus credenciales de base de datos y de configuración de Brevo ([docs/brevo-tutorial.md](docs/brevo-tutorial.md)).
 
 Ejemplo:
 
 ```env
-HOST=localhost
-PORT=5432
-DATABASE=uniopencourse
-USER=uniopencourse_user
-PASSWORD=tu_password
+JWT_SECRET = "clave_super_secreta_para_jwt"
+FRONTEND_URL="http://localhost:3000"
 
-DATABASE_URL="postgresql://uniopencourse_user:tu_password@localhost:5432/uniopencourse"
+DATABASE_URL="postgresql://uniopencourse_user:tu_contraseña@localhost:5432/uniopencourse"
+
+SEED_ADMIN_EMAIL="admin@test.com"
+SEED_ADMIN_PASSWORD="tu_contraseña_segura"
+SEED_ADMIN_USERNAME="admin"
+
+STORAGE_PATH="./storage"
+
+# Email (Brevo) - required for the registration verification link
+BREVO_API_KEY="xkeysib-tu-api-key"
+MAIL_FROM="UniOpenCourse <tu-remitente-verificado@ejemplo.com>"
+EMAIL_VERIFICATION_EXPIRES_HOURS="48"
+EMAIL_RESEND_COOLDOWN_MINUTES="3"
+BREVO_REQUEST_TIMEOUT_MS="15000"
+
+```
+
+#### Frontend
+
+Copiar el archivo de ejemplo:
+
+```bash
+cp apps/frontend/.env.example apps/frontend/.env
+```
+
+Editar `.env` con tus credenciales.
+
+Ejemplo:
+
+```env
+JWT_SECRET = "clave_super_secreta_para_jwt"
+FRONTEND_URL="http://localhost:3000"
+
+DATABASE_URL="postgresql://uniopencourse_user:tu_contraseña@localhost:5432/uniopencourse"
+
+SEED_ADMIN_EMAIL="admin@test.com"
+SEED_ADMIN_PASSWORD="tu_contraseña_segura"
+SEED_ADMIN_USERNAME="admin"
+
+STORAGE_PATH="./storage"
+
+# Email (Brevo) - required for the registration verification link
+BREVO_API_KEY="xkeysib-tu-api-key"
+MAIL_FROM="UniOpenCourse <tu-remitente-verificado@ejemplo.com>"
+EMAIL_VERIFICATION_EXPIRES_HOURS="48"
+EMAIL_RESEND_COOLDOWN_MINUTES="3"
+BREVO_REQUEST_TIMEOUT_MS="15000"
+
 ```
 
 ### Configuración de base de datos (Prisma)
