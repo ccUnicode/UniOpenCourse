@@ -62,6 +62,7 @@ erDiagram
         String course_code UK
         String url_image
         String description
+        String url_trikaweb
         Int teacher_id FK
         DateTime course_creation_date
         DateTime update_date
@@ -221,6 +222,7 @@ Define los cursos publicados en la plataforma. Actúa como el agrupador principa
 | `course_code` | String | (UK) Código corto e identificador único del curso (ej. `MAT-101`). |
 | `url_image` | String | URL de la imagen de portada. |
 | `description` | String | Descripción detallada del curso. |
+| `url_trikaweb` | String? | URL opcional para enlazar las evaluaciones en Trikaweb. |
 | `teacher_id` | Int | (FK) Identificador del docente asignado. |
 | `course_creation_date` | DateTime | Fecha de creación del curso. |
 | `update_date` | DateTime | Fecha de última modificación del curso. |
