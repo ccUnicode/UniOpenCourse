@@ -117,17 +117,17 @@ erDiagram
 
 ### Entidades principales
 
-| Entidad                    | Descripción breve                                               |
-| -------------------------- | --------------------------------------------------------------- |
-| `Role`                     | Define roles para control de acceso (asignación a usuarios).    |
-| `User`                     | Usuarios registrados; credenciales, rol y estado de verificación de correo. |
-| `EmailVerificationToken`   | Token de verificación de correo (hash SHA-256); relación 1:1 con `User`. |
-| `Teacher`                  | Docentes responsables de cursos.                                |
-| `Course`                   | Cursos publicados; enlaza docente y agrupa clases.              |
-| `Class`                    | Clases/unidades dentro de un curso (contenido + video).         |
-| `Material`                 | Recursos asociados a una clase (archivo/enlace/referencia).     |
-| `LastCourseVisit`          | Relación usuario–curso con marcas de tiempo de visita.          |
-| `MaterialTypes`            | Enum de tipos de material (`file`, `link`, `reference`).        |
+| Entidad                  | Descripción breve                                                           |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `Role`                   | Define roles para control de acceso (asignación a usuarios).                |
+| `User`                   | Usuarios registrados; credenciales, rol y estado de verificación de correo. |
+| `EmailVerificationToken` | Token de verificación de correo (hash SHA-256); relación 1:1 con `User`.    |
+| `Teacher`                | Docentes responsables de cursos.                                            |
+| `Course`                 | Cursos publicados; enlaza docente y agrupa clases.                          |
+| `Class`                  | Clases/unidades dentro de un curso (contenido + video).                     |
+| `Material`               | Recursos asociados a una clase (archivo/enlace/referencia).                 |
+| `LastCourseVisit`        | Relación usuario–curso con marcas de tiempo de visita.                      |
+| `MaterialTypes`          | Enum de tipos de material (`file`, `link`, `reference`).                    |
 
 ### Relaciones
 
@@ -150,9 +150,9 @@ Define el rol asignable a usuarios para habilitar la autorización por perfiles 
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `role_id` | Int | (PK) Identificador interno del rol. |
+| Campo       | Tipo   | Descripción                             |
+| ----------- | ------ | --------------------------------------- |
+| `role_id`   | Int    | (PK) Identificador interno del rol.     |
 | `role_name` | String | Nombre del rol (p.ej. `ADMIN`, `USER`). |
 
 ### Relaciones
@@ -173,18 +173,18 @@ Almacena la identidad y credenciales de acceso de las personas. Es el punto de e
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `user_id` | Int | (PK) Identificador interno del usuario. |
-| `email` | String | (UK) Identificador único principal para login y recuperación. |
-| `name` | String | Nombres del usuario. |
-| `last_name` | String | Apellidos del usuario. |
-| `username` | String | (UK) Alias único, usado como alternativa de identificación. |
-| `password` | String | Hash encriptado de la contraseña (nunca texto plano). |
-| `role_id`           | Int       | (FK) Identificador del rol asignado. |
-| `register_date`     | DateTime  | Fecha y hora de creación de la cuenta. |
-| `email_verified`    | Boolean   | Indica si el correo fue confirmado (`default: false`). |
-| `email_verified_at` | DateTime? | Fecha de verificación; `null` si aún no verificó. |
+| Campo               | Tipo      | Descripción                                                   |
+| ------------------- | --------- | ------------------------------------------------------------- |
+| `user_id`           | Int       | (PK) Identificador interno del usuario.                       |
+| `email`             | String    | (UK) Identificador único principal para login y recuperación. |
+| `name`              | String    | Nombres del usuario.                                          |
+| `last_name`         | String    | Apellidos del usuario.                                        |
+| `username`          | String    | (UK) Alias único, usado como alternativa de identificación.   |
+| `password`          | String    | Hash encriptado de la contraseña (nunca texto plano).         |
+| `role_id`           | Int       | (FK) Identificador del rol asignado.                          |
+| `register_date`     | DateTime  | Fecha y hora de creación de la cuenta.                        |
+| `email_verified`    | Boolean   | Indica si el correo fue confirmado (`default: false`).        |
+| `email_verified_at` | DateTime? | Fecha de verificación; `null` si aún no verificó.             |
 
 ### Relaciones
 
@@ -208,12 +208,12 @@ Persiste el enlace de verificación de correo enviado al registrarse o al solici
 
 ### Campos principales
 
-| Campo        | Tipo     | Descripción |
-| ------------ | -------- | ----------- |
-| `id`         | Int      | (PK) Identificador interno del registro. |
-| `user_id`    | Int      | (FK, UK) Usuario dueño del token; relación 1:1. |
-| `token_hash` | String   | (UK) Hash SHA-256 del token enviado por correo (`VarChar(64)`). |
-| `expires_at` | DateTime | Fecha límite de validez del enlace. |
+| Campo        | Tipo     | Descripción                                                           |
+| ------------ | -------- | --------------------------------------------------------------------- |
+| `id`         | Int      | (PK) Identificador interno del registro.                              |
+| `user_id`    | Int      | (FK, UK) Usuario dueño del token; relación 1:1.                       |
+| `token_hash` | String   | (UK) Hash SHA-256 del token enviado por correo (`VarChar(64)`).       |
+| `expires_at` | DateTime | Fecha límite de validez del enlace.                                   |
 | `created_at` | DateTime | Fecha de emisión; usada para el cooldown de reenvío en la aplicación. |
 
 ### Relaciones
@@ -244,11 +244,11 @@ Representa a los docentes o instructores responsables de dictar los cursos de la
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `teacher_id` | Int | (PK) Identificador interno del docente. |
-| `name` | String | Nombres del docente. |
-| `last_name` | String | Apellidos del docente. |
+| Campo        | Tipo   | Descripción                             |
+| ------------ | ------ | --------------------------------------- |
+| `teacher_id` | Int    | (PK) Identificador interno del docente. |
+| `name`       | String | Nombres del docente.                    |
+| `last_name`  | String | Apellidos del docente.                  |
 
 ### Relaciones
 
@@ -268,17 +268,17 @@ Define los cursos publicados en la plataforma. Actúa como el agrupador principa
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `course_id` | Int | (PK) Identificador interno del curso. |
-| `name` | String | Nombre visible del curso. |
-| `course_code` | String | (UK) Código corto e identificador único del curso (ej. `MAT-101`). |
-| `url_image` | String | URL de la imagen de portada. |
-| `description` | String | Descripción detallada del curso. |
-| `url_trikaweb` | String? | URL opcional para enlazar las evaluaciones en Trikaweb. |
-| `teacher_id` | Int | (FK) Identificador del docente asignado. |
-| `course_creation_date` | DateTime | Fecha de creación del curso. |
-| `update_date` | DateTime | Fecha de última modificación del curso. |
+| Campo                  | Tipo     | Descripción                                                        |
+| ---------------------- | -------- | ------------------------------------------------------------------ |
+| `course_id`            | Int      | (PK) Identificador interno del curso.                              |
+| `name`                 | String   | Nombre visible del curso.                                          |
+| `course_code`          | String   | (UK) Código corto e identificador único del curso (ej. `MAT-101`). |
+| `url_image`            | String   | URL de la imagen de portada.                                       |
+| `description`          | String   | Descripción detallada del curso.                                   |
+| `url_trikaweb`         | String?  | URL opcional para enlazar las evaluaciones en Trikaweb.            |
+| `teacher_id`           | Int      | (FK) Identificador del docente asignado.                           |
+| `course_creation_date` | DateTime | Fecha de creación del curso.                                       |
+| `update_date`          | DateTime | Fecha de última modificación del curso.                            |
 
 ### Relaciones
 
@@ -301,12 +301,12 @@ Entidad asociativa que modela la relación de "Muchos a Muchos" entre Usuario y 
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `user_course_id` | Int | (PK) Identificador interno del registro. |
-| `user_id` | Int | (FK) Identificador del usuario. |
-| `course_id` | Int | (FK) Identificador del curso visitado. |
-| `start_date` | DateTime | Fecha del primer acceso o inscripción. |
+| Campo             | Tipo     | Descripción                                                            |
+| ----------------- | -------- | ---------------------------------------------------------------------- |
+| `user_course_id`  | Int      | (PK) Identificador interno del registro.                               |
+| `user_id`         | Int      | (FK) Identificador del usuario.                                        |
+| `course_id`       | Int      | (FK) Identificador del curso visitado.                                 |
+| `start_date`      | DateTime | Fecha del primer acceso o inscripción.                                 |
 | `last_visit_date` | DateTime | Se actualiza automáticamente cada vez que el usuario ingresa al curso. |
 
 ### Relaciones
@@ -328,14 +328,14 @@ Representa una unidad de contenido dentro de un curso, agrupando una descripció
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `class_id` | Int | (PK) Identificador único de la clase. |
-| `course_id` | Int | (FK) Identificador del curso al que pertenece. |
-| `title` | String | Título visible de la clase. |
-| `description` | String | Descripción larga del contenido de la clase. |
-| `url_youtube` | String | Enlace al video principal de la lección. |
-| `class_creation_date`| DateTime | Fecha y hora en la que se creó la clase. |
+| Campo                 | Tipo     | Descripción                                    |
+| --------------------- | -------- | ---------------------------------------------- |
+| `class_id`            | Int      | (PK) Identificador único de la clase.          |
+| `course_id`           | Int      | (FK) Identificador del curso al que pertenece. |
+| `title`               | String   | Título visible de la clase.                    |
+| `description`         | String   | Descripción larga del contenido de la clase.   |
+| `url_youtube`         | String   | Enlace al video principal de la lección.       |
+| `class_creation_date` | DateTime | Fecha y hora en la que se creó la clase.       |
 
 ### Relaciones
 
@@ -357,15 +357,15 @@ Representa los recursos adicionales de apoyo vinculados a una clase. Soporta tre
 
 ### Campos principales
 
-| Campo | Tipo | Descripción |
-| --- | --- | --- |
-| `material_id` | Int | (PK) Identificador único del material. |
-| `class_id` | Int | (FK) Identificador de la clase a la que pertenece. |
-| `material_type` | MaterialTypes | Enum que define si es `file`, `link` o `reference`. |
-| `filename` | String | Nombre visible del material para el usuario. |
-| `file_path` | String? | Ruta de almacenamiento en el servidor (si es de tipo `file`). |
-| `url_link` | String? | URL externa (si es de tipo `link`). |
-| `written_reference` | String? | Texto bibliográfico o literario (si es de tipo `reference`). |
+| Campo               | Tipo          | Descripción                                                   |
+| ------------------- | ------------- | ------------------------------------------------------------- |
+| `material_id`       | Int           | (PK) Identificador único del material.                        |
+| `class_id`          | Int           | (FK) Identificador de la clase a la que pertenece.            |
+| `material_type`     | MaterialTypes | Enum que define si es `file`, `link` o `reference`.           |
+| `filename`          | String        | Nombre visible del material para el usuario.                  |
+| `file_path`         | String?       | Ruta de almacenamiento en el servidor (si es de tipo `file`). |
+| `url_link`          | String?       | URL externa (si es de tipo `link`).                           |
+| `written_reference` | String?       | Texto bibliográfico o literario (si es de tipo `reference`).  |
 
 ### Relaciones
 
@@ -385,13 +385,16 @@ Representa los recursos adicionales de apoyo vinculados a una clase. Soporta tre
 
 ### Migraciones relevantes — verificación de correo
 
-| Migración | Cambios |
-| --------- | ------- |
-| `20260815050418_add_email_verification` | Añade `email_verified` y `email_verified_at` a `User`. Crea tabla `EmailVerificationToken` con índice único en `token_hash` e índice en `user_id`. **Backfill**: usuarios existentes quedan con `email_verified = true` y `email_verified_at = NOW()` para no bloquear cuentas creadas antes del feature. |
-| `20260819200000_unique_verification_token_per_user` | Elimina tokens duplicados por usuario (conserva el más reciente). Reemplaza índice no único en `user_id` por constraint **único** (`user_id` UK), garantizando un solo token activo por usuario. |
+| Migración                                           | Cambios                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20260815050418_add_email_verification`             | Añade `email_verified` y `email_verified_at` a `User`. Crea tabla `EmailVerificationToken` con índice único en `token_hash` e índice en `user_id`. **Backfill**: usuarios existentes quedan con `email_verified = true` y `email_verified_at = NOW()` para no bloquear cuentas creadas antes del feature. |
+| `20260819200000_unique_verification_token_per_user` | Elimina tokens duplicados por usuario (conserva el más reciente). Reemplaza índice no único en `user_id` por constraint **único** (`user_id` UK), garantizando un solo token activo por usuario.                                                                                                          |
 
-- **Seed data**: en el repositorio actual **no** se encontró un archivo de seed (`prisma/seed.*` o `seed.ts`).
-  - Si se requiere precargar roles (p.ej. `ADMIN`/`USER`), debe implementarse explícitamente un proceso de seed o una estrategia de bootstrap en la aplicación.
+- **Seed data**: El seed se encuentra en [apps/backend/prisma/seed.ts](../apps/backend/prisma/seed.ts). Carga los datos del usuario administrador de acuerdo al .env y genera los roles para el funcionamiento del proyecto. Su ejecución se realiza mediante el comando:
+
+  ```bash
+  npx prisma db seed
+  ```
 
 ### Enlaces relacionados
 

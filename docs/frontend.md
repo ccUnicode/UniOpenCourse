@@ -13,21 +13,11 @@ Explicar la arquitectura y organización del código en el frontend, basado en N
 
 ## Stack
 
-- Next.js
-- Tailwind CSS
-- Redux Toolkit
-- NextAuth.js
-- React Flow
-
-Además, en el código actual de auth y sesión se usan:
-
-| Tecnología | Uso |
-| ---------- | --- |
-| React 19 | UI |
-| `jose` | Verificación del JWT en middleware y `/api/auth/session` |
-| `lucide-react` | Iconos |
-
-> **Nota:** La autenticación implementada hoy no pasa por NextAuth; usa route handlers propios (`app/api/auth/*`) y cookie HttpOnly. Redux Toolkit y React Flow figuran en la arquitectura prevista del proyecto; en `package.json` actual aún no están instalados — el estado de sesión de auth se maneja con cookie + `sessionStorage`.
+- Next.js (App Router)
+- React 19
+- Tailwind CSS v4
+- `jose` (Manejo y validación de JWT)
+- `lucide-react` (Íconos)
 
 ---
 
@@ -48,40 +38,40 @@ El proyecto sigue una arquitectura modular y separada por responsabilidades:
 
 ### Cursos y contenido (estudiante)
 
-| Ruta | Vista |
-| :--- | :--- |
-| `/cursos/[courseId]` | Vista general de un curso. Renderiza condicionalmente una pantalla vacía o redirige dinámicamente a la primera clase disponible. |
+| Ruta                                  | Vista                                                                                                                                             |
+| :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/cursos/[courseId]`                  | Vista general de un curso. Renderiza condicionalmente una pantalla vacía o redirige dinámicamente a la primera clase disponible.                  |
 | `/cursos/[courseId]/clases/[classId]` | Interfaz principal de consumo de contenido. Incluye el reproductor incrustado de YouTube, listado dinámico de Materiales y el Sidebar responsivo. |
 
 > En el filesystem las carpetas dinámicas usan `[course_id]` y `[class_id]`; el comportamiento descrito arriba es el mismo.
 
 ### Otras rutas públicas y estudiante
 
-| Ruta | Vista |
-| :--- | :--- |
-| `/` | Página de inicio |
-| `/cursos` | Listado de cursos |
-| `/busqueda` | Resultados de búsqueda global |
+| Ruta         | Vista                                               |
+| :----------- | :-------------------------------------------------- |
+| `/`          | Página de inicio                                    |
+| `/cursos`    | Listado de cursos                                   |
+| `/busqueda`  | Resultados de búsqueda global                       |
 | `/dashboard` | Panel del estudiante autenticado (cursos visitados) |
 
 ### Autenticación (registro, login, verificación)
 
-| Ruta | Vista |
-| :--- | :--- |
-| `/login` | Inicio de sesión de usuario (correo o username) |
-| `/registro` | Registro de cuenta; tras éxito muestra pantalla “Revisa tu correo” |
-| `/verificar-email` | Verificación automática al abrir el enlace del correo (`?token=`) |
+| Ruta               | Vista                                                              |
+| :----------------- | :----------------------------------------------------------------- |
+| `/login`           | Inicio de sesión de usuario (correo o username)                    |
+| `/registro`        | Registro de cuenta; tras éxito muestra pantalla “Revisa tu correo” |
+| `/verificar-email` | Verificación automática al abrir el enlace del correo (`?token=`)  |
 
 ### Administración
 
-| Ruta | Vista |
-| :--- | :--- |
-| `/admin/login` | Inicio de sesión de administrador |
-| `/admin/cursos/[courseId]` | Panel administrativo. Formulario de edición de detalles de un curso (gestiona imagen, datos básicos y campo opcional `url_trikaweb`). |
-| `/admin/cursos` | Listado/gestión de cursos |
-| `/admin/cursos/[courseId]/clases/[classId]` | Edición de clase |
-| `/admin/clases` | Gestión de clases |
-| `/admin/materiales` | Gestión de materiales |
+| Ruta                                        | Vista                                                                                                                                 |
+| :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `/admin/login`                              | Inicio de sesión de administrador                                                                                                     |
+| `/admin/cursos/[courseId]`                  | Panel administrativo. Formulario de edición de detalles de un curso (gestiona imagen, datos básicos y campo opcional `url_trikaweb`). |
+| `/admin/cursos`                             | Listado/gestión de cursos                                                                                                             |
+| `/admin/cursos/[courseId]/clases/[classId]` | Edición de clase                                                                                                                      |
+| `/admin/clases`                             | Gestión de clases                                                                                                                     |
+| `/admin/materiales`                         | Gestión de materiales                                                                                                                 |
 
 El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.ts`.
 
@@ -89,16 +79,14 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
 
 ## Estado global
 
-La regla general del proyecto es **no usar Redux para todo**.
-
-- **Redux Toolkit**: Se reserva estrictamente para datos globales y persistentes a lo largo de toda la sesión (por ejemplo, información del usuario autenticado).
 - **Estado Local (`useState`/`useEffect`)**: Se usa para lógica puramente de interfaz visual (UI). Por ejemplo, en el `CourseSidebar`, el Drawer móvil, el esqueleto de carga de Evaluaciones y los mensajes de error se manejan con estado local, ya que son estados efímeros que no necesitan ser compartidos globalmente.
 
-**Implementación actual de auth** (hasta que Redux cubra sesión de usuario):
+**Implementación de Auth y Sesión**:
+El proyecto no utiliza un gestor de estado global pesado (como Redux). El estado y la identidad del usuario se mantienen sincronizados mediante:
 
-- Cookie HttpOnly `access_token` — JWT; no accesible desde JavaScript.
-- `sessionStorage.user_name` — Nombre para saludo en dashboard; se guarda en login y se borra en logout.
-- **Header (Server Component)** — Lee la cookie en servidor para mostrar login vs logout en el menú.
+- Cookie HttpOnly `access_token` — JWT que maneja la sesión real con el backend; no accesible desde JavaScript por seguridad.
+- `sessionStorage.user_name` — Nombre para el saludo inicial en el dashboard; se guarda al hacer login y se borra en logout. *(Nota técnica: Al ser `sessionStorage`, no se comparte si el usuario abre una nueva pestaña del navegador).*
+- **Header (Server Component)** — Lee la cookie directamente en el servidor para mostrar condicionalmente los menús de 'Login' o el 'LogoutButton'.
 
 ---
 
@@ -110,11 +98,11 @@ Todas las llamadas hacia el backend deben abstraerse en funciones dentro de la c
 
 ### Excepciones y capa de auth
 
-| Tipo de petición | Dónde va | Cómo |
-| ---------------- | -------- | ---- |
-| Datos públicos (cursos, búsqueda) | `services/` → backend directo | `NEXT_PUBLIC_API_URL` |
-| Datos autenticados (dashboard, visitas) | `lib/api-client.ts` → proxy | `apiFetch('courses/dashboard')` → `/api/proxy/...` |
-| Login, registro, verificación | Páginas auth → route handlers | `fetch('/api/auth/...')` — no requieren proxy porque aún no hay cookie o no necesitan sesión |
+| Tipo de petición                        | Dónde va                      | Cómo                                                                                         |
+| --------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------- |
+| Datos públicos (cursos, búsqueda)       | `services/` → backend directo | `NEXT_PUBLIC_API_URL`                                                                        |
+| Datos autenticados (dashboard, visitas) | `lib/api-client.ts` → proxy   | `apiFetch('courses/dashboard')` → `/api/proxy/...`                                           |
+| Login, registro, verificación           | Páginas auth → route handlers | `fetch('/api/auth/...')` — no requieren proxy porque aún no hay cookie o no necesitan sesión |
 
 El proxy `/api/proxy/[...path]` lee la cookie y reenvía `Authorization: Bearer` al NestJS backend.
 
@@ -133,26 +121,26 @@ Detalle del backend: [`backend.md`](./backend.md) (módulos Auth y Mail). Contra
 
 ### Archivos clave
 
-| Archivo | Rol |
-| ------- | --- |
-| `app/login/page.tsx` | Formulario de login de usuario |
-| `app/registro/page.tsx` | Formulario de registro |
-| `app/verificar-email/page.tsx` | Verificación automática al abrir el enlace del correo |
-| `app/admin/login/page.tsx` | Login de administrador |
-| `app/api/auth/login/route.ts` | Proxy a `POST /auth/login`; setea cookie |
-| `app/api/auth/admin/login/route.ts` | Proxy a `POST /auth/admin/login`; setea cookie |
-| `app/api/auth/register/route.ts` | Proxy a `POST /auth/register` |
-| `app/api/auth/verify-email/route.ts` | Proxy a `POST /auth/verify-email` |
-| `app/api/auth/resend-verification/route.ts` | Proxy a `POST /auth/resend-verification` |
-| `app/api/auth/session/route.ts` | Estado de sesión desde la cookie |
-| `app/api/auth/logout/route.ts` | Elimina la cookie `access_token` |
-| `app/api/proxy/[...path]/route.ts` | Proxy autenticado al backend |
-| `lib/auth-cookie.ts` | Opciones de cookie y `getBackendUrl()` |
-| `lib/auth-cookies.ts` | Logout en cliente y nombre en `sessionStorage` |
-| `lib/jwt.ts` | `verifyAccessToken()` con `jose` |
-| `lib/api-client.ts` | `apiFetch()` → `/api/proxy/...` |
-| `middleware.ts` | Protección de rutas `/admin/*` |
-| `components/logout-button.tsx` | Cierra sesión y redirige a `/` |
+| Archivo                                     | Rol                                                   |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `app/login/page.tsx`                        | Formulario de login de usuario                        |
+| `app/registro/page.tsx`                     | Formulario de registro                                |
+| `app/verificar-email/page.tsx`              | Verificación automática al abrir el enlace del correo |
+| `app/admin/login/page.tsx`                  | Login de administrador                                |
+| `app/api/auth/login/route.ts`               | Proxy a `POST /auth/login`; setea cookie              |
+| `app/api/auth/admin/login/route.ts`         | Proxy a `POST /auth/admin/login`; setea cookie        |
+| `app/api/auth/register/route.ts`            | Proxy a `POST /auth/register`                         |
+| `app/api/auth/verify-email/route.ts`        | Proxy a `POST /auth/verify-email`                     |
+| `app/api/auth/resend-verification/route.ts` | Proxy a `POST /auth/resend-verification`              |
+| `app/api/auth/session/route.ts`             | Estado de sesión desde la cookie                      |
+| `app/api/auth/logout/route.ts`              | Elimina la cookie `access_token`                      |
+| `app/api/proxy/[...path]/route.ts`          | Proxy autenticado al backend                          |
+| `lib/auth-cookie.ts`                        | Opciones de cookie y `getBackendUrl()`                |
+| `lib/auth-cookies.ts`                       | Logout en cliente y nombre en `sessionStorage`        |
+| `lib/jwt.ts`                                | `verifyAccessToken()` con `jose`                      |
+| `lib/api-client.ts`                         | `apiFetch()` → `/api/proxy/...`                       |
+| `middleware.ts`                             | Protección de rutas `/admin/*`                        |
+| `components/logout-button.tsx`              | Cierra sesión y redirige a `/`                        |
 
 ### Cookie `access_token`
 
@@ -166,13 +154,13 @@ Definida en `lib/auth-cookie.ts`:
 
 ### Variables de entorno
 
-| Variable | Uso |
-| -------- | --- |
-| `NEXT_PUBLIC_API_URL` | URL del backend (default `http://localhost:3001`) |
-| `API_URL` | Alternativa server-side para route handlers |
-| `JWT_SECRET` | Debe coincidir con el backend; verifica token en middleware y session |
-| `NEXT_PUBLIC_APP_URL` | URL pública del frontend |
-| `NODE_ENV` | Afecta flag `secure` de la cookie |
+| Variable              | Uso                                                                   |
+| --------------------- | --------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | URL del backend (default `http://localhost:3001`)                     |
+| `API_URL`             | Alternativa server-side para route handlers                           |
+| `JWT_SECRET`          | Debe coincidir con el backend; verifica token en middleware y session |
+| `NEXT_PUBLIC_APP_URL` | URL pública del frontend                                              |
+| `NODE_ENV`            | Afecta flag `secure` de la cookie                                     |
 
 Ver `apps/frontend/.env.example`.
 
