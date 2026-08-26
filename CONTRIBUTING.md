@@ -152,4 +152,4 @@ Como regla general, las clases, interfaces y componentes funcionales de React se
 - **Componentes (components/ o features/):** Nombres descriptivos en usando extensión .tsx.
   Ej: `search-result-card.tsx`, `logout-button.tsx`.
 - **Utilidades y Servicios (lib/, utils/, services/)**: Archivos que contienen lógica pura o funciones sin JSX deben usar la extensión .ts.
-  Ej: api-client.ts, middleware.ts.
+  Ej: `api-client.ts`, `middleware.ts`.
