@@ -5,7 +5,7 @@ El objetivo es mantener consistencia en el desarrollo, facilitar la colaboració
 
 ---
 
-## 📌 Convención de Ramas
+## Convención de Ramas
 
 Las ramas deben seguir el siguiente formato:
 
@@ -24,7 +24,7 @@ Las ramas deben seguir el siguiente formato:
 
 ---
 
-## 📝 Convención de Commits
+## Convención de Commits
 
 Se debe usar el estándar:
 
@@ -36,7 +36,7 @@ Se debe usar el estándar:
 
 ---
 
-## 🔄 Flujo de Trabajo con Git
+## Flujo de Trabajo con Git
 
 1. Crear una rama desde `dev`:
 
@@ -50,7 +50,7 @@ Se debe usar el estándar:
 
 ---
 
-## 📥 Requisitos antes de abrir un Pull Request
+## Requisitos antes de abrir un Pull Request
 
 Antes de abrir un PR, asegúrate de cumplir con lo siguiente:
 
@@ -64,29 +64,32 @@ Antes de abrir un PR, asegúrate de cumplir con lo siguiente:
   Se actualizó `base-de-datos.md`.
   Se incluyeron migraciones.
 - El código cumple con el formato de **Prettier**.
+- El código cumple las validaciones de flujo de integración continua
 - No se incluyen archivos personales, temporales o credenciales.
 
 ---
 
-## ✅ Requisitos antes de hacer Merge
+## Requisitos antes de hacer Merge
 
 Un PR solo puede ser aprobado si:
 
 - Pasa revisión de código.
-- No tiene conflictos con `main`.
+- No tiene conflictos con `dev`.
 - Cumple con todas las convenciones establecidas.
 - La funcionalidad fue probada correctamente.
 - La documentación está actualizada.
 
 ---
 
-## 🎨 Uso Obligatorio de Prettier
+## Uso Obligatorio de Prettier
 
 Todo el código debe ser formateado usando **Prettier**.
+La configuración se encuentra en el archivo [.prettierrc](.prettierrc)
+Los archivos excentos del formateado se configuran en [.prettierignore](.prettierignore)
 
 ---
 
-## 📚 Criterios para Actualizar Documentación
+## Criterios para Actualizar Documentación
 
 Se debe actualizar la documentación cuando:
 
@@ -97,7 +100,56 @@ Se debe actualizar la documentación cuando:
 
 ### Archivos clave:
 
-- `arquitectura.md`
-- `base-de-datos.md`
-- `endpoints.md`
+- [arquitectura.md](docs/arquitectura.md)
+- [base-de-datos.md](docs/base-de-datos.md)
+- [endpoints.md](docs/endpoints.md)
 - ADRs (Architecture Decision Records)
+
+---
+
+### Uso de TSDoc
+
+Se debe utilizar TSDoc (comentarios que inician con `/**`) para documentar piezas clave del sistema tanto en el Backend como en el Frontend.
+
+**En el Backend (NestJS):**
+
+- **Obligatorio** para documentar DTOs y Servicios.
+- **Para métodos simples:** Usa un comentario de una sola línea.
+  ```typescript
+  /** Creates a new class */
+  async create(createClassDto: CreateClassDto) { ... }
+  ```
+- **Para métodos complejos:** Usa comentarios multilínea describiendo qué hace, sus parámetros (@param), valores de retorno (@returns) y posibles excepciones (@throws).
+  ```typescript
+  /**
+   * Retrieves paginated classes, optionally filtered by title and/or course
+   * @param search - Optional search term to filter classes
+   * @param page - The current page number for pagination (defaults to 1)
+   * @returns A paginated object containing the data and metadata
+   */
+  async findAll(search?: string, page: number = 1) { ... }
+  ```
+
+---
+
+### Criterios para nombrar archivos, carpetas y módulos.
+
+Se utiliza la kebab-case para los archivos (todo en minúsculas separado por guiones)
+
+Como regla general, las clases, interfaces y componentes funcionales de React se nombran en PascalCase internamente en el código.
+
+**En el Backend (NestJS):**
+
+- **Módulos y Carpetas:** Los módulos que agrupan recursos (ej. colecciones de base de datos) van en plural (courses, classes, materials). Los módulos funcionales específicos van en singular (auth, global-searcher).
+- **Archivos**: Siguen el patrón de sufijos `<nombre-del-recurso>.<tipo>.ts.`
+  - **Controladores:** admin-courses.controller.ts
+  - **Servicios:** classes.service.ts
+  - **DTOs** (dentro de subcarpetas dto/): create-course.dto.ts
+
+**En el Frontend (Next.js):**
+
+- **Rutas (app/):** Las carpetas definen la URL, por lo que deben ser descriptivas y en kebab-case (ej. dashboard, verificar-email, cursos). Los archivos propios del framework dentro de estas carpetas siempre se llaman `page.tsx` o `layout.tsx`, se pueden crear archivos como `not-found.tsx`.
+- **Componentes (components/ o features/):** Nombres descriptivos en usando extensión .tsx.
+  Ej: `search-result-card.tsx`, `logout-button.tsx`.
+- **Utilidades y Servicios (lib/, utils/, services/)**: Archivos que contienen lógica pura o funciones sin JSX deben usar la extensión .ts.
+  Ej: api-client.ts, middleware.ts.
