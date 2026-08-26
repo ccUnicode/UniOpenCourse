@@ -212,6 +212,55 @@ Registro de visita creado o actualizado (`LastCourseVisit`).
 
 ---
 
+## GET /courses/:id/evaluations
+
+### Descripción
+
+Ejecuta un web scraping a Trikaweb para obtener los enlaces de las evaluaciones asociadas a un curso. Emplea un caché en memoria de 5 minutos para deduplicar peticiones simultáneas y evitar ataques Proxy DDoS. La URL objetivo es sanitizada para evitar SSRF.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción  |
+| --------- | ------ | --------- | ------------ |
+| id        | number | Sí        | ID del curso |
+
+### Respuesta 200
+
+Arreglo de objetos con las evaluaciones extraídas o un arreglo vacío `[]` si el curso no tiene una URL de Trikaweb configurada.
+
+Ejemplo:
+```json
+[
+  {
+    "id": "EVAL1",
+    "label": "EVAL1",
+    "link": "https://trikaweb.ccunicode.org/ejemplo#section-EVAL1"
+  }
+]
+```
+
+### Errores
+
+| Código | Caso                                           |
+| ------ | ---------------------------------------------- |
+| 400    | ID no numérico                                 |
+| 503    | Servicio no disponible (Trikaweb caído/timeout) |
+
+### Requerimientos relacionados
+
+- RF-12.8
+- RF-12.9
+
+---
+
 ## GET /courses/:id/classes
 
 ### Descripción
