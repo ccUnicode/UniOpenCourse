@@ -379,6 +379,26 @@ Representa los recursos adicionales de apoyo vinculados a una clase. Soporta tre
 
 ---
 
+## Restricciones importantes
+
+A nivel general de la base de datos se manejan las siguientes restricciones de integridad:
+- **Unicidad de usuarios:** Los campos `email` y `username` de la entidad `User` son únicos (Unique Constraints).
+- **Control de tokens:** La tabla `EmailVerificationToken` posee un constraint único en `user_id` para garantizar la existencia de máximo un token por usuario, además de un índice único en `token_hash` para evitar colisiones.
+- **Unicidad de cursos:** El campo `course_code` en `Course` es único para evitar duplicidad de cursos académicos.
+- **Unicidad de historial:** En `LastCourseVisit`, la combinación del par (`user_id`, `course_id`) es única por definición (modelo asociativo de muchos a muchos).
+- **Cascadas restrictivas:** La eliminación en cascada (`onDelete: Cascade`) está configurada en la mayoría de las relaciones dependientes, por ejemplo: Curso → Clase → Materiales.
+
+---
+
+## Decisiones de modelado
+
+- **Polimorfismo mitigado:** En lugar de crear tablas separadas para cada tipo de material (archivo físico, enlace externo, referencia de texto), se optó por una única tabla `Material` con un Enum `material_type`. Esto simplifica las consultas y el mantenimiento, aunque exige validación lógica a nivel de aplicación (ej. validar que si el tipo es 'link', el campo `url_link` no esté vacío).
+- **Tokens de verificación seguros:** Se decidió extraer el token de verificación a una entidad separada (`EmailVerificationToken`) con relación 1:1, en lugar de ponerlo como un campo nulo dentro del `User`. Esto facilita el control de expiración (`expires_at`), la emisión (`created_at`) y permite escalar a una relación 1:N en el futuro si se requieren múltiples tipos de tokens. Además, solo se almacena el Hash SHA-256 del token para prevenir filtraciones de la base de datos.
+- **Registro de visitas como upsert:** La tabla `LastCourseVisit` se diseñó no como un simple log (que generaría millones de filas rápidamente), sino como un estado acumulativo. Se registra el momento de inicio (`start_date`) y solo se actualiza la fecha de la última visita (`last_visit_date`) utilizando un Upsert.
+- **Roles numéricos:** Se utilizó un `role_id` numérico con su respectiva tabla `Role` en lugar de un Enum de PostgreSQL. Esto permite una mayor flexibilidad futura para la gestión dinámica de roles a través de un panel de administrador sin necesidad de correr migraciones de base de datos cada vez que se cree un nuevo perfil.
+
+---
+
 ## Migraciones y seed data
 
 - **Migraciones**: existen en `apps/backend/prisma/migrations/` y representan la evolución del esquema.
