@@ -1,6 +1,6 @@
 # Brevo — UniOpenCourse
 
-Documentación sobre **qué es Brevo**, **cómo se usa en el proyecto** y **qué permite hacer** la plataforma. Para configurar una cuenta paso a paso, ver [`brevo-tutorial.md`](./brevo-tutorial.md).
+Documentación sobre **qué es Brevo**, **cómo se usa en el proyecto** y **qué permite hacer** la plataforma. Para configurar una cuenta paso a paso, ver [`BREVO-TUTORIAL.md`](./BREVO-TUTORIAL.md).
 
 ---
 

@@ -56,8 +56,8 @@ Antes de abrir un PR, asegúrate de cumplir con lo siguiente:
 
 - El PR tiene una **descripción clara y detallada** del cambio (seguir la guía de redacción de PR's del estandar de documentación de UNIOpenCourse).
 - Si modifica comportamiento de API:
-  Se actualizó Swagger/OpenAPI.
   Se actualizó `endpoints.md` (si aplica).
+  Swagger/OpenAPI solo si el equipo lo adopta en el futuro (actualmente no está implementado; ver [ADR-008](docs/adr/ADR-008-no-implementar-swagger-openapi.md)).
 - Si modifica estructura del sistema:
   Se actualizó `arquitectura.md` o el ADR correspondiente.
 - Si modifica modelo de datos:
