@@ -396,10 +396,12 @@ Administrador.
 
 ### Parámetros de consulta (Query)
 
-| Parámetro | Tipo   | Requerido | Descripción                                          |
-| --------- | ------ | --------- | ---------------------------------------------------- |
-| search    | string | No        | Filtro de texto opcional.                            |
-| page      | number | No        | Número de página para la paginación (por defecto 1). |
+| Parámetro | Tipo   | Requerido | Descripción                                                 |
+| --------- | ------ | --------- | ----------------------------------------------------------- |
+| search    | string | No        | Filtro de texto opcional.                                   |
+| page      | number | No        | Número de página para la paginación (por defecto 1).        |
+| limit     | number | No        | Límite de resultados por página (por defecto 12, máx 100).  |
+| course_id | number | No        | Filtra las clases pertenecientes a un curso específico.     |
 
 ### Respuesta 200
 
@@ -489,6 +491,7 @@ Requerida.
 
 - `file`: Archivo binario (PDF, PNG, JPEG). Tamaño máximo 5MB.
 - `class_id`: ID de la clase.
+- `filename`: Nombre descriptivo del archivo físico a mostrar en la interfaz.
 
 ### Respuesta 201
 
@@ -519,6 +522,7 @@ Requerida.
 | Campo    | Tipo   | Requerido | Descripción                          |
 | -------- | ------ | --------- | ------------------------------------ |
 | class_id | number | Sí        | ID de la clase.                      |
+| filename | string | Sí        | Nombre descriptivo del enlace.       |
 | url_link | string | Sí        | Enlace externo hacia un recurso web. |
 
 ### Respuesta 201
@@ -544,6 +548,7 @@ Requerida.
 | Campo             | Tipo   | Requerido | Descripción                    |
 | ----------------- | ------ | --------- | ------------------------------ |
 | class_id          | number | Sí        | ID de la clase.                |
+| filename          | string | Sí        | Nombre de la referencia.       |
 | written_reference | string | Sí        | Texto de la cita o referencia. |
 
 ### Respuesta 201
@@ -817,6 +822,7 @@ Público.
 ### Requerimientos relacionados
 
 - RF-06
+- RF-13
 
 ## POST /auth/logout
 
@@ -914,7 +920,7 @@ Ninguno.
 
 | Parámetro | Tipo   | Requerido | Descripción         |
 | --------- | ------ | --------- | ------------------- |
-| q         | string | No        | Término de búsqueda |
+| q         | string | Sí        | Término de búsqueda (mínimo 2, máximo 150 caracteres). |
 | page      | number | No        | Página (default 1)  |
 
 ### Body
@@ -935,50 +941,7 @@ Ninguno documentado.
 
 ---
 
-## POST /auth/admin/login
 
-### Descripción
-
-Inicia sesión para administradores.
-
-### Autenticación
-
-No requerida.
-
-### Roles permitidos
-
-Público.
-
-### Parámetros de ruta
-
-Ninguno.
-
-### Query params
-
-Ninguno.
-
-### Body
-
-| Campo    | Tipo   | Requerido | Descripción      |
-| -------- | ------ | --------- | ---------------- |
-| email    | string | Sí        | Correo o usuario |
-| password | string | Sí        | Contraseña       |
-
-### Respuesta 200
-
-Token JWT e información del admin.
-
-### Errores posibles
-
-| Código | Caso                                     |
-| ------ | ---------------------------------------- |
-| 401    | Credenciales inválidas o rol no es ADMIN |
-
-### Requerimientos relacionados
-
-- RF-13
-
----
 
 ## GET /admin/classes/:id
 
@@ -1046,15 +1009,18 @@ Ninguno.
 
 Ninguno.
 
-### Body
+### Body (multipart/form-data)
 
-| Campo       | Tipo   | Requerido | Descripción      |
-| ----------- | ------ | --------- | ---------------- |
-| name        | string | Sí        | Nombre del curso |
-| course_code | string | Sí        | Código único     |
-| description | string | Sí        | Descripción      |
-| url_image   | string | Sí        | URL imagen       |
-| teacher_id  | number | Sí        | ID Docente       |
+| Campo             | Tipo   | Requerido | Descripción                                                |
+| ----------------- | ------ | --------- | ---------------------------------------------------------- |
+| name              | string | Sí        | Nombre del curso                                           |
+| course_code       | string | Sí        | Código único                                               |
+| description       | string | Sí        | Descripción detallada del curso                            |
+| file              | file   | Sí        | Imagen del curso (PNG/JPEG, máximo 5MB)                    |
+| url_trikaweb      | string | No        | URL de evaluaciones en Trikaweb                            |
+| teacher_id        | number | No*       | ID del Docente (*opcional si se envía el nombre manual)    |
+| teacher_name      | string | No*       | Nombre del docente (*opcional si se envía `teacher_id`)    |
+| teacher_last_name | string | No*       | Apellido del docente (*opcional si se envía `teacher_id`)  |
 
 ### Respuesta 201
 
@@ -1183,9 +1149,21 @@ Administrador.
 
 Ninguno.
 
-### Body
+### Body (multipart/form-data)
 
-Atributos opcionales de Course.
+> [!WARNING]
+> Debido a que el backend reutiliza el `CreateCourseDto`, este endpoint de actualización **NO** es realmente parcial. Estás obligado a enviar nuevamente todos los campos obligatorios (`name`, `course_code`, `description`) en cada actualización. Solo la imagen (`file`) es estrictamente opcional.
+
+| Campo             | Tipo   | Requerido | Descripción                                                |
+| ----------------- | ------ | --------- | ---------------------------------------------------------- |
+| name              | string | Sí        | Nombre del curso                                           |
+| course_code       | string | Sí        | Código único                                               |
+| description       | string | Sí        | Descripción detallada del curso                            |
+| file              | file   | No        | Imagen del curso (Solo si se desea reemplazar la actual)   |
+| url_trikaweb      | string | No        | URL de evaluaciones en Trikaweb                            |
+| teacher_id        | number | No*       | ID del Docente (*opcional si se envía el nombre manual)    |
+| teacher_name      | string | No*       | Nombre del docente (*opcional si se envía `teacher_id`)    |
+| teacher_last_name | string | No*       | Apellido del docente (*opcional si se envía `teacher_id`)  |
 
 ### Respuesta 200
 
@@ -1267,7 +1245,12 @@ Ninguno.
 
 ### Query params
 
-Ninguno.
+| Parámetro | Tipo   | Requerido | Descripción                                                     |
+| --------- | ------ | --------- | --------------------------------------------------------------- |
+| search    | string | No        | Filtro de búsqueda por nombre del material o archivo.           |
+| class_id  | number | No        | Filtra los materiales pertenecientes a una clase en específico. |
+| page      | number | No        | Página de resultados (por defecto 1).                           |
+| limit     | number | No        | Cantidad de materiales por página (por defecto 10).             |
 
 ### Body
 
