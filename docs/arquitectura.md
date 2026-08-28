@@ -46,7 +46,7 @@ graph TD
 - **Registro e inicio de sesión**: Creación de la cuenta de usuario en PostgreSQL, envío de un correo con un token seguro para verificar el email (usando Brevo), y login que devuelve las cookies con los tokens de sesión.
 - **Consulta de cursos**: Los usuarios pueden listar y buscar cursos (paginados), acceder a la información de las clases correspondientes y ver los diferentes tipos de materiales (enlaces, archivos, referencias).
 - **Seguimiento de rutas**: El sistema rastrea automáticamente la interacción del usuario (`LastCourseVisit`), permitiendo retomar los cursos visitados recientemente.
-- **Administración de cursos y clases**: Endpoints protegidos (con roles, ej. `ADMIN`) para realizar operaciones CRUD (crear, leer, actualizar, borrar) de cursos, clases, profesores y materiales, validando tamaños y tipos de archivos subidos.
+- **Administración de cursos y clases**: Endpoints protegidos (con roles, ej. `ADMIN`) para realizar operaciones CRUD (crear, leer, actualizar, borrar) de cursos, clases y materiales, validando tamaños y tipos de archivos subidos.
 
 ## Decisiones técnicas
 
