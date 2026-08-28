@@ -289,7 +289,7 @@ Define los cursos publicados en la plataforma. Actúa como el agrupador principa
 ### Reglas
 
 - El código del curso (`course_code`) debe ser único.
-- La eliminación de un curso elimina en cascada todas sus clases, materiales y registros de visitas.
+- La eliminación de un curso elimina en cascada sus registros de visitas. No elimina en cascada sus clases; si tiene clases asignadas, lanzará un error de restricción de clave foránea.
 
 ---
 
@@ -328,14 +328,14 @@ Representa una unidad de contenido dentro de un curso, agrupando una descripció
 
 ### Campos principales
 
-| Campo                 | Tipo     | Descripción                                    |
-| --------------------- | -------- | ---------------------------------------------- |
-| `class_id`            | Int      | (PK) Identificador único de la clase.          |
-| `course_id`           | Int      | (FK) Identificador del curso al que pertenece. |
-| `title`               | String   | Título visible de la clase.                    |
-| `description`         | String   | Descripción larga del contenido de la clase.   |
-| `url_youtube`         | String   | Enlace al video principal de la lección.       |
-| `class_creation_date` | DateTime | Fecha y hora en la que se creó la clase.       |
+| Campo                 | Tipo     | Descripción                                         |
+| --------------------- | -------- | --------------------------------------------------- |
+| `class_id`            | Int      | (PK) Identificador único de la clase.               |
+| `course_id`           | Int      | (FK) Identificador del curso al que pertenece.      |
+| `title`               | String   | Título visible de la clase.                         |
+| `description`         | String   | Descripción larga del contenido de la clase.        |
+| `url_youtube`         | String?  | Enlace al video principal de la lección (Opcional). |
+| `class_creation_date` | DateTime | Fecha y hora en la que se creó la clase.            |
 
 ### Relaciones
 
@@ -344,7 +344,7 @@ Representa una unidad de contenido dentro de un curso, agrupando una descripció
 
 ### Reglas
 
-- La eliminación de un curso desencadenará la eliminación en cascada de sus clases.
+- **NO** existe eliminación en cascada de clases al borrar un curso. Intentar borrar un curso con clases causará una restricción de clave foránea.
 - No puede existir una clase "huérfana" (sin `course_id`).
 
 ---
@@ -382,11 +382,12 @@ Representa los recursos adicionales de apoyo vinculados a una clase. Soporta tre
 ## Restricciones importantes
 
 A nivel general de la base de datos se manejan las siguientes restricciones de integridad:
+
 - **Unicidad de usuarios:** Los campos `email` y `username` de la entidad `User` son únicos (Unique Constraints).
 - **Control de tokens:** La tabla `EmailVerificationToken` posee un constraint único en `user_id` para garantizar la existencia de máximo un token por usuario, además de un índice único en `token_hash` para evitar colisiones.
 - **Unicidad de cursos:** El campo `course_code` en `Course` es único para evitar duplicidad de cursos académicos.
 - **Unicidad de historial:** En `LastCourseVisit`, la combinación del par (`user_id`, `course_id`) es única por definición (modelo asociativo de muchos a muchos).
-- **Cascadas restrictivas:** La eliminación en cascada (`onDelete: Cascade`) está configurada en la mayoría de las relaciones dependientes, por ejemplo: Curso → Clase → Materiales.
+- **Restricciones y Cascadas:** La eliminación en cascada (`onDelete: Cascade`) está configurada en dependencias como Usuario -> Token o Curso -> Visitas. Sin embargo, la relación **Curso -> Clase no tiene cascada**, generando una restricción protectora al intentar eliminar un curso con clases.
 
 ---
 
