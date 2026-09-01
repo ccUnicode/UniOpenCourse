@@ -20,7 +20,7 @@ Monorepo fullstack construido con:
 
 ## Requisitos
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - npm >= 9
 - PostgreSQL >= 14
 
@@ -34,12 +34,12 @@ UniOpenCourse/
 │     ├── frontend/     # Aplicación web (Next.js)
 │     └── backend/      # API (NestJS)
 ├── docs/           # Documentación del proyecto
-│     ├── decisiones/
+│     ├── adr/
 │     ├── arquitectura.md
 │     ├── frontend.md
 │     ├── backend.md
 │     ├── base-de-datos.md
-│     ├── brevo-tutorial.md # Configuración servicio de email
+│     ├── BREVO-TUTORIAL.md # Configuración servicio de email
 │     └── endpoints.md
 ├── README.md
 ├── CONTRIBUTING.md
@@ -77,7 +77,7 @@ Copiar el archivo de ejemplo:
 cp apps/backend/.env.example apps/backend/.env
 ```
 
-Editar `.env` con tus credenciales de base de datos y de configuración de Brevo ([docs/brevo-tutorial.md](docs/brevo-tutorial.md)).
+Editar `.env` con tus credenciales de base de datos y de configuración de Brevo ([docs/BREVO-TUTORIAL.md](docs/BREVO-TUTORIAL.md)).
 
 Ejemplo:
 
