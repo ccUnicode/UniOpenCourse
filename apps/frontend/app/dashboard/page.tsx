@@ -116,7 +116,6 @@ export default function Dashboard() {
               Bienvenido a tu panel de control académico de UniOpenCourseWare.
             </p>
           </div>
-          <LogoutButton message="Cerrar Sesión" />
         </div>
 
         {/* Sección de Cursos */}
@@ -124,7 +123,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-[#157347]" />
-              Mis Cursos Matriculados
+              Cursos visitados recientemente
             </h2>
             <Link
               href="/cursos"
