@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { Search, Plus, SquarePen, Trash2, BookOpen } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { apiFetch } from '@/lib/api-client';
+import {
+  CLASS_LIMITS,
+  isValidYoutubeWatchUrl,
+  mapClassFieldErrors,
+  throwApiError,
+} from '@/lib/api-errors';
 
 // --- Types ---
 interface Class {
@@ -18,6 +24,12 @@ interface Class {
     name: string;
     course_code: string;
   };
+}
+
+interface CourseOption {
+  course_id: number;
+  name: string;
+  course_code: string;
 }
 
 const formatAdminDate = (date?: string) => {
@@ -57,27 +69,34 @@ const fetchClasses = async (
   }
 };
 
+const fetchCourses = async (): Promise<CourseOption[]> => {
+  try {
+    const response = await apiFetch('admin/courses?page=1&limit=50');
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.data || []) as CourseOption[];
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return [];
+  }
+};
+
 const createClass = async (classData: {
   course_id: number;
   title: string;
   description: string;
   url_youtube?: string;
 }): Promise<Class> => {
-  try {
-    const response = await apiFetch('admin/classes', {
-      method: 'POST',
-      body: JSON.stringify(classData),
-    });
+  const response = await apiFetch('admin/classes', {
+    method: 'POST',
+    body: JSON.stringify(classData),
+  });
 
-    if (!response.ok) {
-      throw new Error('Error al crear clase');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating class:', error);
-    throw error;
+  if (!response.ok) {
+    await throwApiError(response, 'Error al crear clase');
   }
+
+  return await response.json();
 };
 
 const deleteClass = async (id: number): Promise<void> => {
@@ -118,6 +137,7 @@ export default function AdminClassesPage() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
 
   // Load classes on mount
   useEffect(() => {
@@ -139,13 +159,24 @@ export default function AdminClassesPage() {
     loadClasses();
   };
 
+  const openCreateModal = async () => {
+    setFormErrors({});
+    setIsCreateModalOpen(true);
+    const courseList = await fetchCourses();
+    setCourses(courseList);
+  };
+
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!formData.course_id.trim()) errors.course_id = 'El ID del curso es requerido';
+    if (!formData.course_id.trim()) errors.course_id = 'Selecciona un curso';
     if (!formData.title.trim()) errors.title = 'El título de la clase es requerido';
     if (!formData.description.trim())
       errors.description = 'La descripción de la clase es requerida';
+    if (formData.url_youtube.trim() && !isValidYoutubeWatchUrl(formData.url_youtube)) {
+      errors.url_youtube =
+        'El enlace debe ser un video de YouTube válido (youtube.com/watch o youtu.be)';
+    }
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -161,11 +192,12 @@ export default function AdminClassesPage() {
 
       setIsCreateModalOpen(false);
       setFormData({ course_id: '', title: '', description: '', url_youtube: '' });
+      setFormErrors({});
       loadClasses();
     } catch (error) {
-      console.error('Error creating class:', error);
-      errors.title = 'Error al crear la clase';
-      setFormErrors(errors);
+      const message =
+        error instanceof Error ? error.message : 'Error al crear la clase';
+      setFormErrors(mapClassFieldErrors(message));
     } finally {
       setIsSubmitting(false);
     }
@@ -208,7 +240,7 @@ export default function AdminClassesPage() {
                 </p>
               </div>
               <button
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={openCreateModal}
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200 cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
@@ -367,6 +399,9 @@ export default function AdminClassesPage() {
             <p className="mt-1 text-sm text-white/50">
               Completa la información de la nueva clase.
             </p>
+            {formErrors.general && (
+              <p className="mt-3 text-sm text-red-400">{formErrors.general}</p>
+            )}
 
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
@@ -374,17 +409,23 @@ export default function AdminClassesPage() {
                   htmlFor="course_id"
                   className="mb-1.5 block text-sm font-normal text-white/85"
                 >
-                  ID del curso
+                  Curso
                 </label>
-                <input
-                  type="number"
+                <select
                   id="course_id"
                   value={formData.course_id}
                   onChange={(e) =>
                     setFormData({ ...formData, course_id: e.target.value })
                   }
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                />
+                >
+                  <option value="">Selecciona un curso</option>
+                  {courses.map((course) => (
+                    <option key={course.course_id} value={course.course_id}>
+                      {course.name} ({course.course_code})
+                    </option>
+                  ))}
+                </select>
                 {formErrors.course_id && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.course_id}</p>
                 )}
@@ -400,10 +441,14 @@ export default function AdminClassesPage() {
                 <input
                   type="text"
                   id="title"
+                  maxLength={CLASS_LIMITS.title}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {formData.title.length}/{CLASS_LIMITS.title}
+                </p>
                 {formErrors.title && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.title}</p>
                 )}
@@ -418,6 +463,7 @@ export default function AdminClassesPage() {
                 </label>
                 <textarea
                   id="description"
+                  maxLength={CLASS_LIMITS.description}
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
@@ -425,6 +471,9 @@ export default function AdminClassesPage() {
                   rows={3}
                   className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {formData.description.length}/{CLASS_LIMITS.description}
+                </p>
                 {formErrors.description && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.description}</p>
                 )}
@@ -440,6 +489,7 @@ export default function AdminClassesPage() {
                 <input
                   type="text"
                   id="url_youtube"
+                  maxLength={CLASS_LIMITS.url_youtube}
                   value={formData.url_youtube}
                   onChange={(e) =>
                     setFormData({ ...formData, url_youtube: e.target.value })
@@ -447,6 +497,9 @@ export default function AdminClassesPage() {
                   placeholder="https://youtube.com/watch?v=..."
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                {formErrors.url_youtube && (
+                  <p className="mt-1 text-xs text-red-400">{formErrors.url_youtube}</p>
+                )}
               </div>
 
               <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">

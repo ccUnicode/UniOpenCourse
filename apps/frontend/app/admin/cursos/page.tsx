@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, BookOpen, Plus, SquarePen, Trash2 } from 'lucide-react';
 
@@ -91,7 +91,6 @@ export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<CreateCourse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [teacherFilter, setTeacherFilter] = useState('Todos los profesores');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,27 +119,6 @@ export default function AdminCoursesPage() {
     setTotalCourses(result.total);
     setTotalPages(result.totalPages);
     setIsLoading(false);
-  };
-
-  // Memoized unique teachers
-  const teachers = useMemo(() => {
-    const all = courses.map((c) => c.teacher_name).filter(Boolean);
-    return ['Todos los profesores', ...Array.from(new Set(all))];
-  }, [courses]);
-
-  // Filtering local teacher selection if active
-  const filteredCourses = useMemo(() => {
-    return courses.filter((course) => {
-      const matchesTeacher =
-        teacherFilter === 'Todos los profesores' || course.teacher_name === teacherFilter;
-      return matchesTeacher;
-    });
-  }, [courses, teacherFilter]);
-
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setTeacherFilter('Todos los profesores');
-    setCurrentPage(1);
   };
 
   const confirmDelete = (course: CreateCourse) => {
@@ -201,50 +179,27 @@ export default function AdminCoursesPage() {
             </div>
 
             {/* Barra de herramientas */}
-            <div className="mt-8 flex flex-col xl:flex-row xl:items-center gap-4">
-              <div className="relative w-full xl:w-[400px]">
+            <div className="mt-8">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Buscar por nombre o código..."
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#1A201D] pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 transition-colors duration-200"
                 />
-              </div>
-
-              <button
-                onClick={loadCourses}
-                className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                {isLoading ? 'Cargando...' : 'Recargar'}
-              </button>
-
-              <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-                <select
-                  value={teacherFilter}
-                  onChange={(e) => setTeacherFilter(e.target.value)}
-                  className="h-11 rounded-[10px] border border-[#2B332F] bg-[#1A201D] px-4 text-sm text-white outline-none focus:border-[#157347] transition-colors"
-                >
-                  {teachers.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={handleClearFilters}
-                  className="h-11 rounded-[10px] border border-[#2B332F] bg-transparent px-4 text-sm text-white/65 hover:bg-white/5 hover:text-white transition-colors duration-200 whitespace-nowrap cursor-pointer"
-                >
-                  Limpiar filtros
-                </button>
               </div>
             </div>
 
             {/* Tabla de cursos */}
             <div className="mt-6 overflow-hidden rounded-2xl border border-[#2B332F] bg-[#1A201D] overflow-x-auto">
-              {filteredCourses.length > 0 ? (
+              {isLoading ? (
+                <div className="py-16 text-center text-sm text-white/50">Cargando...</div>
+              ) : courses.length > 0 ? (
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
@@ -266,13 +221,13 @@ export default function AdminCoursesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCourses.map((course) => (
+                    {courses.map((course) => (
                       <tr
                         key={course.course_id}
                         className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group"
                       >
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-semibold text-white">
+                        <td className="px-5 py-4 break-words min-w-0 max-w-[280px]">
+                          <p className="text-sm font-semibold text-white break-words">
                             {course.name}
                           </p>
                           <p className="mt-1 text-xs text-white/35">
@@ -347,24 +302,28 @@ export default function AdminCoursesPage() {
                     {Math.min(currentPage * itemsPerPage, totalCourses)} de {totalCourses}{' '}
                     cursos
                   </span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347] cursor-pointer"
-                  >
-                    <option value="10" className="bg-[#1A201D] text-white">
-                      10
-                    </option>
-                    <option value="25" className="bg-[#1A201D] text-white">
-                      25
-                    </option>
-                    <option value="50" className="bg-[#1A201D] text-white">
-                      50
-                    </option>
-                  </select>
+                  <label className="inline-flex items-center gap-2">
+                    <select
+                      aria-label="Cursos por página"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="bg-transparent border border-[#2B332F] rounded-md px-2 py-1 outline-none focus:border-[#157347] cursor-pointer"
+                    >
+                      <option value="10" className="bg-[#1A201D] text-white">
+                        10
+                      </option>
+                      <option value="25" className="bg-[#1A201D] text-white">
+                        25
+                      </option>
+                      <option value="50" className="bg-[#1A201D] text-white">
+                        50
+                      </option>
+                    </select>
+                    <span>por pág.</span>
+                  </label>
                 </div>
                 <div className="flex items-center gap-1">
                   <button

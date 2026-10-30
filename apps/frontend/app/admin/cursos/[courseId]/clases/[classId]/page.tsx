@@ -16,6 +16,15 @@ import {
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
 import { apiFetch, API_URL } from '@/lib/api-client';
+import {
+  CLASS_LIMITS,
+  MATERIAL_LIMITS,
+  isAllowedMaterialFile,
+  isHttpsUrl,
+  isValidYoutubeWatchUrl,
+  mapMaterialFieldErrors,
+  throwApiError,
+} from '@/lib/api-errors';
 
 type MaterialType = 'file' | 'link' | 'reference';
 
@@ -91,15 +100,6 @@ const getDomain = (url: string) => {
   }
 };
 
-const isValidUrl = (url: string) => {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
 // --- API Functions ---
 
 const fetchCourse = async (courseId: number): Promise<Course> => {
@@ -122,7 +122,7 @@ const updateClass = async (
     method: 'PATCH',
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error('Error al actualizar clase');
+  if (!response.ok) await throwApiError(response, 'Error al actualizar clase');
   return await response.json();
 };
 
@@ -143,7 +143,7 @@ const createLinkMaterialApi = async (
     body: JSON.stringify({ class_id: classId, filename, url_link }),
   });
   if (!response.ok) {
-    throw new Error('Error al crear enlace');
+    await throwApiError(response, 'Error al crear enlace');
   }
   return await response.json();
 };
@@ -157,7 +157,7 @@ const createReferenceMaterialApi = async (
     method: 'POST',
     body: JSON.stringify({ class_id: classId, filename, written_reference }),
   });
-  if (!response.ok) throw new Error('Error al crear referencia');
+  if (!response.ok) await throwApiError(response, 'Error al crear referencia');
   return await response.json();
 };
 
@@ -176,8 +176,7 @@ const createFileMaterialApi = async (
     body: formData,
   });
   if (!response.ok) {
-    console.log(response);
-    throw new Error('Error al crear archivo');
+    await throwApiError(response, 'Error al crear archivo');
   }
   return await response.json();
 };
@@ -293,6 +292,13 @@ export default function AdminClassPage() {
     if (!classFormData.title.trim()) errors.title = 'El título es obligatorio';
     if (!classFormData.description.trim())
       errors.description = 'La descripción es obligatoria';
+    if (
+      classFormData.url_youtube.trim() &&
+      !isValidYoutubeWatchUrl(classFormData.url_youtube)
+    ) {
+      errors.url_youtube =
+        'El enlace debe ser un video de YouTube válido (youtube.com/watch o youtu.be)';
+    }
     setClassFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -308,8 +314,9 @@ export default function AdminClassPage() {
       setSaveSuccess('Datos guardados exitosamente');
       setTimeout(() => setSaveSuccess(''), 3000);
     } catch (error) {
-      console.error('Error saving class:', error);
-      setSaveError('Error al guardar los cambios.');
+      setSaveError(
+        error instanceof Error ? error.message : 'Error al guardar los cambios.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -397,13 +404,18 @@ export default function AdminClassPage() {
       const trimmedUrl = formData.url.trim();
       if (!trimmedUrl) {
         errors.url = 'La URL es obligatoria';
-      } else if (!isValidUrl(trimmedUrl)) {
-        errors.url = 'Ingresa una URL válida (http:// o https://)';
+      } else if (!isHttpsUrl(trimmedUrl)) {
+        errors.url = 'El enlace debe ser una URL HTTPS válida';
       }
     } else if (formData.type === 'reference') {
       if (!formData.reference.trim()) errors.reference = 'La referencia es obligatoria';
     } else if (formData.type === 'file') {
       if (!formData.file && !editingMaterial) errors.file = 'Debes subir un archivo';
+      else if (formData.file && !isAllowedMaterialFile(formData.file)) {
+        errors.file = 'Tipo de archivo no permitido. Solo se aceptan PDFs, PNGs y JPEGs.';
+      } else if (formData.file && formData.file.size > MATERIAL_LIMITS.fileSizeBytes) {
+        errors.file = 'El archivo no puede superar 5 MB.';
+      }
     }
 
     setFormErrors(errors);
@@ -445,8 +457,9 @@ export default function AdminClassPage() {
       }
       setIsFormModalOpen(false);
     } catch (e) {
-      console.error(e);
-      setFormErrors({ name: 'Error al procesar el material' });
+      const message =
+        e instanceof Error ? e.message : 'Error al procesar el material';
+      setFormErrors(mapMaterialFieldErrors(message));
     } finally {
       setIsSubmitting(false);
     }
@@ -537,12 +550,16 @@ export default function AdminClassPage() {
                     </label>
                     <input
                       type="text"
+                      maxLength={CLASS_LIMITS.title}
                       value={classFormData.title}
                       onChange={(e) =>
                         setClassFormData({ ...classFormData, title: e.target.value })
                       }
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
+                    <p className="mt-1 text-right text-xs text-white/40">
+                      {classFormData.title.length}/{CLASS_LIMITS.title}
+                    </p>
                     {classFormErrors.title && (
                       <p className="mt-1 text-xs text-red-400">{classFormErrors.title}</p>
                     )}
@@ -553,6 +570,7 @@ export default function AdminClassPage() {
                     </label>
                     <input
                       type="text"
+                      maxLength={CLASS_LIMITS.url_youtube}
                       value={classFormData.url_youtube}
                       onChange={(e) =>
                         setClassFormData({
@@ -563,6 +581,11 @@ export default function AdminClassPage() {
                       placeholder="https://youtube.com/watch?v=..."
                       className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                     />
+                    {classFormErrors.url_youtube && (
+                      <p className="mt-1 text-xs text-red-400">
+                        {classFormErrors.url_youtube}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -570,6 +593,7 @@ export default function AdminClassPage() {
                     Descripción
                   </label>
                   <textarea
+                    maxLength={CLASS_LIMITS.description}
                     value={classFormData.description}
                     onChange={(e) =>
                       setClassFormData({ ...classFormData, description: e.target.value })
@@ -577,6 +601,9 @@ export default function AdminClassPage() {
                     rows={5}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
+                  <p className="mt-1 text-right text-xs text-white/40">
+                    {classFormData.description.length}/{CLASS_LIMITS.description}
+                  </p>
                   {classFormErrors.description && (
                     <p className="mt-1 text-xs text-red-400">
                       {classFormErrors.description}
@@ -842,6 +869,9 @@ export default function AdminClassPage() {
             <p className="mt-1 text-sm text-white/50">
               Registra un recurso externo para esta clase.
             </p>
+            {formErrors.general && (
+              <p className="mt-3 text-sm text-red-400">{formErrors.general}</p>
+            )}
 
             <form onSubmit={handleFormSubmit} className="mt-6 space-y-4">
               <div>
@@ -854,11 +884,15 @@ export default function AdminClassPage() {
                 <input
                   type="text"
                   id="name"
+                  maxLength={MATERIAL_LIMITS.filename}
                   placeholder="Ejemplo: Diapositivas de introducción"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {formData.name.length}/{MATERIAL_LIMITS.filename}
+                </p>
                 {formErrors.name && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.name}</p>
                 )}
@@ -909,6 +943,7 @@ export default function AdminClassPage() {
                   <input
                     type="url"
                     id="url"
+                    maxLength={MATERIAL_LIMITS.url_link}
                     placeholder="https://"
                     value={formData.url}
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
@@ -930,6 +965,7 @@ export default function AdminClassPage() {
                   </label>
                   <textarea
                     id="reference"
+                    maxLength={MATERIAL_LIMITS.written_reference}
                     placeholder="Agrega la referencia, texto o fuente bibliográfica"
                     value={formData.reference}
                     onChange={(e) =>
@@ -938,6 +974,9 @@ export default function AdminClassPage() {
                     rows={4}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
+                  <p className="mt-1 text-right text-xs text-white/40">
+                    {formData.reference.length}/{MATERIAL_LIMITS.written_reference}
+                  </p>
                   {formErrors.reference && (
                     <p className="mt-1 text-xs text-red-400">{formErrors.reference}</p>
                   )}
@@ -953,7 +992,7 @@ export default function AdminClassPage() {
                     <input
                       type="file"
                       id="file"
-                      accept="application/pdf,image/png,image/jpeg"
+                      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                       onChange={(e) =>
                         setFormData({
                           ...formData,
