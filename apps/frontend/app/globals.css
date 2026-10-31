@@ -1,8 +1,13 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --background: #121715;
+  --foreground: #ededed;
+  --header-bg: #01392a;
+  --accent: #0b5a46;
+  --primary: #f5f7f6;
+  --placeholder: #8a9893;
 }
 
 @theme inline {
@@ -29,7 +34,7 @@
     -ms-overflow-style: none; /* Internet Explorer y Edge */
     scrollbar-width: none; /* Firefox */
   }
-  
+
   /* Scrollbar personalizado y elegante */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -48,17 +53,6 @@
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #31413c transparent;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121715;
-    --foreground: #ededed;
-    --header-bg: #01392a;
-    --accent: #0b5a46;
-    --primary: #f5f7f6;
-    --placeholder: #8a9893;
   }
 }
 
