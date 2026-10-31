@@ -8,7 +8,7 @@ export default function CourseCard({ course }: { course: Course }) {
     <Link
       href={`/cursos/${course.course_id}`}
       key={course.course_id}
-      className="mx-auto lg:mx-0"
+      className="block w-full min-w-0 max-w-110 mx-auto lg:mx-0"
     >
       <div className="group relative overflow-hidden max-w-110 w-full rounded-2xl border border-white/5 hover:border-white/20 bg-background-secondary transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.4)] hover:-translate-y-1">
         <div className="z-10 flex items-center gap-0 transition-all duration-300 ease-in-out overflow-hidden group-hover:gap-1 font-bold absolute top-4 left-4 bg-header-bg rounded-full px-3 py-1 text-xs">
@@ -34,29 +34,40 @@ export default function CourseCard({ course }: { course: Course }) {
             unoptimized={process.env.NODE_ENV === 'development'}
           />
         </figure>
-        <div className="p-5 md:p-6 w-full flex flex-col gap-6 rounded-b-2xl">
+        <div className="p-5 md:p-6 w-full h-64 flex flex-col gap-6 rounded-b-2xl">
           <div className="flex gap-2 flex-col">
-            <h2 className="text-xl font-bold">{course.name}</h2>
-            <p className="line-clamp-3 text-sm text-muted">{course.description}</p>
+            <h2 className="line-clamp-2 h-14 text-xl leading-7 font-bold [overflow-wrap:anywhere]">
+              {course.name}
+            </h2>
+            <p className="line-clamp-3 h-15 text-sm leading-5 text-muted [overflow-wrap:anywhere]">
+              {course.description}
+            </p>
           </div>
-          <div className="pt-4 border-t border-white/5 flex items-center justify-between mt-auto">
-            <span className="text-xs font-medium text-muted/90 uppercase tracking-wider">
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-3 mt-auto min-w-0">
+            <span
+              className="max-w-1/3 truncate text-xs font-medium text-muted/90 uppercase tracking-wider"
+              title={course.course_code}
+            >
               {course.course_code}
             </span>
-            <div className="inline-flex items-center gap-2 text-sm font-medium text-muted/90">
+            <div className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-muted/90">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
                 height="15"
                 fill="none"
                 viewBox="0 0 21 20"
+                className="shrink-0"
               >
                 <path
                   fill="#95a29d"
                   d="M18.5 15a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H7.96c.35.61.54 1.3.54 2h10v11h-9v2m4-10v2h-6v13h-2v-6h-2v6h-2v-8H0V7a2 2 0 0 1 2-2h11.5Zm-7-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
                 />
               </svg>
-              <p>
+              <p
+                className="truncate"
+                title={`${course.teacher.name} ${course.teacher.last_name}`}
+              >
                 {course.teacher.name} {course.teacher.last_name}
               </p>
             </div>
