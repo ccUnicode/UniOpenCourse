@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, FileText, Link as LinkIcon, BookOpen, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import {
+  AdminCourseClassSelect,
+  type CourseClassGroup,
+} from '@/components/admin/AdminEllipsisSelect';
 import { apiFetch, API_URL } from '@/lib/api-client';
 import {
   MATERIAL_LIMITS,
@@ -40,12 +44,68 @@ interface FetchMaterialsResponse {
 
 interface ClassOption {
   class_id: number;
+  course_id?: number;
   title: string;
   course?: {
     name: string;
     course_code: string;
   };
 }
+
+interface CourseOption {
+  course_id: number;
+  name: string;
+  course_code: string;
+}
+
+const compareEs = (a: string, b: string) =>
+  a.localeCompare(b, 'es', { sensitivity: 'base' });
+
+const groupClassesByCourse = (
+  classes: ClassOption[],
+  courses: CourseOption[],
+): CourseClassGroup[] => {
+  const groups = new Map<string, CourseClassGroup>();
+
+  for (const course of courses) {
+    const key = `id-${course.course_id}`;
+    groups.set(key, {
+      key,
+      label: course.course_code
+        ? `${course.name} (${course.course_code})`
+        : course.name,
+      classes: [],
+    });
+  }
+
+  for (const classItem of classes) {
+    const key =
+      classItem.course_id != null
+        ? `id-${classItem.course_id}`
+        : `name-${classItem.course?.name ?? 'sin-curso'}-${classItem.course?.course_code ?? ''}`;
+
+    if (!groups.has(key)) {
+      const name = classItem.course?.name ?? 'Sin curso';
+      const code = classItem.course?.course_code;
+      groups.set(key, {
+        key,
+        label: code ? `${name} (${code})` : name,
+        classes: [],
+      });
+    }
+
+    groups.get(key)!.classes.push({
+      value: String(classItem.class_id),
+      label: classItem.title,
+    });
+  }
+
+  const sorted = Array.from(groups.values()).sort((a, b) => compareEs(a.label, b.label));
+  for (const group of sorted) {
+    group.classes.sort((a, b) => compareEs(a.label, b.label));
+  }
+  return sorted;
+};
 
 const getMaterialDownloadUrl = (materialId: number) =>
   `${API_URL}/materials/${materialId}/download`;
@@ -80,17 +140,36 @@ const fetchMaterials = async (
   }
 };
 
-const fetchClasses = async (): Promise<ClassOption[]> => {
+const fetchAllPages = async <T,>(
+  path: string,
+  limit: number,
+): Promise<T[]> => {
+  const collected: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+
   try {
-    const response = await apiFetch('admin/classes?page=1&limit=100');
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.data || []) as ClassOption[];
+    do {
+      const separator = path.includes('?') ? '&' : '?';
+      const response = await apiFetch(`${path}${separator}page=${page}&limit=${limit}`);
+      if (!response.ok) break;
+      const data = await response.json();
+      collected.push(...((data.data || []) as T[]));
+      totalPages = data.totalPages || 1;
+      page += 1;
+    } while (page <= totalPages);
   } catch (error) {
-    console.error('Error fetching classes:', error);
-    return [];
+    console.error('Error fetching selector options:', error);
   }
+
+  return collected;
 };
+
+const fetchClasses = async (): Promise<ClassOption[]> =>
+  fetchAllPages<ClassOption>('admin/classes', 100);
+
+const fetchCourses = async (): Promise<CourseOption[]> =>
+  fetchAllPages<CourseOption>('admin/courses', 50);
 
 const createFileMaterial = async (
   classId: number,
@@ -194,6 +273,11 @@ export default function AdminMaterialsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const classGroups = useMemo(
+    () => groupClassesByCourse(classes, courses),
+    [classes, courses],
+  );
 
   // Load materials on search, page or limit change
   useEffect(() => {
@@ -220,7 +304,9 @@ export default function AdminMaterialsPage() {
   const openCreateModal = async () => {
     setFormErrors({});
     setIsCreateModalOpen(true);
-    setClasses(await fetchClasses());
+    const [classList, courseList] = await Promise.all([fetchClasses(), fetchCourses()]);
+    setClasses(classList);
+    setCourses(courseList);
   };
 
   const handleCreateMaterial = async (e: React.FormEvent) => {
@@ -610,7 +696,7 @@ export default function AdminMaterialsPage() {
       {/* Modal Crear Material */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
-          <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear material</h2>
             <p className="mt-1 text-sm text-white/50">
               Selecciona el tipo de material y completa la información.
@@ -671,22 +757,13 @@ export default function AdminMaterialsPage() {
                 >
                   Clase
                 </label>
-                <select
+                <AdminCourseClassSelect
                   id="class_id"
                   value={formData.class_id}
-                  onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                >
-                  <option value="">Selecciona una clase</option>
-                  {classes.map((classItem) => (
-                    <option key={classItem.class_id} value={classItem.class_id}>
-                      {classItem.title}
-                      {classItem.course
-                        ? ` — ${classItem.course.name} (${classItem.course.course_code})`
-                        : ''}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Selecciona una clase"
+                  groups={classGroups}
+                  onChange={(classId) => setFormData({ ...formData, class_id: classId })}
+                />
                 {formErrors.class_id && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.class_id}</p>
                 )}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Plus, SquarePen, Trash2, BookOpen } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminEllipsisSelect } from '@/components/admin/AdminEllipsisSelect';
 import { apiFetch } from '@/lib/api-client';
 import {
   CLASS_LIMITS,
@@ -70,15 +71,26 @@ const fetchClasses = async (
 };
 
 const fetchCourses = async (): Promise<CourseOption[]> => {
+  const collected: CourseOption[] = [];
+  let page = 1;
+  let totalPages = 1;
+
   try {
-    const response = await apiFetch('admin/courses?page=1&limit=50');
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.data || []) as CourseOption[];
+    do {
+      const response = await apiFetch(`admin/courses?page=${page}&limit=50`);
+      if (!response.ok) break;
+      const data = await response.json();
+      collected.push(...((data.data || []) as CourseOption[]));
+      totalPages = data.totalPages || 1;
+      page += 1;
+    } while (page <= totalPages);
   } catch (error) {
     console.error('Error fetching courses:', error);
-    return [];
   }
+
+  return collected.sort((a, b) =>
+    a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
+  );
 };
 
 const createClass = async (classData: {
@@ -394,7 +406,7 @@ export default function AdminClassesPage() {
       {/* Modal Crear Clase */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
-          <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear clase</h2>
             <p className="mt-1 text-sm text-white/50">
               Completa la información de la nueva clase.
@@ -411,21 +423,18 @@ export default function AdminClassesPage() {
                 >
                   Curso
                 </label>
-                <select
+                <AdminEllipsisSelect
                   id="course_id"
                   value={formData.course_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, course_id: e.target.value })
+                  placeholder="Selecciona un curso"
+                  options={courses.map((course) => ({
+                    value: String(course.course_id),
+                    label: `${course.name} (${course.course_code})`,
+                  }))}
+                  onChange={(courseId) =>
+                    setFormData({ ...formData, course_id: courseId })
                   }
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
-                >
-                  <option value="">Selecciona un curso</option>
-                  {courses.map((course) => (
-                    <option key={course.course_id} value={course.course_id}>
-                      {course.name} ({course.course_code})
-                    </option>
-                  ))}
-                </select>
+                />
                 {formErrors.course_id && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.course_id}</p>
                 )}
