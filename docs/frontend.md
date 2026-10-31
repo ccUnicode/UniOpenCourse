@@ -95,6 +95,10 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
   mínima de 380 px en escritorio y crece para mostrar descripciones extensas.
 - Estos ajustes de presentación no sustituyen las validaciones del backend y
   no modifican los formularios del administrador.
+- El carrusel del home usa `components/carousel.tsx`, separado de `CourseCard`.
+  Cada diapositiva ocupa exactamente el ancho visible. Su cuerpo tiene altura
+  fija por breakpoint, título y descripción se limitan a dos líneas con elipsis,
+  y las palabras sin espacios se parten para evitar recortes laterales.
 
 ### Comprobación manual
 
@@ -102,6 +106,8 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
    cortos y largos, incluyendo cadenas de 600 caracteres sin espacios.
 2. Comprobar a 375, 768 y 1440 px que las tarjetas mantienen dimensiones
    uniformes, muestran elipsis y conservan alineado el pie.
+   Revisar también todas las diapositivas del carrusel del home: los textos
+   largos deben mostrar elipsis y el código del curso debe permanecer visible.
 3. Abrir una clase de un curso con esos textos y comprobar que el contenido
    completo salta de línea sin tapar la imagen ni producir scroll horizontal.
 4. Revisar también títulos de clases, enlaces y referencias extensos.
