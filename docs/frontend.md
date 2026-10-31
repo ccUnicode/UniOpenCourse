@@ -77,6 +77,58 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
 
 ---
 
+## Apariencia y contenido de cursos
+
+- La paleta oscura se fija en `app/globals.css`, incluyendo `color-scheme: dark`
+  para controles nativos. Los colores no dependen de `prefers-color-scheme` ni
+  del tema seleccionado en Windows o el navegador.
+- Home y catálogo usan una cuadrícula de una, dos o tres columnas según el
+  ancho disponible. Ambos reutilizan `components/courses/course-card.tsx`, al
+  igual que el dashboard del estudiante.
+- Las tarjetas ocupan el ancho de su columna hasta un máximo de 440 px. La
+  imagen mantiene proporción 16:9 y el cuerpo tiene altura de 256 px. El título
+  reserva dos líneas y la descripción tres; el exceso se muestra con puntos
+  suspensivos. Código y docente se limitan a una línea con el mismo criterio.
+- En la vista del curso, `overflow-wrap: anywhere` permite partir palabras sin
+  espacios en títulos, descripciones, nombres y materiales. Los hijos flex
+  pueden reducir su ancho con `min-width: 0`. El encabezado conserva una altura
+  mínima de 380 px en escritorio y crece para mostrar descripciones extensas.
+- Estos ajustes de presentación no sustituyen las validaciones del backend y
+  no modifican los formularios del administrador.
+
+### Comprobación manual
+
+1. Abrir `/`, `/cursos` y el dashboard con cursos de títulos y descripciones
+   cortos y largos, incluyendo cadenas de 600 caracteres sin espacios.
+2. Comprobar a 375, 768 y 1440 px que las tarjetas mantienen dimensiones
+   uniformes, muestran elipsis y conservan alineado el pie.
+3. Abrir una clase de un curso con esos textos y comprobar que el contenido
+   completo salta de línea sin tapar la imagen ni producir scroll horizontal.
+4. Revisar también títulos de clases, enlaces y referencias extensos.
+5. Alternar la preferencia de color del navegador entre claro y oscuro: los
+   colores de página, textos y controles deben permanecer iguales. Comprobar
+   también una pantalla de administración por el uso de estilos globales.
+
+### Validación de estas correcciones
+
+Se comprobó en Chrome con tres cursos locales de distintos tamaños: home,
+catálogo y detalle sin scroll horizontal a 375, 768 y 1440 px; tarjetas con
+dimensiones iguales y pies alineados; descripción de 600 caracteres sin espacios
+completa dentro del encabezado. También se probó el acceso de un estudiante y su
+dashboard en esos tres anchos. Los colores de home, catálogo y login del admin
+permanecieron iguales al alternar la preferencia clara y oscura.
+
+TypeScript y ESLint del frontend pasaron sin errores (cuatro advertencias
+preexistentes en admin y login). El build de producción pasó con Webpack;
+Turbopack falló al iniciar un proceso de PostCSS en el entorno local. Para usar
+Webpack desde `apps/frontend`:
+
+```powershell
+node ../../node_modules/next/dist/bin/next dev --webpack
+```
+
+Para compilar, sustituir `dev --webpack` por `build --webpack`.
+
 ## Estado global
 
 - **Estado Local (`useState`/`useEffect`)**: Se usa para lógica puramente de interfaz visual (UI). Por ejemplo, en el `CourseSidebar`, el Drawer móvil, el esqueleto de carga de Evaluaciones y los mensajes de error se manejan con estado local, ya que son estados efímeros que no necesitan ser compartidos globalmente.
@@ -85,7 +137,7 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
 El proyecto no utiliza un gestor de estado global pesado (como Redux). El estado y la identidad del usuario se mantienen sincronizados mediante:
 
 - Cookie HttpOnly `access_token` — JWT que maneja la sesión real con el backend; no accesible desde JavaScript por seguridad.
-- `sessionStorage.user_name` — Nombre para el saludo inicial en el dashboard; se guarda al hacer login y se borra en logout. *(Nota técnica: Al ser `sessionStorage`, no se comparte si el usuario abre una nueva pestaña del navegador).*
+- `sessionStorage.user_name` — Nombre para el saludo inicial en el dashboard; se guarda al hacer login y se borra en logout. _(Nota técnica: Al ser `sessionStorage`, no se comparte si el usuario abre una nueva pestaña del navegador)._
 - **Header (Server Component)** — Lee la cookie directamente en el servidor para mostrar condicionalmente los menús de 'Login' o el 'LogoutButton'.
 
 ---
