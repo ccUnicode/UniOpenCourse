@@ -21,12 +21,16 @@ export default function CourseHero({
   teacher,
 }: CourseHeroProps) {
   return (
-    <section className="relative w-full h-auto md:h-[380px] flex-shrink-0 overflow-hidden bg-[#0f1714] flex flex-col-reverse md:flex-row">
+    <section className="relative w-full min-w-0 md:min-h-[380px] flex-shrink-0 overflow-hidden bg-[#0f1714] flex flex-col-reverse md:flex-row [overflow-wrap:anywhere]">
       {/* Lado Izquierdo: Información del curso (Mitad exacta) */}
-      <div className="w-full md:w-1/2 h-auto md:h-full flex flex-col justify-center px-6 md:pl-10 md:pr-6 py-8 md:py-0 z-10">
-        <div className="flex items-baseline gap-4 mb-4">
-          <h1 className="text-[28px] font-bold text-white">{courseName}</h1>
-          <span className="text-[24px] font-bold text-white">({courseCode})</span>
+      <div className="w-full min-w-0 md:w-1/2 flex flex-col justify-center px-6 md:pl-10 md:pr-6 py-8 z-10">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-4 min-w-0">
+          <h1 className="min-w-0 max-w-full text-[28px] font-bold text-white">
+            {courseName}
+          </h1>
+          <span className="min-w-0 max-w-full text-[24px] font-bold text-white">
+            ({courseCode})
+          </span>
         </div>
 
         <p className="text-[#a0aab2] text-[15px] mb-5 leading-relaxed max-w-[95%]">

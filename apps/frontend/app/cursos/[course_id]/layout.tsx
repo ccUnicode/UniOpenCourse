@@ -25,14 +25,14 @@ export default async function CourseLayout({
   const safeClasses = Array.isArray(classes) ? classes : [];
 
   return (
-    <div className="flex flex-col md:flex-row bg-background-secondary items-start">
+    <div className="flex min-w-0 flex-col md:flex-row bg-background-secondary items-start [overflow-wrap:anywhere]">
       <CourseSidebar
         courseId={course_id}
         courseName={course.name}
         classes={safeClasses}
       />
 
-      <div className="flex-1 w-full">{children}</div>
+      <div className="flex-1 min-w-0 w-full">{children}</div>
     </div>
   );
 }
