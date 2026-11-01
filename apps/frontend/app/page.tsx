@@ -1,10 +1,32 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getCarouselData } from '@/services/courses.service';
 import Carousel from '@/components/carousel';
 import { CourseSection } from '@/components/courses/course-section';
+import { verifyAccessToken } from '@/lib/jwt';
 
 export const dynamic = 'force-dynamic';
+
+/** Landing page that redirects authenticated users to their corresponding panel */
 export default async function Home() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('access_token')?.value;
+
+  if (token) {
+    let role: string | null = null;
+    try {
+      const payload = await verifyAccessToken(token);
+      role = payload.role;
+    } catch {
+      role = null;
+    }
+
+    if (role) {
+      redirect(role === 'ADMIN' ? '/admin/cursos' : '/dashboard');
+    }
+  }
+
   const courses_carousel = await getCarouselData();
 
   return (
