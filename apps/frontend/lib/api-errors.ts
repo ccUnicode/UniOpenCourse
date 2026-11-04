@@ -54,8 +54,11 @@ export const CLASS_LIMITS = {
   url_youtube: 150,
 };
 
-const YOUTUBE_WATCH_OR_SHARE_LINK =
-  /^https:\/\/(?:(?:www|m)\.)?youtube\.com\/watch\?v=[\w-]{11}(?:&[\w.\-=%]*)*$|^https:\/\/youtu\.be\/[\w-]{11}(?:\?[\w.\-=%]*)?$/;
+const YOUTUBE_PARAM = '[\\w.~%+=-]*';
+const YOUTUBE_WATCH_OR_SHARE_LINK = new RegExp(
+  `^https:\\/\\/(?:(?:www|m)\\.)?youtube\\.com\\/watch\\?(?:${YOUTUBE_PARAM}=${YOUTUBE_PARAM}&)*v=[\\w-]{11}(?:&${YOUTUBE_PARAM}=${YOUTUBE_PARAM})*$` +
+    `|^https:\\/\\/youtu\\.be\\/[\\w-]{11}(?:\\?${YOUTUBE_PARAM}(?:&${YOUTUBE_PARAM}=${YOUTUBE_PARAM})*)?$`,
+);
 
 export function isValidYoutubeWatchUrl(url: string): boolean {
   return YOUTUBE_WATCH_OR_SHARE_LINK.test(url.trim());

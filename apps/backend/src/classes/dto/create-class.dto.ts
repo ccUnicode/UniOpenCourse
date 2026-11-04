@@ -8,8 +8,11 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
-const YOUTUBE_WATCH_OR_SHARE_LINK =
-  /^https:\/\/(?:(?:www|m)\.)?youtube\.com\/watch\?v=[\w-]{11}(?:&[\w.\-=%]*)*$|^https:\/\/youtu\.be\/[\w-]{11}(?:\?[\w.\-=%]*)?$/;
+const YOUTUBE_PARAM = '[\\w.~%+=-]*';
+const YOUTUBE_WATCH_OR_SHARE_LINK = new RegExp(
+  `^https:\\/\\/(?:(?:www|m)\\.)?youtube\\.com\\/watch\\?(?:${YOUTUBE_PARAM}=${YOUTUBE_PARAM}&)*v=[\\w-]{11}(?:&${YOUTUBE_PARAM}=${YOUTUBE_PARAM})*$` +
+    `|^https:\\/\\/youtu\\.be\\/[\\w-]{11}(?:\\?${YOUTUBE_PARAM}(?:&${YOUTUBE_PARAM}=${YOUTUBE_PARAM})*)?$`,
+);
 
 /** DTO for creating a new class */
 export class CreateClassDto {
@@ -33,10 +36,10 @@ export class CreateClassDto {
   description: string;
 
   @IsOptional()
-  @Transform(({ value }: { value: unknown }): string | undefined => {
-    if (value === '' || value == null) return undefined;
-    if (typeof value !== 'string') return undefined;
-    return value.trim();
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
   })
   @IsString()
   @MaxLength(150, {

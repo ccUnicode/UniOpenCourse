@@ -47,10 +47,10 @@ export class CreateCourseDto {
 
   @IsString()
   @IsOptional()
-  @Transform(({ value }: { value: unknown }): string | null => {
-    if (value === '' || value == null) return null;
-    if (typeof value !== 'string') return null;
-    return value.trim().split('#')[0];
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim().split('#')[0];
+    return trimmed === '' ? null : trimmed;
   })
   @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })
   @Matches(/^https:\/\/trikaweb\.ccunicode\.org\//, {
