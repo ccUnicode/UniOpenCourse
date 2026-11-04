@@ -47,9 +47,9 @@ export class CreateCourseDto {
 
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }): string | null => {
     if (value === '' || value == null) return null;
-    if (typeof value !== 'string') return value;
+    if (typeof value !== 'string') return null;
     return value.trim().split('#')[0];
   })
   @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })

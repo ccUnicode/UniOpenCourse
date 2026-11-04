@@ -361,14 +361,6 @@ export default function AdminClassPage() {
     setIsFormModalOpen(true);
   };
 
-  // Edit is not supported by the API yet — inform user instead
-  const openEditModal = (_material: ClassMaterial) => {
-    setFormErrors({
-      name: 'La edición de materiales no está disponible aún. Elimina el material y créalo de nuevo.',
-    });
-    setIsFormModalOpen(false);
-  };
-
   const confirmDelete = (material: ClassMaterial) => {
     setMaterialToDelete(material);
     setIsDeleteModalOpen(true);

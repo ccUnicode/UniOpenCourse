@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { logout, saveUserDisplayName, getUserDisplayName } from '@/lib/auth-cookies';
+import { saveUserDisplayName } from '@/lib/auth-cookies';
 
 
 // Iconos SVG simples para el formulario

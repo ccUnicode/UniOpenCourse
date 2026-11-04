@@ -33,9 +33,9 @@ export class CreateClassDto {
   description: string;
 
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }): string | undefined => {
     if (value === '' || value == null) return undefined;
-    if (typeof value !== 'string') return value;
+    if (typeof value !== 'string') return undefined;
     return value.trim();
   })
   @IsString()

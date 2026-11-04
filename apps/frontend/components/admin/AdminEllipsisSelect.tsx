@@ -139,12 +139,6 @@ export function AdminCourseClassSelect({
     return null;
   }, [groups, value]);
 
-  useEffect(() => {
-    if (!value) return;
-    const group = groups.find((item) => item.classes.some((cls) => cls.value === value));
-    if (group) setExpanded(group.key);
-  }, [value, groups]);
-
   return (
     <div ref={rootRef} className="w-full min-w-0">
       <button
