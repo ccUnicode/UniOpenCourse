@@ -89,7 +89,7 @@ describe('ClassesService (Public)', () => {
         title: 'Test Class',
         course_id: 1,
         description: 'Test',
-        url_youtube: 'https://youtube.com/test',
+        url_youtube: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       };
       const expected = { class_id: 1, ...createDto };
 

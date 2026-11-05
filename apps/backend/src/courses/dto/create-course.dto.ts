@@ -23,6 +23,9 @@ export class CreateCourseDto {
 
   @IsString()
   @IsNotEmpty({ message: 'La descripción del curso es obligatoria' })
+  @MaxLength(600, {
+    message: 'La descripción del curso no puede exceder los 600 caracteres',
+  })
   description: string;
 
   @Type(() => Number)
@@ -44,7 +47,11 @@ export class CreateCourseDto {
 
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? null : (value as string | undefined)))
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim().split('#')[0];
+    return trimmed === '' ? null : trimmed;
+  })
   @MaxLength(255, { message: 'La URL no puede exceder los 255 caracteres' })
   @Matches(/^https:\/\/trikaweb\.ccunicode\.org\//, {
     message: 'La URL debe ser segura (HTTPS) y pertenecer a trikaweb.ccunicode.org',

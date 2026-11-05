@@ -1,6 +1,7 @@
 import { CreateCourse } from '@/interfaces/course.interface';
 import { CreateCoursePayload } from '@/interfaces/course.interface';
 import { apiFetch } from '@/lib/api-client';
+import { sanitizeTrikawebUrl, throwApiError } from '@/lib/api-errors';
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function getCarouselData() {
@@ -46,7 +47,7 @@ export const createCourse = async (
     }
 
     if (courseData.url_trikaweb) {
-      formData.append('url_trikaweb', courseData.url_trikaweb);
+      formData.append('url_trikaweb', sanitizeTrikawebUrl(courseData.url_trikaweb));
     }
 
     formData.append('file', courseData.file);
@@ -57,7 +58,7 @@ export const createCourse = async (
     });
 
     if (!response.ok) {
-      throw new Error('Error al crear curso');
+      await throwApiError(response, 'Error al crear curso');
     }
 
     return await response.json();

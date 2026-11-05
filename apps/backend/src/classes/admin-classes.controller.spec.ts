@@ -51,7 +51,7 @@ describe('AdminClassesController', () => {
         title: 'Test',
         course_id: 1,
         description: 'Desc',
-        url_youtube: 'https://youtube.com/test',
+        url_youtube: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       };
 
       await controller.create(createDto);

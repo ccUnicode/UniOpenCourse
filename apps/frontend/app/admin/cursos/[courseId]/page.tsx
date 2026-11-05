@@ -6,6 +6,21 @@ import { useParams, useRouter } from 'next/navigation';
 import { SquarePen, Trash2, Plus, BookOpen, ArrowLeft } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { apiFetch } from '@/lib/api-client';
+import {
+  CLASS_LIMITS,
+  isValidYoutubeWatchUrl,
+  mapClassFieldErrors,
+  sanitizeTrikawebUrl,
+  throwApiError,
+} from '@/lib/api-errors';
+
+const COURSE_LIMITS = {
+  name: 100,
+  course_code: 10,
+  description: 600,
+  teacher: 50,
+  url_trikaweb: 255,
+};
 
 // --- Types ---
 
@@ -88,7 +103,7 @@ const updateCourse = async (
   }
 
   if (courseData.url_trikaweb !== undefined) {
-    formData.append('url_trikaweb', courseData.url_trikaweb);
+    formData.append('url_trikaweb', sanitizeTrikawebUrl(courseData.url_trikaweb));
   }
 
   if (courseData.file) {
@@ -101,7 +116,7 @@ const updateCourse = async (
   });
 
   if (!response.ok) {
-    throw new Error('Error al actualizar curso');
+    await throwApiError(response, 'Error al actualizar curso');
   }
 
   return await response.json();
@@ -114,7 +129,7 @@ const createClass = async (
     method: 'POST',
     body: JSON.stringify(classData),
   });
-  if (!response.ok) throw new Error('Error al crear clase');
+  if (!response.ok) await throwApiError(response, 'Error al crear clase');
   return await response.json();
 };
 
@@ -163,6 +178,7 @@ export default function AdminCourseDetailPage() {
     url_youtube: '',
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [createClassErrors, setCreateClassErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (courseId) loadData();
@@ -203,11 +219,15 @@ export default function AdminCourseDetailPage() {
     setSaveError('');
     setSaveSuccess('');
     try {
+      const sanitizedTrikaweb = sanitizeTrikawebUrl(courseFormData.url_trikaweb);
+      if (sanitizedTrikaweb !== courseFormData.url_trikaweb) {
+        setCourseFormData((prev) => ({ ...prev, url_trikaweb: sanitizedTrikaweb }));
+      }
       const updated = await updateCourse(courseId, {
         name: courseFormData.name,
         course_code: courseFormData.course_code,
         description: courseFormData.description,
-        url_trikaweb: courseFormData.url_trikaweb || undefined,
+        url_trikaweb: sanitizedTrikaweb || undefined,
         teacher_name: courseFormData.teacher_name || undefined,
         teacher_last_name: courseFormData.teacher_last_name || undefined,
         file: courseFormData.file,
@@ -216,9 +236,9 @@ export default function AdminCourseDetailPage() {
       setSaveSuccess('Datos guardados exitosamente');
       setTimeout(() => setSaveSuccess(''), 3000);
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _err = error;
-      setSaveError('Error al guardar los cambios.');
+      setSaveError(
+        error instanceof Error ? error.message : 'Error al guardar los cambios.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -244,7 +264,16 @@ export default function AdminCourseDetailPage() {
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClass.title.trim() || !newClass.description.trim()) return;
+    const errors: Record<string, string> = {};
+    if (!newClass.title.trim()) errors.title = 'El título de la clase es requerido';
+    if (!newClass.description.trim())
+      errors.description = 'La descripción de la clase es requerida';
+    if (newClass.url_youtube.trim() && !isValidYoutubeWatchUrl(newClass.url_youtube)) {
+      errors.url_youtube =
+        'El enlace debe ser un video de YouTube válido (youtube.com/watch o youtu.be)';
+    }
+    setCreateClassErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setIsCreating(true);
     try {
@@ -258,9 +287,12 @@ export default function AdminCourseDetailPage() {
       setClasses([...classes, created]);
       setIsCreateModalOpen(false);
       setNewClass({ title: '', description: '', url_youtube: '' });
+      setCreateClassErrors({});
       loadData();
     } catch (error) {
-      console.error('Error creating class:', error);
+      const message =
+        error instanceof Error ? error.message : 'Error al crear la clase';
+      setCreateClassErrors(mapClassFieldErrors(message));
     } finally {
       setIsCreating(false);
     }
@@ -339,12 +371,16 @@ export default function AdminCourseDetailPage() {
                   </label>
                   <input
                     type="text"
+                    maxLength={COURSE_LIMITS.name}
                     value={courseFormData.name}
                     onChange={(e) =>
                       setCourseFormData({ ...courseFormData, name: e.target.value })
                     }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
+                  <p className="mt-1 text-right text-xs text-white/40">
+                    {courseFormData.name.length}/{COURSE_LIMITS.name}
+                  </p>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-normal text-white/85">
@@ -352,6 +388,7 @@ export default function AdminCourseDetailPage() {
                   </label>
                   <input
                     type="text"
+                    maxLength={COURSE_LIMITS.course_code}
                     value={courseFormData.course_code}
                     onChange={(e) =>
                       setCourseFormData({
@@ -369,6 +406,7 @@ export default function AdminCourseDetailPage() {
                   <input
                     type="text"
                     placeholder="Ej: Carlos"
+                    maxLength={COURSE_LIMITS.teacher}
                     value={courseFormData.teacher_name}
                     onChange={(e) =>
                       setCourseFormData({
@@ -386,6 +424,7 @@ export default function AdminCourseDetailPage() {
                   <input
                     type="text"
                     placeholder="Ej: López"
+                    maxLength={COURSE_LIMITS.teacher}
                     value={courseFormData.teacher_last_name}
                     onChange={(e) =>
                       setCourseFormData({
@@ -403,12 +442,19 @@ export default function AdminCourseDetailPage() {
                   <input
                     type="url"
                     placeholder="https://trikaweb.ccunicode.org/..."
+                    maxLength={COURSE_LIMITS.url_trikaweb}
                     value={courseFormData.url_trikaweb}
                     onChange={(e) =>
                       setCourseFormData({
                         ...courseFormData,
                         url_trikaweb: e.target.value,
                       })
+                    }
+                    onBlur={() =>
+                      setCourseFormData((prev) => ({
+                        ...prev,
+                        url_trikaweb: sanitizeTrikawebUrl(prev.url_trikaweb),
+                      }))
                     }
                     className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                   />
@@ -443,6 +489,7 @@ export default function AdminCourseDetailPage() {
                     Descripción
                   </label>
                   <textarea
+                    maxLength={COURSE_LIMITS.description}
                     value={courseFormData.description}
                     onChange={(e) =>
                       setCourseFormData({
@@ -453,6 +500,9 @@ export default function AdminCourseDetailPage() {
                     rows={3}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
+                  <p className="mt-1 text-right text-xs text-white/40">
+                    {courseFormData.description.length}/{COURSE_LIMITS.description}
+                  </p>
                 </div>
               </div>
             </section>
@@ -467,7 +517,10 @@ export default function AdminCourseDetailPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => {
+                    setCreateClassErrors({});
+                    setIsCreateModalOpen(true);
+                  }}
                   className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -590,6 +643,9 @@ export default function AdminCourseDetailPage() {
             <p className="mt-1 text-sm text-white/50">
               Agrega una clase al temario del curso.
             </p>
+            {createClassErrors.general && (
+              <p className="mt-3 text-sm text-red-400">{createClassErrors.general}</p>
+            )}
 
             <form onSubmit={handleCreateClass} className="mt-6 space-y-4">
               <div>
@@ -598,12 +654,18 @@ export default function AdminCourseDetailPage() {
                 </label>
                 <input
                   type="text"
+                  maxLength={CLASS_LIMITS.title}
                   placeholder="Ej: Estructuras de control"
                   value={newClass.title}
                   onChange={(e) => setNewClass({ ...newClass, title: e.target.value })}
-                  required
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {newClass.title.length}/{CLASS_LIMITS.title}
+                </p>
+                {createClassErrors.title && (
+                  <p className="mt-1 text-xs text-red-400">{createClassErrors.title}</p>
+                )}
               </div>
 
               <div>
@@ -611,15 +673,23 @@ export default function AdminCourseDetailPage() {
                   Descripción <span className="text-red-400">*</span>
                 </label>
                 <textarea
+                  maxLength={CLASS_LIMITS.description}
                   placeholder="Explica brevemente de qué trata esta clase..."
                   value={newClass.description}
                   onChange={(e) =>
                     setNewClass({ ...newClass, description: e.target.value })
                   }
-                  required
                   rows={3}
                   className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {newClass.description.length}/{CLASS_LIMITS.description}
+                </p>
+                {createClassErrors.description && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {createClassErrors.description}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -627,7 +697,8 @@ export default function AdminCourseDetailPage() {
                   Enlace de video <span className="text-white/35">(opcional)</span>
                 </label>
                 <input
-                  type="url"
+                  type="text"
+                  maxLength={CLASS_LIMITS.url_youtube}
                   placeholder="https://www.youtube.com/watch?v=..."
                   value={newClass.url_youtube}
                   onChange={(e) =>
@@ -635,6 +706,11 @@ export default function AdminCourseDetailPage() {
                   }
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                {createClassErrors.url_youtube && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {createClassErrors.url_youtube}
+                  </p>
+                )}
               </div>
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-[#2B332F]">

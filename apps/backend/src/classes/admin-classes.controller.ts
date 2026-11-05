@@ -9,6 +9,8 @@ import {
   Controller,
   ParseIntPipe,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -21,6 +23,13 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('admin/classes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class AdminClassesController {
   constructor(private readonly service: ClassesService) {}
 
