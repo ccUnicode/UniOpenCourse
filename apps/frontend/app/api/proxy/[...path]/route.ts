@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getBackendUrl } from '@/lib/auth-cookie';
+import { forwardBackendRequest } from '@/services/backend.service';
 
 async function proxyRequest(request: NextRequest, path: string[]) {
   const cookieStore = await cookies();
@@ -10,9 +10,7 @@ async function proxyRequest(request: NextRequest, path: string[]) {
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const targetPath = path.join('/');
-  const url = new URL(`${getBackendUrl()}/${targetPath}`);
-  url.search = request.nextUrl.search;
+  const targetPath = `${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
 
   const headers = new Headers();
   headers.set('Authorization', `Bearer ${token}`);
@@ -31,7 +29,7 @@ async function proxyRequest(request: NextRequest, path: string[]) {
     init.body = await request.arrayBuffer();
   }
 
-  const response = await fetch(url.toString(), init);
+  const response = await forwardBackendRequest(targetPath, init);
   const responseHeaders = new Headers();
 
   const disposition = response.headers.get('content-disposition');

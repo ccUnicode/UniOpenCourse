@@ -1,6 +1,8 @@
 import CourseHero from '@/features/courses/components/CourseHero';
 import CourseMaterials from '@/features/courses/components/CourseMaterials';
-import { getClassData, getMaterialData, getCourse } from '@/services/classes.service';
+import { getClassData } from '@/services/classes.service';
+import { getMaterialData } from '@/services/materials.service';
+import { getCourse } from '@/services/courses.service';
 import { notFound } from 'next/navigation';
 import { CourseVisitTracker } from '@/components/courses/course-visit-tracker';
 

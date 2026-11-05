@@ -1,5 +1,7 @@
 'use client';
 
+import { getSession, loginAdmin } from '@/services/auth.service';
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -64,7 +66,7 @@ export default function LoginAdmin() {
   const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
-    fetch('/api/auth/session', { credentials: 'include' })
+    getSession()
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated && data.role === 'ADMIN') {
@@ -96,13 +98,7 @@ export default function LoginAdmin() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await loginAdmin({ email, password });
 
       const data = await response.json();
 

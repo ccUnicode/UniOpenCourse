@@ -1,5 +1,5 @@
 import { SearchResult } from '@/interfaces/search.interface';
-import { formatType } from '@/services/search.service';
+import { formatType } from '@/utils/search-format';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getStorageImageUrl } from '@/utils/image-url';

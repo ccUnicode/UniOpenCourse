@@ -1,130 +1,25 @@
 'use client';
 
+import {
+  getAdminClasses as fetchClasses,
+  createClass,
+  deleteClass,
+} from '@/services/classes.service';
+import { getAdminCourseOptions as fetchCourses } from '@/services/courses.service';
+import { formatAdminDate } from '@/utils/admin-date';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Plus, SquarePen, Trash2, BookOpen } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminEllipsisSelect } from '@/components/admin/AdminEllipsisSelect';
-import { apiFetch } from '@/lib/api-client';
 import {
   CLASS_LIMITS,
   isValidYoutubeWatchUrl,
   mapClassFieldErrors,
-  throwApiError,
 } from '@/lib/api-errors';
 
-// --- Types ---
-interface Class {
-  class_id: number;
-  course_id: number;
-  title: string;
-  description: string;
-  url_youtube?: string;
-  class_creation_date?: string;
-  course?: {
-    name: string;
-    course_code: string;
-  };
-}
-
-interface CourseOption {
-  course_id: number;
-  name: string;
-  course_code: string;
-}
-
-const formatAdminDate = (date?: string) => {
-  if (!date) return 'N/A';
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return 'N/A';
-  return parsed.toLocaleString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-// --- API Functions ---
-
-const fetchClasses = async (
-  search: string = '',
-  page: number = 1,
-  limit: number = 10,
-): Promise<{ data: Class[]; total: number }> => {
-  try {
-    const response = await apiFetch(
-      `admin/classes?search=${search}&page=${page}&limit=${limit}`,
-    );
-
-    if (!response.ok) {
-      throw new Error('Error al obtener clases');
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching classes:', error);
-    return { data: [], total: 0 };
-  }
-};
-
-const fetchCourses = async (): Promise<CourseOption[]> => {
-  const collected: CourseOption[] = [];
-  let page = 1;
-  let totalPages = 1;
-
-  try {
-    do {
-      const response = await apiFetch(`admin/courses?page=${page}&limit=50`);
-      if (!response.ok) break;
-      const data = await response.json();
-      collected.push(...((data.data || []) as CourseOption[]));
-      totalPages = data.totalPages || 1;
-      page += 1;
-    } while (page <= totalPages);
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-  }
-
-  return collected.sort((a, b) =>
-    a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
-  );
-};
-
-const createClass = async (classData: {
-  course_id: number;
-  title: string;
-  description: string;
-  url_youtube?: string;
-}): Promise<Class> => {
-  const response = await apiFetch('admin/classes', {
-    method: 'POST',
-    body: JSON.stringify(classData),
-  });
-
-  if (!response.ok) {
-    await throwApiError(response, 'Error al crear clase');
-  }
-
-  return await response.json();
-};
-
-const deleteClass = async (id: number): Promise<void> => {
-  try {
-    const response = await apiFetch(`admin/classes/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al eliminar clase');
-    }
-  } catch (error) {
-    console.error('Error deleting class:', error);
-    throw error;
-  }
-};
+import type { AdminClass as Class, CourseOption } from '@/interfaces/admin.interface';
 
 // --- Main Page ---
 
@@ -207,8 +102,7 @@ export default function AdminClassesPage() {
       setFormErrors({});
       loadClasses();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error al crear la clase';
+      const message = error instanceof Error ? error.message : 'Error al crear la clase';
       setFormErrors(mapClassFieldErrors(message));
     } finally {
       setIsSubmitting(false);

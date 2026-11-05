@@ -8,7 +8,3 @@ export const accessTokenCookieOptions = {
   path: '/',
   maxAge: COOKIE_MAX_AGE,
 };
-
-export function getBackendUrl() {
-  return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-}

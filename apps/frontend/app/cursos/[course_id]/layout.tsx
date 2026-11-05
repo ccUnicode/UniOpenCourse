@@ -1,5 +1,6 @@
 import CourseSidebar from '@/features/courses/components/CourseSidebar';
-import { getClassesByCourse, getCourse } from '@/services/classes.service';
+import { getClassesByCourse } from '@/services/classes.service';
+import { getCourse } from '@/services/courses.service';
 import { notFound } from 'next/navigation';
 
 export default async function CourseLayout({

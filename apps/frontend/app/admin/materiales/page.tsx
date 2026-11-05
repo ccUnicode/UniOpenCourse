@@ -1,246 +1,34 @@
 'use client';
 
+import {
+  getAdminMaterials as fetchMaterials,
+  createFileMaterial,
+  createLinkMaterial,
+  createReferenceMaterial,
+  deleteMaterial,
+} from '@/services/materials.service';
+import { getAdminClassOptions as fetchClasses } from '@/services/classes.service';
+import { getAdminCourseOptions as fetchCourses } from '@/services/courses.service';
+import { groupClassesByCourse } from '@/utils/course-options';
+import { getMaterialDownloadUrl } from '@/utils/material-format';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, FileText, Link as LinkIcon, BookOpen, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import {
-  AdminCourseClassSelect,
-  type CourseClassGroup,
-} from '@/components/admin/AdminEllipsisSelect';
-import { apiFetch, API_URL } from '@/lib/api-client';
+import { AdminCourseClassSelect } from '@/components/admin/AdminEllipsisSelect';
 import {
   MATERIAL_LIMITS,
   isAllowedMaterialFile,
   isHttpsUrl,
   mapMaterialFieldErrors,
-  throwApiError,
 } from '@/lib/api-errors';
 
-// --- Types ---
-type MaterialType = 'file' | 'link' | 'reference';
-
-interface Material {
-  material_id: number;
-  class_id: number;
-  material_type: MaterialType;
-  filename: string;
-  url_link?: string;
-  written_reference?: string;
-  material_creation_date?: string;
-  class?: {
-    title: string;
-    course?: {
-      name: string;
-      course_code: string;
-    };
-  };
-}
-
-interface FetchMaterialsResponse {
-  data: Material[];
-  total: number;
-  totalPages: number;
-}
-
-interface ClassOption {
-  class_id: number;
-  course_id?: number;
-  title: string;
-  course?: {
-    name: string;
-    course_code: string;
-  };
-}
-
-interface CourseOption {
-  course_id: number;
-  name: string;
-  course_code: string;
-}
-
-const compareEs = (a: string, b: string) =>
-  a.localeCompare(b, 'es', { sensitivity: 'base' });
-
-const groupClassesByCourse = (
-  classes: ClassOption[],
-  courses: CourseOption[],
-): CourseClassGroup[] => {
-  const groups = new Map<string, CourseClassGroup>();
-
-  for (const course of courses) {
-    const key = `id-${course.course_id}`;
-    groups.set(key, {
-      key,
-      label: course.course_code
-        ? `${course.name} (${course.course_code})`
-        : course.name,
-      classes: [],
-    });
-  }
-
-  for (const classItem of classes) {
-    const key =
-      classItem.course_id != null
-        ? `id-${classItem.course_id}`
-        : `name-${classItem.course?.name ?? 'sin-curso'}-${classItem.course?.course_code ?? ''}`;
-
-    if (!groups.has(key)) {
-      const name = classItem.course?.name ?? 'Sin curso';
-      const code = classItem.course?.course_code;
-      groups.set(key, {
-        key,
-        label: code ? `${name} (${code})` : name,
-        classes: [],
-      });
-    }
-
-    groups.get(key)!.classes.push({
-      value: String(classItem.class_id),
-      label: classItem.title,
-    });
-  }
-
-  const sorted = Array.from(groups.values()).sort((a, b) => compareEs(a.label, b.label));
-  for (const group of sorted) {
-    group.classes.sort((a, b) => compareEs(a.label, b.label));
-  }
-  return sorted;
-};
-
-const getMaterialDownloadUrl = (materialId: number) =>
-  `${API_URL}/materials/${materialId}/download`;
-
-const fetchMaterials = async (
-  search: string = '',
-  page: number = 1,
-  limit: number = 10,
-  classId?: number,
-): Promise<FetchMaterialsResponse> => {
-  try {
-    let path = `admin/materials?search=${encodeURIComponent(search)}&page=${page}&limit=${limit}`;
-    if (classId) {
-      path += `&class_id=${classId}`;
-    }
-
-    const response = await apiFetch(path);
-
-    if (!response.ok) {
-      throw new Error('Error al obtener materiales');
-    }
-
-    const data = await response.json();
-    return {
-      data: data.data || [],
-      total: data.total || 0,
-      totalPages: data.totalPages || 1,
-    };
-  } catch (error) {
-    console.error('Error fetching materials:', error);
-    return { data: [], total: 0, totalPages: 1 };
-  }
-};
-
-const fetchAllPages = async <T,>(
-  path: string,
-  limit: number,
-): Promise<T[]> => {
-  const collected: T[] = [];
-  let page = 1;
-  let totalPages = 1;
-
-  try {
-    do {
-      const separator = path.includes('?') ? '&' : '?';
-      const response = await apiFetch(`${path}${separator}page=${page}&limit=${limit}`);
-      if (!response.ok) break;
-      const data = await response.json();
-      collected.push(...((data.data || []) as T[]));
-      totalPages = data.totalPages || 1;
-      page += 1;
-    } while (page <= totalPages);
-  } catch (error) {
-    console.error('Error fetching selector options:', error);
-  }
-
-  return collected;
-};
-
-const fetchClasses = async (): Promise<ClassOption[]> =>
-  fetchAllPages<ClassOption>('admin/classes', 100);
-
-const fetchCourses = async (): Promise<CourseOption[]> =>
-  fetchAllPages<CourseOption>('admin/courses', 50);
-
-const createFileMaterial = async (
-  classId: number,
-  filename: string,
-  file: File,
-): Promise<Material> => {
-  const formData = new FormData();
-  formData.append('class_id', classId.toString());
-  formData.append('filename', filename);
-  formData.append('file', file);
-
-  const response = await apiFetch('admin/materials/file', {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    await throwApiError(response, 'Error al subir archivo');
-  }
-
-  return await response.json();
-};
-
-const createLinkMaterial = async (
-  classId: number,
-  filename: string,
-  url_link: string,
-): Promise<Material> => {
-  const response = await apiFetch('admin/materials/link', {
-    method: 'POST',
-    body: JSON.stringify({ class_id: classId, filename, url_link }),
-  });
-
-  if (!response.ok) {
-    await throwApiError(response, 'Error al crear enlace');
-  }
-
-  return await response.json();
-};
-
-const createReferenceMaterial = async (
-  classId: number,
-  filename: string,
-  written_reference: string,
-): Promise<Material> => {
-  const response = await apiFetch('admin/materials/reference', {
-    method: 'POST',
-    body: JSON.stringify({ class_id: classId, filename, written_reference }),
-  });
-
-  if (!response.ok) {
-    await throwApiError(response, 'Error al crear referencia');
-  }
-
-  return await response.json();
-};
-
-const deleteMaterial = async (id: number): Promise<void> => {
-  try {
-    const response = await apiFetch(`admin/materials/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al eliminar material');
-    }
-  } catch (error) {
-    console.error('Error deleting material:', error);
-    throw error;
-  }
-};
+import type {
+  AdminMaterial as Material,
+  MaterialType,
+  ClassOption,
+  CourseOption,
+} from '@/interfaces/admin.interface';
 
 // --- Main Page ---
 
