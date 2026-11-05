@@ -74,3 +74,11 @@ export async function registerCourseVisit(courseId: string) {
   });
   return response;
 }
+
+export async function getCourseEvaluations(courseId: string) {
+  const response = await fetch(`${baseUrl}/courses/${courseId}/evaluations`);
+  if (!response.ok) {
+    throw new Error('Error fetching evaluations');
+  }
+  return response.json();
+}
