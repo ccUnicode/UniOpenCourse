@@ -1,5 +1,7 @@
 'use client';
 
+import { getSession, registerAccount, resendVerification } from '@/services/auth.service';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -54,7 +56,7 @@ export default function Registro() {
   const [resendMessage, setResendMessage] = useState('');
 
   useEffect(() => {
-    fetch('/api/auth/session', { credentials: 'include' })
+    getSession()
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
@@ -109,18 +111,12 @@ export default function Registro() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          name: formData.name,
-          last_name: formData.last_name,
-          username: formData.username,
-          password: formData.password,
-        }),
+      const response = await registerAccount({
+        email: formData.email,
+        name: formData.name,
+        last_name: formData.last_name,
+        username: formData.username,
+        password: formData.password,
       });
 
       const data = await response.json();
@@ -155,11 +151,7 @@ export default function Registro() {
     setResendMessage('');
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registeredEmail }),
-      });
+      const response = await resendVerification(registeredEmail);
       const data = await response.json();
       setResendMessage(data.message || 'Te enviamos un nuevo enlace.');
     } catch (error) {
@@ -202,8 +194,8 @@ export default function Registro() {
               {registeredEmail}
             </p>
             <p className="mb-7 text-sm text-white/60">
-              Haz clic en el enlace para activar tu cuenta. Si no lo encuentras, revisa
-              tu carpeta de spam o correo no deseado.
+              Haz clic en el enlace para activar tu cuenta. Si no lo encuentras, revisa tu
+              carpeta de spam o correo no deseado.
             </p>
 
             {resendMessage && (

@@ -1,5 +1,7 @@
 'use client';
 
+import { verifyEmail, resendVerification } from '@/services/auth.service';
+
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -60,11 +62,7 @@ function VerificarEmailContent() {
 
   const verify = useCallback(async (verificationToken: string) => {
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: verificationToken }),
-      });
+      const response = await verifyEmail(verificationToken);
       const data = await response.json();
 
       if (response.ok) {
@@ -103,11 +101,7 @@ function VerificarEmailContent() {
     setResendMessage('');
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      const response = await resendVerification(email);
       const data = await response.json();
       setResendMessage(data.message || 'Te enviamos un nuevo enlace.');
     } catch (error) {
@@ -133,7 +127,9 @@ function VerificarEmailContent() {
             <>
               <StatusIcon status={status} />
               <h1 className="mb-3 text-2xl font-bold tracking-tight text-white">
-                {status === 'success' ? '¡Correo verificado!' : 'No pudimos verificar tu correo'}
+                {status === 'success'
+                  ? '¡Correo verificado!'
+                  : 'No pudimos verificar tu correo'}
               </h1>
               <p className="mb-7 text-sm text-white/70">{message}</p>
             </>

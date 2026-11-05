@@ -1,5 +1,5 @@
 import { LogOut } from 'lucide-react';
-import { logout } from '@/lib/auth-cookies';
+import { logout } from '@/services/auth.service';
 const handleLogout = async () => {
   await logout();
   window.location.replace('/');

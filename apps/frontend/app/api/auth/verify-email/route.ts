@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getBackendUrl } from '@/lib/auth-cookie';
+import { forwardBackendRequest } from '@/services/backend.service';
 
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const response = await fetch(`${getBackendUrl()}/auth/verify-email`, {
+  const response = await forwardBackendRequest(`auth/verify-email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

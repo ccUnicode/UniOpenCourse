@@ -1,5 +1,19 @@
 'use client';
 
+import { getAdminCourse as fetchCourse } from '@/services/courses.service';
+import { getAdminClass as fetchClassInfo, updateClass } from '@/services/classes.service';
+import {
+  deleteMaterial as deleteMaterialApi,
+  createLinkMaterial as createLinkMaterialApi,
+  createReferenceMaterial as createReferenceMaterialApi,
+  createFileMaterial as createFileMaterialApi,
+} from '@/services/materials.service';
+import {
+  getDomain,
+  getMaterialDownloadUrl,
+  mapApiMaterial,
+} from '@/utils/material-format';
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -15,7 +29,6 @@ import {
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useParams } from 'next/navigation';
-import { apiFetch, API_URL } from '@/lib/api-client';
 import {
   CLASS_LIMITS,
   MATERIAL_LIMITS,
@@ -23,44 +36,14 @@ import {
   isHttpsUrl,
   isValidYoutubeWatchUrl,
   mapMaterialFieldErrors,
-  throwApiError,
 } from '@/lib/api-errors';
 
-type MaterialType = 'file' | 'link' | 'reference';
-
-interface ClassMaterial {
-  id: number;
-  classId: number;
-  name: string;
-  type: MaterialType;
-  url?: string;
-  reference?: string;
-  createdAt: string;
-}
-
-interface ApiMaterial {
-  material_id: number;
-  class_id: number;
-  material_type: string;
-  filename: string;
-  url_link?: string;
-  written_reference?: string;
-  material_creation_date: string;
-}
-
-interface ClassInfo {
-  class_id: number;
-  course_id: number;
-  title: string;
-  description: string;
-  url_youtube?: string;
-}
-
-interface Course {
-  course_id: number;
-  name: string;
-  course_code: string;
-}
+import type {
+  MaterialType,
+  AdminClass as ClassInfo,
+  CourseOption as Course,
+} from '@/interfaces/admin.interface';
+import type { ClassMaterialView as ClassMaterial } from '@/utils/material-format';
 
 const TypeIconMap: Record<MaterialType, React.ElementType> = {
   file: FileText,
@@ -89,115 +72,6 @@ const MaterialTypeBadge = ({ type }: { type: MaterialType }) => {
     </span>
   );
 };
-
-// --- Utils ---
-const getDomain = (url: string) => {
-  try {
-    const domain = new URL(url).hostname;
-    return domain.replace('www.', '');
-  } catch {
-    return 'enlace externo';
-  }
-};
-
-// --- API Functions ---
-
-const fetchCourse = async (courseId: number): Promise<Course> => {
-  const response = await apiFetch(`admin/courses/${courseId}`);
-  if (!response.ok) throw new Error('Error al obtener curso');
-  return await response.json();
-};
-
-const fetchClassInfo = async (classId: number): Promise<ClassInfo> => {
-  const response = await apiFetch(`admin/classes/${classId}`);
-  if (!response.ok) throw new Error('Error al obtener clase');
-  return await response.json();
-};
-
-const updateClass = async (
-  classId: number,
-  data: Partial<ClassInfo>,
-): Promise<ClassInfo> => {
-  const response = await apiFetch(`admin/classes/${classId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) await throwApiError(response, 'Error al actualizar clase');
-  return await response.json();
-};
-
-const deleteMaterialApi = async (id: number): Promise<void> => {
-  const response = await apiFetch(`admin/materials/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Error al eliminar material');
-};
-
-const createLinkMaterialApi = async (
-  classId: number,
-  filename: string,
-  url_link: string,
-): Promise<ApiMaterial> => {
-  const response = await apiFetch('admin/materials/link', {
-    method: 'POST',
-    body: JSON.stringify({ class_id: classId, filename, url_link }),
-  });
-  if (!response.ok) {
-    await throwApiError(response, 'Error al crear enlace');
-  }
-  return await response.json();
-};
-
-const createReferenceMaterialApi = async (
-  classId: number,
-  filename: string,
-  written_reference: string,
-): Promise<ApiMaterial> => {
-  const response = await apiFetch('admin/materials/reference', {
-    method: 'POST',
-    body: JSON.stringify({ class_id: classId, filename, written_reference }),
-  });
-  if (!response.ok) await throwApiError(response, 'Error al crear referencia');
-  return await response.json();
-};
-
-const createFileMaterialApi = async (
-  classId: number,
-  filename: string,
-  file: File,
-): Promise<ApiMaterial> => {
-  const formData = new FormData();
-  formData.append('class_id', classId.toString());
-  formData.append('filename', filename);
-  formData.append('file', file);
-
-  const response = await apiFetch('admin/materials/file', {
-    method: 'POST',
-    body: formData,
-  });
-  if (!response.ok) {
-    await throwApiError(response, 'Error al crear archivo');
-  }
-  return await response.json();
-};
-
-const getMaterialDownloadUrl = (materialId: number) =>
-  `${API_URL}/materials/${materialId}/download`;
-
-// Map API material to local format
-const mapApiMaterial = (m: ApiMaterial): ClassMaterial => ({
-  id: m.material_id,
-  classId: m.class_id,
-  name: m.filename,
-  type: m.material_type as MaterialType,
-  url: m.url_link || undefined,
-  reference: m.written_reference || undefined,
-  createdAt: new Date(m.material_creation_date).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }),
-});
 
 // --- Page Component ---
 export default function AdminClassPage() {
@@ -278,7 +152,6 @@ export default function AdminClassPage() {
         description: classInfo.description || '',
         url_youtube: classInfo.url_youtube || '',
       });
-      // @ts-expect-error backend returns materials in classInfo
       setMaterials((classInfo.materials || []).map(mapApiMaterial));
     } catch (error) {
       console.error('Error loading data:', error);
@@ -449,8 +322,7 @@ export default function AdminClassPage() {
       }
       setIsFormModalOpen(false);
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : 'Error al procesar el material';
+      const message = e instanceof Error ? e.message : 'Error al procesar el material';
       setFormErrors(mapMaterialFieldErrors(message));
     } finally {
       setIsSubmitting(false);
