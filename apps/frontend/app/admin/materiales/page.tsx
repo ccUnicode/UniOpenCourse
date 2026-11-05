@@ -1,9 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, FileText, Link as LinkIcon, BookOpen, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import {
+  AdminCourseClassSelect,
+  type CourseClassGroup,
+} from '@/components/admin/AdminEllipsisSelect';
 import { apiFetch, API_URL } from '@/lib/api-client';
+import {
+  MATERIAL_LIMITS,
+  isAllowedMaterialFile,
+  isHttpsUrl,
+  mapMaterialFieldErrors,
+  throwApiError,
+} from '@/lib/api-errors';
 
 // --- Types ---
 type MaterialType = 'file' | 'link' | 'reference';
@@ -30,6 +41,71 @@ interface FetchMaterialsResponse {
   total: number;
   totalPages: number;
 }
+
+interface ClassOption {
+  class_id: number;
+  course_id?: number;
+  title: string;
+  course?: {
+    name: string;
+    course_code: string;
+  };
+}
+
+interface CourseOption {
+  course_id: number;
+  name: string;
+  course_code: string;
+}
+
+const compareEs = (a: string, b: string) =>
+  a.localeCompare(b, 'es', { sensitivity: 'base' });
+
+const groupClassesByCourse = (
+  classes: ClassOption[],
+  courses: CourseOption[],
+): CourseClassGroup[] => {
+  const groups = new Map<string, CourseClassGroup>();
+
+  for (const course of courses) {
+    const key = `id-${course.course_id}`;
+    groups.set(key, {
+      key,
+      label: course.course_code
+        ? `${course.name} (${course.course_code})`
+        : course.name,
+      classes: [],
+    });
+  }
+
+  for (const classItem of classes) {
+    const key =
+      classItem.course_id != null
+        ? `id-${classItem.course_id}`
+        : `name-${classItem.course?.name ?? 'sin-curso'}-${classItem.course?.course_code ?? ''}`;
+
+    if (!groups.has(key)) {
+      const name = classItem.course?.name ?? 'Sin curso';
+      const code = classItem.course?.course_code;
+      groups.set(key, {
+        key,
+        label: code ? `${name} (${code})` : name,
+        classes: [],
+      });
+    }
+
+    groups.get(key)!.classes.push({
+      value: String(classItem.class_id),
+      label: classItem.title,
+    });
+  }
+
+  const sorted = Array.from(groups.values()).sort((a, b) => compareEs(a.label, b.label));
+  for (const group of sorted) {
+    group.classes.sort((a, b) => compareEs(a.label, b.label));
+  }
+  return sorted;
+};
 
 const getMaterialDownloadUrl = (materialId: number) =>
   `${API_URL}/materials/${materialId}/download`;
@@ -64,31 +140,57 @@ const fetchMaterials = async (
   }
 };
 
+const fetchAllPages = async <T,>(
+  path: string,
+  limit: number,
+): Promise<T[]> => {
+  const collected: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  try {
+    do {
+      const separator = path.includes('?') ? '&' : '?';
+      const response = await apiFetch(`${path}${separator}page=${page}&limit=${limit}`);
+      if (!response.ok) break;
+      const data = await response.json();
+      collected.push(...((data.data || []) as T[]));
+      totalPages = data.totalPages || 1;
+      page += 1;
+    } while (page <= totalPages);
+  } catch (error) {
+    console.error('Error fetching selector options:', error);
+  }
+
+  return collected;
+};
+
+const fetchClasses = async (): Promise<ClassOption[]> =>
+  fetchAllPages<ClassOption>('admin/classes', 100);
+
+const fetchCourses = async (): Promise<CourseOption[]> =>
+  fetchAllPages<CourseOption>('admin/courses', 50);
+
 const createFileMaterial = async (
   classId: number,
   filename: string,
   file: File,
 ): Promise<Material> => {
-  try {
-    const formData = new FormData();
-    formData.append('class_id', classId.toString());
-    formData.append('filename', filename);
-    formData.append('file', file);
+  const formData = new FormData();
+  formData.append('class_id', classId.toString());
+  formData.append('filename', filename);
+  formData.append('file', file);
 
-    const response = await apiFetch('admin/materials/file', {
-      method: 'POST',
-      body: formData,
-    });
+  const response = await apiFetch('admin/materials/file', {
+    method: 'POST',
+    body: formData,
+  });
 
-    if (!response.ok) {
-      throw new Error('Error al subir archivo');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating file material:', error);
-    throw error;
+  if (!response.ok) {
+    await throwApiError(response, 'Error al subir archivo');
   }
+
+  return await response.json();
 };
 
 const createLinkMaterial = async (
@@ -96,21 +198,16 @@ const createLinkMaterial = async (
   filename: string,
   url_link: string,
 ): Promise<Material> => {
-  try {
-    const response = await apiFetch('admin/materials/link', {
-      method: 'POST',
-      body: JSON.stringify({ class_id: classId, filename, url_link }),
-    });
+  const response = await apiFetch('admin/materials/link', {
+    method: 'POST',
+    body: JSON.stringify({ class_id: classId, filename, url_link }),
+  });
 
-    if (!response.ok) {
-      throw new Error('Error al crear enlace');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating link material:', error);
-    throw error;
+  if (!response.ok) {
+    await throwApiError(response, 'Error al crear enlace');
   }
+
+  return await response.json();
 };
 
 const createReferenceMaterial = async (
@@ -118,21 +215,16 @@ const createReferenceMaterial = async (
   filename: string,
   written_reference: string,
 ): Promise<Material> => {
-  try {
-    const response = await apiFetch('admin/materials/reference', {
-      method: 'POST',
-      body: JSON.stringify({ class_id: classId, filename, written_reference }),
-    });
+  const response = await apiFetch('admin/materials/reference', {
+    method: 'POST',
+    body: JSON.stringify({ class_id: classId, filename, written_reference }),
+  });
 
-    if (!response.ok) {
-      throw new Error('Error al crear referencia');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating reference material:', error);
-    throw error;
+  if (!response.ok) {
+    await throwApiError(response, 'Error al crear referencia');
   }
+
+  return await response.json();
 };
 
 const deleteMaterial = async (id: number): Promise<void> => {
@@ -180,6 +272,12 @@ export default function AdminMaterialsPage() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const classGroups = useMemo(
+    () => groupClassesByCourse(classes, courses),
+    [classes, courses],
+  );
 
   // Load materials on search, page or limit change
   useEffect(() => {
@@ -203,16 +301,36 @@ export default function AdminMaterialsPage() {
     (m) => typeFilter === 'Todos los tipos' || m.material_type === typeFilter,
   );
 
+  const openCreateModal = async () => {
+    setFormErrors({});
+    setIsCreateModalOpen(true);
+    const [classList, courseList] = await Promise.all([fetchClasses(), fetchCourses()]);
+    setClasses(classList);
+    setCourses(courseList);
+  };
+
   const handleCreateMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!formData.class_id.trim()) errors.class_id = 'Requerido';
+    if (!formData.class_id.trim()) errors.class_id = 'Selecciona una clase';
     if (!formData.title.trim()) errors.title = 'Requerido';
 
-    if (materialType === 'link' && !formData.url.trim()) errors.url = 'Requerido';
+    if (materialType === 'link') {
+      if (!formData.url.trim()) errors.url = 'Requerido';
+      else if (!isHttpsUrl(formData.url.trim())) {
+        errors.url = 'El enlace debe ser una URL HTTPS válida';
+      }
+    }
     if (materialType === 'reference' && !formData.content.trim())
       errors.content = 'Requerido';
-    if (materialType === 'file' && !formData.file) errors.file = 'Requerido';
+    if (materialType === 'file') {
+      if (!formData.file) errors.file = 'Requerido';
+      else if (!isAllowedMaterialFile(formData.file)) {
+        errors.file = 'Tipo de archivo no permitido. Solo se aceptan PDFs, PNGs y JPEGs.';
+      } else if (formData.file.size > MATERIAL_LIMITS.fileSizeBytes) {
+        errors.file = 'El archivo no puede superar 5 MB.';
+      }
+    }
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -241,9 +359,9 @@ export default function AdminMaterialsPage() {
       resetForm();
       loadMaterials();
     } catch (error) {
-      console.error('Error creating material:', error);
-      errors.title = 'Error al crear el material';
-      setFormErrors(errors);
+      const message =
+        error instanceof Error ? error.message : 'Error al crear el material';
+      setFormErrors(mapMaterialFieldErrors(message));
     } finally {
       setIsSubmitting(false);
     }
@@ -320,7 +438,7 @@ export default function AdminMaterialsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={openCreateModal}
                 className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#157347] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1A8A56] focus:outline-none focus:ring-2 focus:ring-[#1A8A56]/40 transition-colors duration-200"
               >
                 <Plus className="w-5 h-5" />
@@ -578,11 +696,14 @@ export default function AdminMaterialsPage() {
       {/* Modal Crear Material */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
-          <div className="w-full max-w-xl rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-2xl border border-[#2B332F] bg-[#1A201D] p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white">Crear material</h2>
             <p className="mt-1 text-sm text-white/50">
               Selecciona el tipo de material y completa la información.
             </p>
+            {formErrors.general && (
+              <p className="mt-3 text-sm text-red-400">{formErrors.general}</p>
+            )}
 
             <form onSubmit={handleCreateMaterial} className="mt-6 space-y-4">
               <div>
@@ -634,14 +755,14 @@ export default function AdminMaterialsPage() {
                   htmlFor="class_id"
                   className="mb-1.5 block text-sm font-normal text-white/85"
                 >
-                  ID de la clase
+                  Clase
                 </label>
-                <input
-                  type="number"
+                <AdminCourseClassSelect
                   id="class_id"
                   value={formData.class_id}
-                  onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-                  className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
+                  placeholder="Selecciona una clase"
+                  groups={classGroups}
+                  onChange={(classId) => setFormData({ ...formData, class_id: classId })}
                 />
                 {formErrors.class_id && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.class_id}</p>
@@ -658,10 +779,14 @@ export default function AdminMaterialsPage() {
                 <input
                   type="text"
                   id="title"
+                  maxLength={MATERIAL_LIMITS.filename}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="h-11 w-full rounded-[10px] border border-[#2B332F] bg-[#131716] px-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20"
                 />
+                <p className="mt-1 text-right text-xs text-white/40">
+                  {formData.title.length}/{MATERIAL_LIMITS.filename}
+                </p>
                 {formErrors.title && (
                   <p className="mt-1 text-xs text-red-400">{formErrors.title}</p>
                 )}
@@ -676,8 +801,9 @@ export default function AdminMaterialsPage() {
                     URL
                   </label>
                   <input
-                    type="text"
+                    type="url"
                     id="url"
+                    maxLength={MATERIAL_LIMITS.url_link}
                     value={formData.url}
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                     placeholder="https://ejemplo.com"
@@ -699,6 +825,7 @@ export default function AdminMaterialsPage() {
                   </label>
                   <textarea
                     id="content"
+                    maxLength={MATERIAL_LIMITS.written_reference}
                     value={formData.content}
                     onChange={(e) =>
                       setFormData({ ...formData, content: e.target.value })
@@ -706,6 +833,9 @@ export default function AdminMaterialsPage() {
                     rows={4}
                     className="w-full rounded-[10px] border border-[#2B332F] bg-[#131716] p-4 text-sm text-white outline-none focus:border-[#157347] focus:ring-2 focus:ring-[#157347]/20 resize-none"
                   />
+                  <p className="mt-1 text-right text-xs text-white/40">
+                    {formData.content.length}/{MATERIAL_LIMITS.written_reference}
+                  </p>
                   {formErrors.content && (
                     <p className="mt-1 text-xs text-red-400">{formErrors.content}</p>
                   )}
