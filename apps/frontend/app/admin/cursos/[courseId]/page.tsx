@@ -1,17 +1,23 @@
 'use client';
 
+import { getAdminCourse as fetchCourse, updateCourse } from '@/services/courses.service';
+import {
+  getAdminClassesByCourse as fetchClasses,
+  createClass,
+  deleteClass,
+} from '@/services/classes.service';
+import { formatAdminDate } from '@/utils/admin-date';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { SquarePen, Trash2, Plus, BookOpen, ArrowLeft } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { apiFetch } from '@/lib/api-client';
 import {
   CLASS_LIMITS,
   isValidYoutubeWatchUrl,
   mapClassFieldErrors,
   sanitizeTrikawebUrl,
-  throwApiError,
 } from '@/lib/api-errors';
 
 const COURSE_LIMITS = {
@@ -22,123 +28,10 @@ const COURSE_LIMITS = {
   url_trikaweb: 255,
 };
 
-// --- Types ---
-
-interface Class {
-  class_id: number;
-  course_id: number;
-  title: string;
-  description?: string;
-  url_youtube?: string;
-  class_creation_date?: string;
-}
-
-const formatAdminDate = (date?: string) => {
-  if (!date) return 'N/A';
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return 'N/A';
-  return parsed.toLocaleString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-interface Course {
-  course_id: number;
-  name: string;
-  course_code: string;
-  description: string;
-  url_trikaweb?: string;
-  teacher_name?: string;
-  url_image?: string;
-}
-
-// --- API Functions ---
-
-const fetchCourse = async (courseId: number): Promise<Course> => {
-  const response = await apiFetch(`admin/courses/${courseId}`);
-  if (!response.ok) throw new Error('Error al obtener curso');
-  return await response.json();
-};
-
-const fetchClasses = async (courseId: number): Promise<Class[]> => {
-  try {
-    const response = await apiFetch(`admin/classes?course_id=${courseId}&limit=100`);
-    if (!response.ok) throw new Error('Error al obtener clases');
-    const data = await response.json();
-    return data.data || [];
-  } catch (error) {
-    console.error('Error fetching classes:', error);
-    return [];
-  }
-};
-
-const updateCourse = async (
-  id: number,
-  courseData: {
-    name: string;
-    course_code: string;
-    description: string;
-    url_trikaweb?: string;
-    teacher_name?: string;
-    teacher_last_name?: string;
-    file?: File | null;
-  },
-) => {
-  const formData = new FormData();
-
-  formData.append('name', courseData.name);
-  formData.append('course_code', courseData.course_code);
-  formData.append('description', courseData.description);
-
-  if (courseData.teacher_name) {
-    formData.append('teacher_name', courseData.teacher_name);
-  }
-
-  if (courseData.teacher_last_name) {
-    formData.append('teacher_last_name', courseData.teacher_last_name);
-  }
-
-  if (courseData.url_trikaweb !== undefined) {
-    formData.append('url_trikaweb', sanitizeTrikawebUrl(courseData.url_trikaweb));
-  }
-
-  if (courseData.file) {
-    formData.append('file', courseData.file);
-  }
-
-  const response = await apiFetch(`admin/courses/${id}`, {
-    method: 'PATCH',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    await throwApiError(response, 'Error al actualizar curso');
-  }
-
-  return await response.json();
-};
-
-const createClass = async (
-  classData: Omit<Class, 'class_id' | 'course_id' | 'order_number'> & Partial<Class>,
-): Promise<Class> => {
-  const response = await apiFetch('admin/classes', {
-    method: 'POST',
-    body: JSON.stringify(classData),
-  });
-  if (!response.ok) await throwApiError(response, 'Error al crear clase');
-  return await response.json();
-};
-
-const deleteClass = async (id: number): Promise<void> => {
-  const response = await apiFetch(`admin/classes/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Error al eliminar clase');
-};
+import type {
+  AdminClass as Class,
+  AdminCourse as Course,
+} from '@/interfaces/admin.interface';
 
 // --- Main Page ---
 
@@ -290,8 +183,7 @@ export default function AdminCourseDetailPage() {
       setCreateClassErrors({});
       loadData();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error al crear la clase';
+      const message = error instanceof Error ? error.message : 'Error al crear la clase';
       setCreateClassErrors(mapClassFieldErrors(message));
     } finally {
       setIsCreating(false);

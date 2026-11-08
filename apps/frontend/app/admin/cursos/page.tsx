@@ -1,91 +1,20 @@
 'use client';
 
+import {
+  getAdminCourses as fetchCourses,
+  deleteCourse,
+} from '@/services/courses.service';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, BookOpen, Plus, SquarePen, Trash2 } from 'lucide-react';
 
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { apiFetch } from '@/lib/api-client';
 
 import { CreateCourse } from '@/interfaces/course.interface';
 
-import { formatAdminDate } from '@/services/general.service';
+import { formatAdminDate } from '@/utils/admin-date';
 import CreateCourseModal from '@/components/courses/create-course-modal';
-
-interface FetchCoursesResponse {
-  data: CreateCourse[];
-  total: number;
-  totalPages: number;
-}
-
-const fetchCourses = async (
-  search: string = '',
-  page: number = 1,
-  limit: number = 10,
-): Promise<FetchCoursesResponse> => {
-  try {
-    const response = await apiFetch(
-      `admin/courses?q=${encodeURIComponent(search)}&page=${page}&limit=${limit}`,
-    );
-
-    if (!response.ok) {
-      throw new Error('Error al obtener cursos');
-    }
-
-    const data = await response.json();
-    const courses = (data.data || []) as CreateCourse[];
-    const mapped = courses.map((c) => ({
-      ...c,
-      teacher_name: c.teacher ? `${c.teacher.name} ${c.teacher.last_name}` : undefined,
-    }));
-
-    return {
-      data: mapped,
-      total: data.total || 0,
-      totalPages: data.totalPages || 1,
-    };
-  } catch (error) {
-    console.error('Error fetching courses:', error);
-    return { data: [], total: 0, totalPages: 1 };
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const updateCourse = async (
-  id: number,
-  courseData: Partial<CreateCourse>,
-): Promise<CreateCourse> => {
-  try {
-    const response = await apiFetch(`admin/courses/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(courseData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al actualizar curso');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error updating course:', error);
-    throw error;
-  }
-};
-
-const deleteCourse = async (id: number): Promise<void> => {
-  try {
-    const response = await apiFetch(`admin/courses/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al eliminar curso');
-    }
-  } catch (error) {
-    console.error('Error deleting course:', error);
-    throw error;
-  }
-};
 
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<CreateCourse[]>([]);

@@ -1,13 +1,15 @@
 'use client';
 
+import { getSession } from '@/services/auth.service';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
-import { getUserDisplayName } from '@/lib/auth-cookies';
-import { apiFetch } from '@/lib/api-client';
+import { getUserDisplayName } from '@/lib/user-session';
+import { getStudentDashboard } from '@/services/courses.service';
 import LogoutButton from '@/components/logout-button';
 
 export default function Dashboard() {
@@ -19,7 +21,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      const sessionRes = await fetch('/api/auth/session', { credentials: 'include' });
+      const sessionRes = await getSession();
       const session = await sessionRes.json();
       console.log(session);
 
@@ -36,7 +38,7 @@ export default function Dashboard() {
       setUserName(getUserDisplayName());
 
       try {
-        const response = await apiFetch('courses/dashboard');
+        const response = await getStudentDashboard();
 
         if (!response.ok) {
           throw new Error('Error al obtener datos');

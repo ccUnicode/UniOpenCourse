@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BookOpen, Video, FileText, LogOut, Menu, X } from 'lucide-react';
 
-import { logout } from '@/lib/auth-cookies';
+import { logout } from '@/services/auth.service';
 
 export const AdminSidebar = () => {
   const pathname = usePathname();

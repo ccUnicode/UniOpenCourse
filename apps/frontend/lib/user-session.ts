@@ -1,12 +1,3 @@
-/** Logs out the current user and clears the stored display name */
-export async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('user_name');
-  }
-}
-
 /** Persists the user's display name across browser tabs */
 export function saveUserDisplayName(name: string) {
   if (typeof window !== 'undefined') {
@@ -20,4 +11,9 @@ export function getUserDisplayName() {
     return localStorage.getItem('user_name') || 'Estudiante';
   }
   return 'Estudiante';
+}
+
+/** Clears the client-only display name; session cookies belong to auth handlers. */
+export function clearUserDisplayName() {
+  if (typeof window !== 'undefined') localStorage.removeItem('user_name');
 }
