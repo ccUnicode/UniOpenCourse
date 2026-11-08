@@ -36,9 +36,9 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
         {materials.map((material) => (
           <div
             key={material.material_id}
-            className="flex items-center justify-between p-4 bg-[#131c19] border border-[#1d2b27] rounded-lg"
+            className="flex min-w-0 items-center justify-between gap-4 p-4 bg-[#131c19] border border-[#1d2b27] rounded-lg"
           >
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <span className="text-white font-semibold">{material.filename}</span>
 
               {material.material_type === 'file' && (
@@ -61,7 +61,7 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
               )}
             </div>
 
-            <div className="flex items-center">
+            <div className="flex shrink-0 items-center">
               {material.material_type === 'file' && (
                 <a
                   href={getMaterialDownloadUrl(material.material_id)}
