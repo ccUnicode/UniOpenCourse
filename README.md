@@ -135,6 +135,16 @@ Generar el cliente de Prisma:
 npx prisma generate
 ```
 
+Este paso también es necesario después de clonar el repositorio o actualizar el
+schema. El cliente generado se guarda en `apps/backend/src/generated/prisma` y
+no se versiona. Si aparecen errores `TS2307` sobre `generated/prisma` junto con
+errores de propiedades inexistentes en `PrismaService`, ejecuta este comando
+desde `apps/backend` y reinicia `npm run dev`.
+
+Para conectar el backend, debe existir `apps/backend/.env` con una
+`DATABASE_URL` válida y PostgreSQL debe estar en ejecución. Generar el cliente
+no instala PostgreSQL ni crea las tablas: continúa con las migraciones y el seed.
+
 Ejecutar las migraciones para crear las tablas:
 
 ```bash
