@@ -11,6 +11,7 @@ import { ClassesModule } from './classes/classes.module';
 import { AuthModule } from './auth/auth.module';
 import { MaterialsModule } from './materials/materials.module';
 import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
       ],
     }),
     PrismaModule,
+    StorageModule,
     CoursesModule,
     ClassesModule,
     MaterialsModule,
