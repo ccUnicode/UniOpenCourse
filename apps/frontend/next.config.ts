@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com',
       },
       {
+        protocol: 'https',
+        hostname: '*.r2.dev',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.r2.dev',
+      },
+      {
         protocol: apiUrl.protocol === 'https:' ? 'https' : 'http',
         hostname: apiUrl.hostname,
         ...(apiUrl.port && {
