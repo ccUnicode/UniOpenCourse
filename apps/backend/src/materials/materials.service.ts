@@ -7,20 +7,23 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { StorageService } from '../storage/storage.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
-import { MaterialTypes, Prisma } from '../generated/prisma/client';
+import { MaterialTypes, Prisma } from '../generated/prisma';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ReadStream } from 'fs';
 
 @Injectable()
 export class MaterialsService {
   private readonly logger = new Logger(MaterialsService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -77,8 +80,8 @@ export class MaterialsService {
   }
 
   /**
-   * Creates a new physical file material
-   * @param createFileDto - Data containing the class_id
+   * Creates a new physical file material and uploads it to Cloudflare R2
+   * @param createFileDto - Data containing the class_id and filename
    * @param file - The uploaded file object
    * @throws BadRequestException if the file is missing or invalid
    * @returns The newly created material record
@@ -88,14 +91,28 @@ export class MaterialsService {
       throw new BadRequestException('Debes adjuntar un archivo válido.');
     }
 
-    return this.prisma.material.create({
-      data: {
-        class_id: createFileDto.class_id,
-        material_type: MaterialTypes.file,
-        filename: createFileDto.filename,
-        file_path: file.filename,
-      },
-    });
+    const uploadResult = await this.storageService.uploadFile(file, 'materials');
+
+    try {
+      return await this.prisma.material.create({
+        data: {
+          class_id: createFileDto.class_id,
+          material_type: MaterialTypes.file,
+          filename: createFileDto.filename,
+          file_path: uploadResult.url,
+        },
+      });
+    } catch (error) {
+      try {
+        await this.storageService.deleteFile(uploadResult.url);
+      } catch (cleanupError) {
+        this.logger.error(
+          `No se pudo eliminar el archivo de R2 tras fallo: ${uploadResult.url}`,
+          cleanupError,
+        );
+      }
+      throw error;
+    }
   }
 
   /** Creates a new external link material */
@@ -118,7 +135,7 @@ export class MaterialsService {
     });
   }
 
-  /** Deletes a material by its ID and unlinks its physical file if applicable */
+  /** Deletes a material by its ID and unlinks its physical file (from R2 or local storage) */
   async remove(id: number) {
     const material = await this.prisma.material.findUnique({
       where: { material_id: id },
@@ -127,31 +144,45 @@ export class MaterialsService {
     if (!material) {
       throw new NotFoundException('Material no encontrado.');
     }
-    const storagePath = this.configService.get<string>(
-      'STORAGE_PATH',
-      path.join(process.cwd(), 'storage'),
-    );
+
+    const deleted = await this.prisma.material.delete({
+      where: { material_id: id },
+    });
+
     if (material.material_type === MaterialTypes.file && material.file_path) {
-      const filePath = path.join(storagePath, material.file_path);
-      try {
-        if (fs.existsSync(filePath)) {
-          await fs.promises.unlink(filePath);
-        }
-      } catch (error) {
-        this.logger.error(
-          `Error deleting physical file: ${filePath}`,
-          error instanceof Error ? error.stack : undefined,
+      if (
+        material.file_path.startsWith('http://') ||
+        material.file_path.startsWith('https://')
+      ) {
+        await this.storageService.deleteFile(material.file_path);
+      } else {
+        const storagePath = this.configService.get<string>(
+          'STORAGE_PATH',
+          path.join(process.cwd(), 'storage'),
         );
+        const filePath = path.join(storagePath, material.file_path);
+        try {
+          if (fs.existsSync(filePath)) {
+            await fs.promises.unlink(filePath);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error deleting physical file: ${filePath}`,
+            error instanceof Error ? error.stack : undefined,
+          );
+        }
       }
     }
 
-    return this.prisma.material.delete({
-      where: { material_id: id },
-    });
+    return deleted;
   }
 
-  /** Gets the read stream and original filename for a physical material file */
-  async getDownloadableFile(id: number) {
+  /** Gets the downloadable file information (either Cloudflare R2 URL or local read stream) */
+  async getDownloadableFile(id: number): Promise<{
+    url?: string;
+    stream?: ReadStream;
+    filename: string;
+  }> {
     const material = await this.prisma.material.findUnique({
       where: { material_id: id },
     });
@@ -163,6 +194,23 @@ export class MaterialsService {
     if (material.material_type !== MaterialTypes.file || !material.file_path) {
       throw new BadRequestException('Este material no es un archivo descargable.');
     }
+
+    let filename = material.filename || 'material';
+
+    if (
+      material.file_path.startsWith('http://') ||
+      material.file_path.startsWith('https://')
+    ) {
+      const urlExt = path.extname(new URL(material.file_path).pathname);
+      if (!path.extname(filename) && urlExt) {
+        filename += urlExt;
+      }
+      return {
+        url: material.file_path,
+        filename,
+      };
+    }
+
     const storagePath = this.configService.get<string>(
       'STORAGE_PATH',
       path.join(process.cwd(), 'storage'),
@@ -173,7 +221,6 @@ export class MaterialsService {
       throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
     }
     const extension = path.extname(material.file_path);
-    let filename = material.filename || material.file_path;
 
     if (!path.extname(filename)) {
       filename += extension;

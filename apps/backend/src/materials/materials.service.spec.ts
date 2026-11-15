@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { StorageService } from '../storage/storage.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,10 +17,10 @@ jest.mock('fs', () => ({
     unlink: jest.fn(),
   },
 }));
+
 describe('MaterialsService', () => {
   let service: MaterialsService;
 
-  // Mock prisma
   const mockPrismaService = {
     material: {
       create: jest.fn(),
@@ -27,14 +28,19 @@ describe('MaterialsService', () => {
       findUnique: jest.fn(),
     },
   };
+
   const mockConfigService = {
     get: jest.fn((key: string) => {
       if (key === 'STORAGE_PATH') {
         return path.join(process.cwd(), 'storage');
       }
-
       return undefined;
     }),
+  };
+
+  const mockStorageService = {
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -48,6 +54,10 @@ describe('MaterialsService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: StorageService,
+          useValue: mockStorageService,
         },
       ],
     }).compile();
@@ -64,32 +74,39 @@ describe('MaterialsService', () => {
   });
 
   describe('createFile', () => {
-    it('should create a material of type "file" with real uploaded file data', async () => {
+    it('should upload to Cloudflare R2 and save the resulting URL', async () => {
       const dto = { class_id: 1, filename: 'documento.pdf' };
       const mockFile = {
         originalname: 'documento.pdf',
-        filename: 'documento-123.pdf',
+        buffer: Buffer.from('dummy-data'),
       } as Express.Multer.File;
+
+      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
+      mockStorageService.uploadFile.mockResolvedValue({
+        url: r2Url,
+        key: 'materials/materials-123.pdf',
+      });
 
       const expectedResult = {
         material_id: 1,
         class_id: dto.class_id,
         material_type: 'file',
         filename: dto.filename,
-        file_path: mockFile.filename,
+        file_path: r2Url,
       };
 
       mockPrismaService.material.create.mockResolvedValue(expectedResult);
 
       const result = await service.createFile(dto, mockFile);
 
+      expect(mockStorageService.uploadFile).toHaveBeenCalledWith(mockFile, 'materials');
       expect(result).toEqual(expectedResult);
       expect(mockPrismaService.material.create).toHaveBeenCalledWith({
         data: {
           class_id: dto.class_id,
           material_type: 'file',
           filename: dto.filename,
-          file_path: mockFile.filename,
+          file_path: r2Url,
         },
       });
     });
@@ -99,6 +116,30 @@ describe('MaterialsService', () => {
       await expect(service.createFile(dto, undefined)).rejects.toThrow(
         BadRequestException,
       );
+      expect(mockStorageService.uploadFile).not.toHaveBeenCalled();
+    });
+
+    it('should delete uploaded R2 file if DB creation fails', async () => {
+      const dto = { class_id: 1, filename: 'documento.pdf' };
+      const mockFile = {
+        originalname: 'documento.pdf',
+        buffer: Buffer.from('dummy-data'),
+      } as Express.Multer.File;
+
+      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
+      mockStorageService.uploadFile.mockResolvedValue({
+        url: r2Url,
+        key: 'materials/materials-123.pdf',
+      });
+
+      mockPrismaService.material.create.mockRejectedValue(
+        new Error('DB connection failed'),
+      );
+
+      await expect(service.createFile(dto, mockFile)).rejects.toThrow(
+        'DB connection failed',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(r2Url);
     });
   });
 
@@ -149,12 +190,14 @@ describe('MaterialsService', () => {
   });
 
   describe('remove', () => {
-    it('should delete a material by its ID', async () => {
+    it('should delete a material by its ID and clean up R2 file if URL', async () => {
       const materialId = 10;
+      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
       const expectedResult = {
         material_id: materialId,
         filename: 'test.pdf',
         material_type: 'file',
+        file_path: r2Url,
       };
 
       mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
@@ -166,6 +209,29 @@ describe('MaterialsService', () => {
       expect(mockPrismaService.material.delete).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(r2Url);
+    });
+
+    it('should delete a material by its ID and unlink local file if local path', async () => {
+      const materialId = 10;
+      const expectedResult = {
+        material_id: materialId,
+        filename: 'test.pdf',
+        material_type: 'file',
+        file_path: 'local-test.pdf',
+      };
+
+      mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
+      mockPrismaService.material.delete.mockResolvedValue(expectedResult);
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      const result = await service.remove(materialId);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockPrismaService.material.delete).toHaveBeenCalledWith({
+        where: { material_id: materialId },
+      });
+      expect(fs.promises.unlink).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if material does not exist', async () => {
@@ -201,7 +267,23 @@ describe('MaterialsService', () => {
       await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw NotFoundException if physical file is missing from server', async () => {
+    it('should return R2 url and filename when file is stored in Cloudflare R2', async () => {
+      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: r2Url,
+        filename: 'documento',
+      });
+
+      const result = await service.getDownloadableFile(1);
+
+      expect(result).toEqual({
+        url: r2Url,
+        filename: 'documento.pdf',
+      });
+    });
+
+    it('should throw NotFoundException if physical local file is missing from server', async () => {
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
         file_path: 'test.pdf',
@@ -211,7 +293,7 @@ describe('MaterialsService', () => {
       await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
     });
 
-    it('should return a read stream and filename if file exists', async () => {
+    it('should return a read stream and filename if local file exists', async () => {
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
         file_path: 'test.pdf',

@@ -48,6 +48,16 @@ async function main() {
         last_name: 'System',
         password: hashedPassword,
         role_id: adminRole.role_id,
+        email_verified: true,
+        email_verified_at: new Date(),
+      },
+    });
+  } else if (!existingAdmin.email_verified) {
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: {
+        email_verified: true,
+        email_verified_at: new Date(),
       },
     });
   }

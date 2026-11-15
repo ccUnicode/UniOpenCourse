@@ -34,6 +34,25 @@ describe('MaterialsController', () => {
   });
 
   describe('download', () => {
+    it('should redirect if getDownloadableFile returns a url', async () => {
+      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
+      mockMaterialsService.getDownloadableFile.mockResolvedValue({
+        url: r2Url,
+        filename: 'test.pdf',
+      } as never);
+
+      const mockRedirect = jest.fn();
+      const mockRes = {
+        redirect: mockRedirect,
+      } as unknown as Response;
+
+      const result = await controller.download(1, mockRes);
+
+      expect(mockMaterialsService.getDownloadableFile).toHaveBeenCalledWith(1);
+      expect(mockRedirect).toHaveBeenCalledWith(r2Url);
+      expect(result).toBeUndefined();
+    });
+
     it('should set headers and return a StreamableFile', async () => {
       const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
       const expectedFilename = 'test.pdf';

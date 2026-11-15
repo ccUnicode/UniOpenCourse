@@ -1,27 +1,22 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
-import { ConfigService } from '@nestjs/config';
+import { memoryStorage } from 'multer';
 import { CoursesController } from './courses.controller';
 import { AdminCoursesController } from './admin-courses.controller';
 import { CoursesService } from './courses.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { createStorageConfig } from 'src/utils/storage.config';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
     PrismaModule,
-    MulterModule.registerAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const storageDir = configService.get<string>('STORAGE_PATH', './storage');
-
-        return {
-          storage: createStorageConfig(storageDir),
-        };
-      },
+    StorageModule,
+    MulterModule.register({
+      storage: memoryStorage(),
     }),
   ],
   controllers: [CoursesController, AdminCoursesController],
   providers: [CoursesService],
+  exports: [CoursesService],
 })
 export class CoursesModule {}

@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
+import { StorageService } from '../storage/storage.service';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 
@@ -25,6 +26,10 @@ describe('CoursesService', () => {
   const mockConfigService = {
     get: jest.fn(),
   };
+  const mockStorageService = {
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -34,6 +39,7 @@ describe('CoursesService', () => {
         CoursesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: StorageService, useValue: mockStorageService },
       ],
     }).compile();
 
