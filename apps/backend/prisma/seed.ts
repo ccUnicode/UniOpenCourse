@@ -52,7 +52,10 @@ async function main() {
         email_verified_at: new Date(),
       },
     });
-  } else if (!existingAdmin.email_verified) {
+  } else if (
+    existingAdmin.role_id === adminRole.role_id &&
+    !existingAdmin.email_verified
+  ) {
     await prisma.user.update({
       where: { email: adminEmail },
       data: {
@@ -60,6 +63,10 @@ async function main() {
         email_verified_at: new Date(),
       },
     });
+  } else if (existingAdmin.role_id !== adminRole.role_id) {
+    console.warn(
+      `[Seed Warning] Usuario existente con email ${adminEmail} no posee rol ADMIN. Se omite verificación automática.`,
+    );
   }
 }
 

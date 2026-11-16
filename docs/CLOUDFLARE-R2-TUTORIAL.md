@@ -15,7 +15,7 @@ Cloudflare R2 incluye mensualmente sin costo:
 - **10 millones** de operaciones de lectura/descarga (Clase B).
 - **\$0 de tarifas de salida (Zero Egress Fees):** Las descargas de PDFs e imágenes no generan cobro por ancho de banda.
 
-> **Nota sobre la activación:** Cloudflare solicita registrar una tarjeta de crédito/débito para validar la cuenta y prevenir abusos de bots. El cobro inmediato es de **\$0.00**. No se realizará ningún cargo a menos que se excedan los 10 GB gratuitos.
+> **Nota sobre la activación y costos:** Cloudflare solicita registrar una tarjeta de crédito/débito para validar la cuenta y prevenir abusos de bots. El cobro inmediato es de **\$0.00**. No se realizará ningún cargo a menos que se superen los límites gratuitos mensuales de almacenamiento (10 GB) o de operaciones (1M de operaciones Clase A o 10M de operaciones Clase B).
 
 ---
 
@@ -45,15 +45,13 @@ Para que los usuarios puedan ver las imágenes de los cursos y descargar los mat
 1. Entra al bucket recién creado (`uniopencourse-bucket`).
 2. Ve a la pestaña **Configuración** (Settings).
 3. Busca la sección **Acceso público** (Public Access).
-4. Tienes dos opciones para habilitar el acceso público:
-   - **Opción A (Recomendada / Inmediata - Dominio R2.dev):**
-     - Haz clic en **Permitir acceso** en la subsección _Dominio de desarrollo r2.dev_.
-     - Escribe `permitir` o confirma en el cuadro de diálogo.
-     - Se generará una URL pública similar a:
-       `https://pub-xxxxxxxxxxxxxxxxxxxxxxxx.r2.dev`
-   - **Opción B (Dominio personalizado del centro):**
-     - Si la institución administra su dominio en Cloudflare (ej. `midominio.com`), haz clic en **Conectar dominio** y asigna un subdominio como `storage.midominio.com`.
+4. En la subsección **Dominio de desarrollo r2.dev**, haz clic en **Permitir acceso** (o _Allow Access_).
+   - Escribe `permitir` o confirma en el cuadro de diálogo si te lo solicita.
+   - Se generará una URL pública similar a:
+     `https://pub-xxxxxxxxxxxxxxxxxxxxxxxx.r2.dev`
 5. Copia esa URL pública (sin barra diagonal `/` al final).
+
+> **Nota sobre entornos:** El dominio público `r2.dev` está destinado a entornos de **desarrollo y pruebas**. Para despliegues en producción con alto tráfico, Cloudflare recomienda conectar un dominio propio para evitar límites de tasa (*rate limits* o respuestas HTTP 429).
 
 ---
 

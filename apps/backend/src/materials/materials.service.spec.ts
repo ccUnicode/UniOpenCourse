@@ -4,7 +4,11 @@ import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ReadStream } from 'fs';
@@ -212,7 +216,7 @@ describe('MaterialsService', () => {
       expect(mockStorageService.deleteFile).toHaveBeenCalledWith(r2Url);
     });
 
-    it('should delete a material by its ID and unlink local file if local path', async () => {
+    it('should delete a material by its ID and unlink local file via storageService', async () => {
       const materialId = 10;
       const expectedResult = {
         material_id: materialId,
@@ -223,15 +227,33 @@ describe('MaterialsService', () => {
 
       mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      mockStorageService.deleteFile.mockResolvedValue(true);
 
       const result = await service.remove(materialId);
 
       expect(result).toEqual(expectedResult);
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith('local-test.pdf');
       expect(mockPrismaService.material.delete).toHaveBeenCalledWith({
         where: { material_id: materialId },
       });
-      expect(fs.promises.unlink).toHaveBeenCalled();
+    });
+
+    it('should throw InternalServerErrorException and preserve DB record if storage cleanup throws', async () => {
+      const materialId = 10;
+      const materialRecord = {
+        material_id: materialId,
+        filename: 'test.pdf',
+        material_type: 'file',
+        file_path: 'https://pub-abc.r2.dev/materials/test.pdf',
+      };
+
+      mockPrismaService.material.findUnique.mockResolvedValue(materialRecord);
+      mockStorageService.deleteFile.mockRejectedValue(new Error('S3 connection timeout'));
+
+      await expect(service.remove(materialId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(mockPrismaService.material.delete).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if material does not exist', async () => {
@@ -315,6 +337,28 @@ describe('MaterialsService', () => {
       });
       expect(fs.existsSync).toHaveBeenCalled();
       expect(fs.createReadStream).toHaveBeenCalled();
+    });
+
+    it('should return a read stream and original filename when file is stored as local URL', async () => {
+      mockPrismaService.material.findUnique.mockResolvedValue({
+        material_type: 'file',
+        file_path: 'http://localhost:3001/storage/materials/TAREA-3-12345.pdf',
+        filename: 'TAREA 3',
+      });
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      const mockStream = {
+        pipe: jest.fn(),
+        on: jest.fn(),
+      } as unknown as ReadStream;
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+
+      const result = await service.getDownloadableFile(1);
+
+      expect(result).toEqual({
+        stream: mockStream,
+        filename: 'TAREA 3.pdf',
+      });
     });
   });
 });

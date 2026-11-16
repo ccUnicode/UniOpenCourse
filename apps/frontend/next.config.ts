@@ -18,10 +18,6 @@ const nextConfig: NextConfig = {
         hostname: '*.r2.dev',
       },
       {
-        protocol: 'https',
-        hostname: '**.r2.dev',
-      },
-      {
         protocol: apiUrl.protocol === 'https:' ? 'https' : 'http',
         hostname: apiUrl.hostname,
         ...(apiUrl.port && {

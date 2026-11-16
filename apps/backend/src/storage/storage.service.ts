@@ -40,12 +40,21 @@ export class StorageService {
       path.join(process.cwd(), 'storage'),
     );
 
+    const hasValidPublicUrl = Boolean(
+      this.publicUrl &&
+        (this.publicUrl.startsWith('http://') ||
+          this.publicUrl.startsWith('https://')) &&
+        !this.publicUrl.includes('tu-id') &&
+        !this.publicUrl.includes('ejemplo.com'),
+    );
+
     const hasValidR2Creds = Boolean(
       accountId &&
         accessKeyId &&
         secretAccessKey &&
         !accountId.includes('tu_cloudflare') &&
-        accountId.trim() !== '',
+        accountId.trim() !== '' &&
+        hasValidPublicUrl,
     );
 
     if (driver === 'local') {
@@ -196,7 +205,8 @@ export class StorageService {
       const resolvedPath = path.resolve(localPath);
       const resolvedBasePath = path.resolve(this.localBasePath);
 
-      if (!resolvedPath.startsWith(resolvedBasePath)) {
+      const relative = path.relative(resolvedBasePath, resolvedPath);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
         this.logger.warn(`Intento de Path Traversal bloqueado al eliminar: ${fileUrlOrKey}`);
         return false;
       }

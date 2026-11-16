@@ -184,5 +184,56 @@ describe('StorageService', () => {
       expect(success).toBe(false);
       expect(fs.promises.unlink).not.toHaveBeenCalled();
     });
+
+    it('should block sibling directory traversal during local deletion (e.g., ../storage-backup)', async () => {
+      const maliciousSiblingPath = '../storage-backup/cover.jpg';
+      const success = await service.deleteFile(maliciousSiblingPath);
+
+      expect(success).toBe(false);
+      expect(fs.promises.unlink).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to local mode if R2_PUBLIC_URL is missing despite valid S3 keys', async () => {
+      const mockConfigMissingUrl = {
+        get: jest.fn((key: string, defaultValue?: string) => {
+          switch (key) {
+            case 'R2_ACCOUNT_ID':
+              return 'valid_account_id';
+            case 'R2_ACCESS_KEY_ID':
+              return 'valid_key_id';
+            case 'R2_SECRET_ACCESS_KEY':
+              return 'valid_secret';
+            case 'R2_PUBLIC_URL':
+              return ''; // Missing public URL!
+            case 'BACKEND_URL':
+              return 'http://localhost:3001';
+            case 'STORAGE_PATH':
+              return 'C:\\mock\\storage';
+            default:
+              return defaultValue;
+          }
+        }),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          StorageService,
+          {
+            provide: ConfigService,
+            useValue: mockConfigMissingUrl,
+          },
+        ],
+      }).compile();
+
+      const localFallbackService = module.get<StorageService>(StorageService);
+      const mockFile = {
+        originalname: 'test.pdf',
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('content'),
+      } as Express.Multer.File;
+
+      const uploadResult = await localFallbackService.uploadFile(mockFile, 'materials');
+      expect(uploadResult.url).toMatch(/^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/);
+    });
   });
 });

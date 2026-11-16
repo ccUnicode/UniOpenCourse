@@ -3,6 +3,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
@@ -145,34 +146,29 @@ export class MaterialsService {
       throw new NotFoundException('Material no encontrado.');
     }
 
+    // Limpieza previa del archivo físico antes de borrar el registro de la base de datos
+    if (material.material_type === MaterialTypes.file && material.file_path) {
+      try {
+        const fileDeleted = await this.storageService.deleteFile(material.file_path);
+        if (!fileDeleted) {
+          this.logger.warn(
+            `No se pudo confirmar la eliminación física del archivo: ${material.file_path}`,
+          );
+        }
+      } catch (storageError) {
+        this.logger.error(
+          `Error al intentar eliminar el archivo físico: ${material.file_path}`,
+          storageError,
+        );
+        throw new InternalServerErrorException(
+          'No se pudo eliminar el archivo del almacenamiento. Operación cancelada para reintento.',
+        );
+      }
+    }
+
     const deleted = await this.prisma.material.delete({
       where: { material_id: id },
     });
-
-    if (material.material_type === MaterialTypes.file && material.file_path) {
-      if (
-        material.file_path.startsWith('http://') ||
-        material.file_path.startsWith('https://')
-      ) {
-        await this.storageService.deleteFile(material.file_path);
-      } else {
-        const storagePath = this.configService.get<string>(
-          'STORAGE_PATH',
-          path.join(process.cwd(), 'storage'),
-        );
-        const filePath = path.join(storagePath, material.file_path);
-        try {
-          if (fs.existsSync(filePath)) {
-            await fs.promises.unlink(filePath);
-          }
-        } catch (error) {
-          this.logger.error(
-            `Error deleting physical file: ${filePath}`,
-            error instanceof Error ? error.stack : undefined,
-          );
-        }
-      }
-    }
 
     return deleted;
   }
@@ -197,10 +193,13 @@ export class MaterialsService {
 
     let filename = material.filename || 'material';
 
-    if (
-      material.file_path.startsWith('http://') ||
-      material.file_path.startsWith('https://')
-    ) {
+    const isCloudflareUrl =
+      (material.file_path.startsWith('http://') ||
+        material.file_path.startsWith('https://')) &&
+      !material.file_path.includes('/storage/') &&
+      !material.file_path.includes('localhost');
+
+    if (isCloudflareUrl) {
       const urlExt = path.extname(new URL(material.file_path).pathname);
       if (!path.extname(filename) && urlExt) {
         filename += urlExt;
@@ -215,16 +214,26 @@ export class MaterialsService {
       'STORAGE_PATH',
       path.join(process.cwd(), 'storage'),
     );
-    const filePath = path.join(storagePath, material.file_path);
+
+    let relativePath = material.file_path;
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+      const parsed = new URL(relativePath);
+      relativePath = parsed.pathname.replace(/^\/storage\//, '').replace(/^\//, '');
+    } else {
+      relativePath = relativePath.replace(/^\/?storage\//, '');
+    }
+
+    const filePath = path.join(storagePath, relativePath);
 
     if (!fs.existsSync(filePath)) {
       throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
     }
-    const extension = path.extname(material.file_path);
 
-    if (!path.extname(filename)) {
+    const extension = path.extname(filePath);
+    if (!path.extname(filename) && extension) {
       filename += extension;
     }
+
     return {
       stream: fs.createReadStream(filePath),
       filename,
