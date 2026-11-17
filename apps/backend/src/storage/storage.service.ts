@@ -214,9 +214,10 @@ export class StorageService {
       if (fs.existsSync(resolvedPath)) {
         await fs.promises.unlink(resolvedPath);
         this.logger.log(`Archivo local eliminado del disco: ${resolvedPath}`);
-        return true;
+      } else {
+        this.logger.warn(`El archivo local ya no existía en disco: ${resolvedPath}`);
       }
-      return false;
+      return true;
     } catch (error) {
       this.logger.warn(`No se pudo eliminar el archivo local (${fileUrlOrKey}):`, error);
       return false;

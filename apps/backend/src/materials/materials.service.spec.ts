@@ -206,6 +206,7 @@ describe('MaterialsService', () => {
 
       mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
+      mockStorageService.deleteFile.mockResolvedValue(true);
 
       const result = await service.remove(materialId);
 
@@ -228,6 +229,7 @@ describe('MaterialsService', () => {
       mockPrismaService.material.findUnique.mockResolvedValue(expectedResult);
       mockPrismaService.material.delete.mockResolvedValue(expectedResult);
       mockStorageService.deleteFile.mockResolvedValue(true);
+      mockStorageService.deleteFile.mockResolvedValue(true);
 
       const result = await service.remove(materialId);
 
@@ -249,6 +251,24 @@ describe('MaterialsService', () => {
 
       mockPrismaService.material.findUnique.mockResolvedValue(materialRecord);
       mockStorageService.deleteFile.mockRejectedValue(new Error('S3 connection timeout'));
+
+      await expect(service.remove(materialId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(mockPrismaService.material.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw InternalServerErrorException and preserve DB record if storage cleanup returns false', async () => {
+      const materialId = 10;
+      const materialRecord = {
+        material_id: materialId,
+        filename: 'test.pdf',
+        material_type: 'file',
+        file_path: 'https://pub-abc.r2.dev/materials/test.pdf',
+      };
+
+      mockPrismaService.material.findUnique.mockResolvedValue(materialRecord);
+      mockStorageService.deleteFile.mockResolvedValue(false);
 
       await expect(service.remove(materialId)).rejects.toThrow(
         InternalServerErrorException,

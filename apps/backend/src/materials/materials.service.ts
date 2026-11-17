@@ -151,11 +151,17 @@ export class MaterialsService {
       try {
         const fileDeleted = await this.storageService.deleteFile(material.file_path);
         if (!fileDeleted) {
-          this.logger.warn(
-            `No se pudo confirmar la eliminación física del archivo: ${material.file_path}`,
+          this.logger.error(
+            `No se pudo eliminar el archivo físico del almacenamiento: ${material.file_path}`,
+          );
+          throw new InternalServerErrorException(
+            'No se pudo eliminar el archivo del almacenamiento. Operación cancelada para reintento.',
           );
         }
       } catch (storageError) {
+        if (storageError instanceof InternalServerErrorException) {
+          throw storageError;
+        }
         this.logger.error(
           `Error al intentar eliminar el archivo físico: ${material.file_path}`,
           storageError,
