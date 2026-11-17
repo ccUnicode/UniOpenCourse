@@ -116,6 +116,17 @@ describe('StorageService', () => {
       expect(success).toBe(true);
       expect(mockS3Send).toHaveBeenCalledWith(expect.any(DeleteObjectCommand));
     });
+
+    it('should delete legacy local file from disk even when R2 mode is enabled', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      const legacyFileName = 'legacy.pdf';
+      const success = await service.deleteFile(legacyFileName);
+
+      expect(success).toBe(true);
+      expect(fs.promises.unlink).toHaveBeenCalled();
+      expect(mockS3Send).not.toHaveBeenCalled();
+    });
   });
 
   describe('Local Mode (Automatic when credentials missing or STORAGE_DRIVER=local)', () => {

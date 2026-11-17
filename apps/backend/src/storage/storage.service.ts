@@ -164,13 +164,12 @@ export class StorageService {
   async deleteFile(fileUrlOrKey: string): Promise<boolean> {
     if (!fileUrlOrKey) return false;
 
-    // Si es una URL o recurso de Cloudflare R2
+    // Determina si el recurso pertenece explícitamente a Cloudflare R2
+    const cleanPublicUrl = this.publicUrl ? this.publicUrl.replace(/\/$/, '') : '';
     const isCloudflareUrl =
       fileUrlOrKey.includes('.r2.dev') ||
       fileUrlOrKey.includes('.r2.cloudflarestorage.com') ||
-      (this.isR2Enabled &&
-        !fileUrlOrKey.includes('localhost') &&
-        !fileUrlOrKey.includes('/storage/'));
+      (cleanPublicUrl !== '' && fileUrlOrKey.startsWith(cleanPublicUrl));
 
     if (isCloudflareUrl && this.isR2Enabled && this.s3Client) {
       try {
@@ -191,7 +190,7 @@ export class StorageService {
       }
     }
 
-    // Modo Local
+    // Modo Local (para URLs locales o archivos locales antiguos como legacy.pdf)
     try {
       let relativePath = fileUrlOrKey;
       if (fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://')) {
@@ -202,8 +201,19 @@ export class StorageService {
       }
 
       const localPath = path.join(this.localBasePath, relativePath);
-      const resolvedPath = path.resolve(localPath);
+      let resolvedPath = path.resolve(localPath);
       const resolvedBasePath = path.resolve(this.localBasePath);
+
+      // Si no existe directamente en storage/<relativePath>, revisar si está en subcarpetas (materials o courses)
+      if (!fs.existsSync(resolvedPath)) {
+        const inMaterials = path.resolve(this.localBasePath, 'materials', relativePath);
+        const inCourses = path.resolve(this.localBasePath, 'courses', relativePath);
+        if (fs.existsSync(inMaterials)) {
+          resolvedPath = inMaterials;
+        } else if (fs.existsSync(inCourses)) {
+          resolvedPath = inCourses;
+        }
+      }
 
       const relative = path.relative(resolvedBasePath, resolvedPath);
       if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
