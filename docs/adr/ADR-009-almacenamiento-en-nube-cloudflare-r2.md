@@ -16,11 +16,6 @@ Este enfoque presenta limitaciones críticas al prepararse para producción:
 Por otro lado, forzar una dependencia 100% estricta de Cloudflare R2 para desarrollo local presenta desventajas inmediatas:
 
 - Los nuevos desarrolladores o integrantes del equipo que no cuenten con una cuenta en Cloudflare (o que aún no registren un método de pago para activar R2) quedarían bloqueados para probar la creación de cursos y materiales.
-- Purgar agresivamente el soporte de lectura y borrado de archivos locales rompería los materiales y cursos creados previamente en bases de datos locales de desarrollo, generando errores 500 al intentar consultarlos o eliminarlos.
-- Realizar una purga total inmediata consumiría un tiempo valioso en la fase final de cierre de versión, sin aportar valor operativo inmediato.
-
-Por otro lado, forzar una dependencia 100% estricta de Cloudflare R2 para desarrollo local presenta desventajas inmediatas:
-- Los nuevos desarrolladores o integrantes del equipo que no cuenten con una cuenta en Cloudflare (o que aún no registren un método de pago para activar R2) quedarían bloqueados para probar la creación de cursos y materiales.
 - Purgar agresivamente el soporte de lectura y borrado de archivos locales rompería los materiales y cursos creados previamente en bases de datos locales de desarrollo, generando errores al intentar consultarlos o eliminarlos.
 - Realizar una purga total inmediata consumiría un tiempo valioso en la fase final de cierre de versión, sin aportar valor operativo inmediato.
 
@@ -35,7 +30,7 @@ Se decidió implementar un **módulo de almacenamiento híbrido con interruptor 
    - **Modo Local (Fallback):** Si las credenciales de R2 no están configuradas, si tienen valores de marcador de posición, o si se define explícitamente `STORAGE_DRIVER=local` en el `.env`, el servicio guarda el buffer directamente en disco (`apps/backend/storage/<carpeta>/`) y devuelve la URL estática local (`http://localhost:3001/storage/...`).
 4. **Descargas Optimizadas y Transparentes:** Para los materiales descargables (`/materials/:id/download`), el controlador ejecuta una redirección HTTP 302 directa a la URL del archivo (sea de Cloudflare R2 o servida por `ServeStaticModule`).
 5. **Retrocompatibilidad y Deuda Técnica Controlada:** Se preserva el soporte para leer y eliminar archivos locales preexistentes en la base de datos de desarrollo. Si en el futuro se decide retirar completamente el modo local, la migración estará aislada únicamente dentro de `StorageService`.
-6. **Configuración en Frontend:** Se configuró `next.config.ts` para autorizar orígenes `*.r2.dev` y `image-url.ts` para servir URLs absolutas sin prefijos erróneos.
+6. **Configuración en Frontend:** Se configuró `next.config.ts` para autorizar los subdominios `*.r2.dev` y admitir dinámicamente cualquier dominio personalizado configurado en `R2_PUBLIC_URL` o `NEXT_PUBLIC_R2_PUBLIC_URL` en `remotePatterns`, y `image-url.ts` para servir URLs absolutas sin prefijos erróneos.
 
 ## Consecuencias
 
