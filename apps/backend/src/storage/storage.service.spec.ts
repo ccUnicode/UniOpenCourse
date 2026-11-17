@@ -204,6 +204,15 @@ describe('StorageService', () => {
       expect(fs.promises.unlink).not.toHaveBeenCalled();
     });
 
+    it('should return false and not delete locally when trying to delete an R2 file while R2 is disabled', async () => {
+      const r2Url = 'https://pub-test.r2.dev/courses/cover-123.jpg';
+      const success = await service.deleteFile(r2Url);
+
+      expect(success).toBe(false);
+      expect(fs.promises.unlink).not.toHaveBeenCalled();
+      expect(mockS3Send).not.toHaveBeenCalled();
+    });
+
     it('should fall back to local mode if R2_PUBLIC_URL is missing despite valid S3 keys', async () => {
       const mockConfigMissingUrl = {
         get: jest.fn((key: string, defaultValue?: string) => {

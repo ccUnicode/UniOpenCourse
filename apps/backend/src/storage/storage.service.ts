@@ -171,7 +171,14 @@ export class StorageService {
       fileUrlOrKey.includes('.r2.cloudflarestorage.com') ||
       (cleanPublicUrl !== '' && fileUrlOrKey.startsWith(cleanPublicUrl));
 
-    if (isCloudflareUrl && this.isR2Enabled && this.s3Client) {
+    if (isCloudflareUrl) {
+      if (!this.isR2Enabled || !this.s3Client) {
+        this.logger.warn(
+          `No se pudo eliminar el archivo de Cloudflare R2 porque el modo R2 está deshabilitado: ${fileUrlOrKey}`,
+        );
+        return false;
+      }
+
       try {
         const key = this.extractKeyFromUrl(fileUrlOrKey);
         if (!key) return false;
