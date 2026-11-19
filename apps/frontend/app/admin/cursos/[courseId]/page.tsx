@@ -206,7 +206,7 @@ export default function AdminCourseDetailPage() {
       <div className="flex min-h-[calc(100vh-70px)]">
         <AdminSidebar />
 
-        <div className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
+        <div className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto space-y-8">
             {/* Encabezado con breadcrumb */}
             <div>
@@ -432,7 +432,12 @@ export default function AdminCourseDetailPage() {
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-xl border border-[#2B332F] bg-[#131716] overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
+                  <table className="w-full table-fixed text-left border-collapse min-w-[600px]">
+                    <colgroup>
+                      <col />
+                      <col className="w-44" />
+                      <col className="w-28" />
+                    </colgroup>
                     <thead>
                       <tr className="bg-[#151A17] border-b border-[#2B332F]">
                         <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
@@ -452,7 +457,7 @@ export default function AdminCourseDetailPage() {
                           key={cls.class_id}
                           className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors"
                         >
-                          <td className="px-5 py-4 text-sm font-semibold text-white">
+                          <td className="px-5 py-4 text-sm font-semibold text-white [overflow-wrap:anywhere]">
                             {cls.title}
                           </td>
                           <td className="px-5 py-4 text-sm text-white/50">

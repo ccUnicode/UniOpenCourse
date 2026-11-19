@@ -133,7 +133,7 @@ export default function AdminClassesPage() {
       <div className="flex">
         <AdminSidebar />
 
-        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto">
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -192,7 +192,13 @@ export default function AdminClassesPage() {
             {/* Tabla de clases */}
             <div className="mt-6 overflow-hidden rounded-2xl border border-[#2B332F] bg-[#1A201D] overflow-x-auto">
               {classes.length > 0 ? (
-                <table className="w-full text-left border-collapse min-w-[800px]">
+                <table className="w-full table-fixed text-left border-collapse min-w-[800px]">
+                  <colgroup>
+                    <col />
+                    <col className="w-[30%]" />
+                    <col className="w-44" />
+                    <col className="w-28" />
+                  </colgroup>
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
@@ -215,7 +221,7 @@ export default function AdminClassesPage() {
                         key={classItem.class_id}
                         className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group"
                       >
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 [overflow-wrap:anywhere]">
                           <p className="text-sm font-semibold text-white">
                             {classItem.title}
                           </p>
@@ -225,7 +231,7 @@ export default function AdminClassesPage() {
                             </p>
                           )}
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 [overflow-wrap:anywhere]">
                           <span className="text-sm font-medium text-white/85">
                             {classItem.course
                               ? `${classItem.course.name} (${classItem.course.course_code})`

@@ -213,7 +213,7 @@ export default function AdminMaterialsPage() {
       <div className="flex flex-1">
         <AdminSidebar />
 
-        <main className="flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 lg:px-10 bg-background">
           <div className="max-w-[1600px] mx-auto">
             {/* Encabezado */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -299,7 +299,15 @@ export default function AdminMaterialsPage() {
             {/* Tabla de materiales */}
             <div className="mt-6 overflow-hidden rounded-2xl border border-[#2B332F] bg-[#1A201D] overflow-x-auto">
               {filteredMaterials.length > 0 ? (
-                <table className="w-full text-left border-collapse min-w-[800px]">
+                <table className="w-full table-fixed text-left border-collapse min-w-[960px]">
+                  <colgroup>
+                    <col className="w-[28%]" />
+                    <col className="w-26" />
+                    <col className="w-[22%]" />
+                    <col />
+                    <col className="w-32" />
+                    <col className="w-24" />
+                  </colgroup>
                   <thead>
                     <tr className="bg-[#151A17] border-b border-[#2B332F]">
                       <th className="px-5 py-4 text-xs font-medium uppercase tracking-wide text-white/45">
@@ -328,12 +336,12 @@ export default function AdminMaterialsPage() {
                         key={material.material_id}
                         className="border-b border-[#2B332F] last:border-b-0 hover:bg-white/[0.025] transition-colors duration-200 group"
                       >
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 [overflow-wrap:anywhere]">
                           <div className="flex items-center gap-2">
-                            <span className="text-white/35">
+                            <span className="shrink-0 text-white/35">
                               {getMaterialIcon(material.material_type)}
                             </span>
-                            <div>
+                            <div className="min-w-0">
                               <p className="text-sm font-semibold text-white">
                                 {material.filename}
                               </p>
@@ -352,12 +360,12 @@ export default function AdminMaterialsPage() {
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/75">
+                          <span className="text-sm text-white/75 [overflow-wrap:anywhere]">
                             {material.class?.title || 'Sin clase'}
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-sm text-white/55 max-w-xs truncate block">
+                          <span className="block truncate text-sm text-white/55">
                             {material.material_type === 'link' && material.url_link ? (
                               <a
                                 href={material.url_link}
