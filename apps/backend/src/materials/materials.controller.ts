@@ -19,7 +19,14 @@ export class MaterialsController {
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { stream, filename } = await this.materialsService.getDownloadableFile(id);
+    const fileData = await this.materialsService.getDownloadableFile(id);
+
+    if (fileData.url) {
+      res.redirect(fileData.url);
+      return;
+    }
+
+    const { stream, filename } = fileData;
     const extension = path.extname(filename).toLowerCase();
     const mimeTypes: Record<string, string> = {
       '.pdf': 'application/pdf',
@@ -28,12 +35,11 @@ export class MaterialsController {
       '.jpeg': 'image/jpeg',
     };
 
-    // Obliga al navegador a descargar el archivo con el nombre original
     res.set({
       'Content-Type': mimeTypes[extension] || 'application/octet-stream',
     });
     res.attachment(filename);
 
-    return new StreamableFile(stream);
+    return new StreamableFile(stream!);
   }
 }

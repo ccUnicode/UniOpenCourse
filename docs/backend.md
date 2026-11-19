@@ -162,8 +162,9 @@ Administrar los recursos adicionales de las clases (archivos físicos, enlaces e
 ### Dependencias
 
 - `PrismaService` (para acceso a la base de datos).
-- `@nestjs/platform-express` y `multer` (para la intercepción y carga física de archivos).
-- `storageConfig` (configuración personalizada de destino y sanitización de archivos).
+- `@nestjs/platform-express` y `multer` (para la intercepción de archivos en memoria con `memoryStorage()`).
+- `StorageModule` / `StorageService` (subida a Cloudflare R2 y eliminación de archivos).
+- `storageConfig` (reglas de validación de tamaño y tipos MIME admitidos).
 
 ---
 
@@ -285,3 +286,37 @@ Enviar correos transaccionales de verificación de cuenta mediante la API HTTP d
 ### Dependencias
 
 - `ConfigService` (lectura de credenciales y URLs).
+
+---
+
+## Módulo: Storage
+
+### Responsabilidad
+
+Centralizar la interacción con el almacenamiento de archivos (modo híbrido con Cloudflare R2 para producción y fallback local en disco para desarrollo) para portadas de cursos y archivos de materiales adjuntos.
+
+### Requerimientos relacionados
+
+- RF-12.12
+- RF-18.2.1
+
+### Archivos principales
+
+- `src/storage/storage.module.ts`
+- `src/storage/storage.service.ts`
+- `src/storage/storage.service.spec.ts`
+
+### Reglas de negocio
+
+- **Conmutación Inteligente (Patrón Driver):**
+  - **Modo Cloudflare R2:** Se activa automáticamente en presencia de credenciales válidas (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`). Sube archivos mediante `@aws-sdk/client-s3` (`PutObjectCommand`) y devuelve URLs públicas de CDN.
+  - **Modo Local:** Si no se configuran credenciales o se define `STORAGE_DRIVER=local` en el `.env`, guarda el buffer en disco físico (`storage/<carpeta>/`) y devuelve URLs servidas por `ServeStaticModule`.
+- Sube archivos a carpetas lógicas (`courses/` o `materials/`) con nombres sanitizados (máximo 60 caracteres alfanuméricos) y sufijos únicos timestamp.
+- Elimina objetos huérfanos cuando se actualiza la portada de un curso o se elimina un material/curso (detecta si el recurso es de R2 o de disco local y aplica la eliminación correspondiente).
+- Transfiere descargas de materiales directamente a la CDN pública de Cloudflare vía redirección HTTP 302, reduciendo el consumo de ancho de banda del backend a \$0 en producción.
+- Permite que nuevos desarrolladores prueben la plataforma en local sin estar obligados a crear una cuenta con tarjeta en Cloudflare, preservando también los registros históricos de prueba.
+
+### Dependencias
+
+- `@aws-sdk/client-s3` (cliente S3 estándar para Cloudflare R2).
+- `ConfigService` (lectura de credenciales `R2_*` y switch `STORAGE_DRIVER`).
