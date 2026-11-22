@@ -14,6 +14,7 @@ import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma';
+import { GoogleUserPayload } from './strategies/google.strategy';
 
 const GENERIC_RESEND_MESSAGE =
   'Si el correo existe y aún no está verificado, recibirás un enlace de verificación.';
@@ -359,5 +360,100 @@ export class AuthService {
   private getResendCooldownMs(): number {
     const minutes = Number(this.config.get<string>('EMAIL_RESEND_COOLDOWN_MINUTES') ?? 3);
     return minutes * 60 * 1000;
+  }
+
+  async validateGoogleUser(googleUser: GoogleUserPayload) {
+    const email = googleUser.email.trim().toLowerCase();
+
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { role: true },
+    });
+
+    if (user) {
+      if (!user.email_verified) {
+        user = await this.prisma.user.update({
+          where: { user_id: user.user_id },
+          data: {
+            email_verified: true,
+            email_verified_at: new Date(),
+          },
+          include: { role: true },
+        });
+      }
+    } else {
+      const baseUsername = this.generateBaseUsername(
+        googleUser.email,
+        googleUser.firstName,
+      );
+      const uniqueUsername = await this.generateUniqueUsername(baseUsername);
+
+      const randomPassword = randomBytes(32).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      const name = (googleUser.firstName || 'Usuario').trim().slice(0, 50);
+      const lastName = (googleUser.lastName || '').trim().slice(0, 50);
+
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          username: uniqueUsername,
+          name,
+          last_name: lastName,
+          password: hashedPassword,
+          email_verified: true,
+          email_verified_at: new Date(),
+          role: {
+            connect: {
+              role_name: 'USER',
+            },
+          },
+        },
+        include: { role: true },
+      });
+    }
+
+    const payload = {
+      sub: user.user_id,
+      email: user.email,
+      role: user.role.role_name,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        last_name: user.last_name,
+        role: user.role.role_name,
+      },
+    };
+  }
+
+  private generateBaseUsername(email: string, firstName?: string): string {
+    const raw = (firstName || email.split('@')[0])
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '');
+    return (raw || 'user').slice(0, 50);
+  }
+
+  private async generateUniqueUsername(baseUsername: string): Promise<string> {
+    const existing = await this.prisma.user.findUnique({
+      where: { username: baseUsername },
+    });
+    if (!existing) {
+      return baseUsername;
+    }
+    for (let i = 0; i < 5; i++) {
+      const suffix = `_${randomBytes(2).toString('hex')}`;
+      const candidate = `${baseUsername.slice(0, 70 - suffix.length)}${suffix}`;
+      const found = await this.prisma.user.findUnique({
+        where: { username: candidate },
+      });
+      if (!found) return candidate;
+    }
+    return `${baseUsername.slice(0, 55)}_${Date.now()}`;
   }
 }
