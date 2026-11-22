@@ -487,4 +487,136 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
   });
+
+  describe('validateGoogleUser', () => {
+    const mockGooglePayload = {
+      email: 'jeferson@gmail.com',
+      firstName: 'Jeferson',
+      lastName: 'Snyder',
+      picture: 'https://lh3.googleusercontent.com/pic.jpg',
+      accessToken: 'token-xyz',
+    };
+
+    it('debe registrar un usuario nuevo y emitir JWT si no existe en BD', async () => {
+      // 1. findUnique por email no encuentra al usuario
+      prismaMock.user.findUnique.mockResolvedValueOnce(null);
+      // 2. findUnique por username no encuentra colisión
+      prismaMock.user.findUnique.mockResolvedValueOnce(null);
+
+      const mockCreatedUser = {
+        user_id: 10,
+        email: 'jeferson@gmail.com',
+        username: 'jeferson',
+        name: 'Jeferson',
+        last_name: 'Snyder',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+      prismaMock.user.create.mockResolvedValueOnce(mockCreatedUser);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'jeferson@gmail.com' },
+        include: { role: true },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'jeferson@gmail.com',
+            email_verified: true,
+            role: { connect: { role_name: 'USER' } },
+          }),
+        }),
+      );
+      expect(result).toEqual({
+        access_token: 'signed_google_jwt',
+        user: {
+          user_id: 10,
+          email: 'jeferson@gmail.com',
+          username: 'jeferson',
+          name: 'Jeferson',
+          last_name: 'Snyder',
+          role: 'USER',
+        },
+      });
+    });
+
+    it('debe actualizar email_verified a true si el usuario ya existía sin verificar', async () => {
+      const mockUnverifiedUser = {
+        user_id: 10,
+        email: 'jeferson@gmail.com',
+        username: 'jeferson',
+        name: 'Jeferson',
+        last_name: 'Snyder',
+        email_verified: false,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique.mockResolvedValueOnce(mockUnverifiedUser);
+      prismaMock.user.update.mockResolvedValueOnce({
+        ...mockUnverifiedUser,
+        email_verified: true,
+        email_verified_at: new Date(),
+      });
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: 10 },
+          data: expect.objectContaining({
+            email_verified: true,
+          }),
+        }),
+      );
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('debe reutilizar el usuario si ya existe y está verificado', async () => {
+      const mockVerifiedUser = {
+        user_id: 10,
+        email: 'jeferson@gmail.com',
+        username: 'jeferson',
+        name: 'Jeferson',
+        last_name: 'Snyder',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique.mockResolvedValueOnce(mockVerifiedUser);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+      expect(result.user.email).toBe('jeferson@gmail.com');
+    });
+
+    it('debe resolver colisiones de username agregando un sufijo único', async () => {
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // por email
+      prismaMock.user.findUnique.mockResolvedValueOnce({ user_id: 1, username: 'jeferson' }); // primer username choca
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // segundo candidato pasa
+
+      const mockCreatedWithSuffix = {
+        user_id: 11,
+        email: 'jeferson@gmail.com',
+        username: 'jeferson_a1b2',
+        name: 'Jeferson',
+        last_name: 'Snyder',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+      prismaMock.user.create.mockResolvedValueOnce(mockCreatedWithSuffix);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.create).toHaveBeenCalled();
+      expect(result.user.username).toBe('jeferson_a1b2');
+    });
+  });
 });

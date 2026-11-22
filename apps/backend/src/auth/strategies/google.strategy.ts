@@ -11,6 +11,10 @@ export interface GoogleUserPayload {
   accessToken: string;
 }
 
+/**
+ * Estrategia de autenticación federada con Google OAuth 2.0.
+ * Extrae y valida el perfil básico del usuario (email, nombre y foto).
+ */
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(configService: ConfigService) {
@@ -22,6 +26,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
+  /**
+   * Procesa el perfil devuelto por Google y construye el payload normalizado del usuario.
+   *
+   * @param accessToken Token de acceso emitido por Google
+   * @param _refreshToken Token de refresco opcional
+   * @param profile Perfil de usuario devuelto por la API de Google
+   * @param done Callback de verificación de Passport
+   */
   async validate(
     accessToken: string,
     _refreshToken: string,

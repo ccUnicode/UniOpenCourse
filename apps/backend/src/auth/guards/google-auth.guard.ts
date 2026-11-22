@@ -1,6 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
+/**
+ * Guardián de autenticación para rutas de Google OAuth 2.0.
+ * Intercepta y traduce errores de autorización a excepciones controladas en español.
+ */
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard('google') {
   handleRequest<TUser = any>(

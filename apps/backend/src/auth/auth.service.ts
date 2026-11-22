@@ -362,6 +362,14 @@ export class AuthService {
     return minutes * 60 * 1000;
   }
 
+  /**
+   * Valida un usuario autenticado mediante Google OAuth 2.0.
+   * Si el usuario no existe, lo crea con rol USER y estado verificado;
+   * si ya existe, actualiza su estado de verificación si estaba pendiente.
+   *
+   * @param googleUser Perfil normalizado devuelto por la estrategia de Google
+   * @returns Objeto con access_token firmado y datos públicos del usuario
+   */
   async validateGoogleUser(googleUser: GoogleUserPayload) {
     const email = googleUser.email.trim().toLowerCase();
 

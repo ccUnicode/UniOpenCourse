@@ -51,12 +51,20 @@ export class AuthController {
     return this.authService.adminLogin(dto);
   }
 
+  /**
+   * Inicia el flujo de autenticación federada con Google OAuth 2.0.
+   * Redirige al navegador del usuario a la pantalla de consentimiento de Google.
+   */
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleAuth() {
-    // Inicia el flujo de autenticación con Google (redirige a la pantalla de consentimiento)
+    // Manejado por GoogleAuthGuard
   }
 
+  /**
+   * Callback de retorno de Google OAuth 2.0.
+   * Valida o registra al usuario en base de datos, establece la cookie de sesión y redirige al frontend.
+   */
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
