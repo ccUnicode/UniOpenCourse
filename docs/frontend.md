@@ -57,11 +57,12 @@ El proyecto sigue una arquitectura modular y separada por responsabilidades:
 
 ### Autenticación (registro, login, verificación)
 
-| Ruta               | Vista                                                              |
-| :----------------- | :----------------------------------------------------------------- |
-| `/login`           | Inicio de sesión de usuario (correo o username)                    |
-| `/registro`        | Registro de cuenta; tras éxito muestra pantalla “Revisa tu correo” |
-| `/verificar-email` | Verificación automática al abrir el enlace del correo (`?token=`)  |
+| Ruta                    | Vista                                                              |
+| :---------------------- | :----------------------------------------------------------------- |
+| `/login`                | Inicio de sesión de usuario (correo o username)                    |
+| `/registro`             | Registro de cuenta; tras éxito muestra pantalla “Revisa tu correo” |
+| `/verificar-email`      | Verificación automática al abrir el enlace del correo (`?token=`)  |
+| `/auth/google/callback` | Callback de retorno Google OAuth; setea cookie y va a `/dashboard` |
 
 ### Administración
 
@@ -243,6 +244,8 @@ Detalle del backend: [`backend.md`](./backend.md) (módulos Auth y Mail). Contra
 | `lib/api-client.ts`                         | Transporte común para todos los servicios              |
 | `middleware.ts`                             | Protección de rutas `/admin/*`                         |
 | `components/logout-button.tsx`              | Cierra sesión y redirige a `/`                         |
+| `components/auth/google-sign-in-button.tsx` | Botón reutilizable de inicio de sesión con Google      |
+| `app/auth/google/callback/route.ts`         | Callback de Google OAuth; valida token y setea cookie  |
 
 ### Cookie `access_token`
 
@@ -278,6 +281,8 @@ Ver `apps/frontend/.env.example`.
 
 **Logout** — `LogoutButton` → `auth.service.ts` → borra cookie mediante el handler;
 tras éxito limpia el nombre de `localStorage` con `user-session.ts` → `/`.
+
+**Google OAuth (Federado)** — Botón en `/login` y `/registro` → redirige a backend `${NEXT_PUBLIC_API_URL}/auth/google` → retorno a `/auth/google/callback?token=...` valida firma de JWT, emite cookie `access_token` y redirige a `/dashboard` (o `/admin/cursos`). Si hay error redirige a `/login?error=google_auth_failed`.
 
 **Middleware** — Protege `/admin/*` (JWT + rol `ADMIN`). `/dashboard` comprueba sesión en cliente con `/api/auth/session`.
 
@@ -325,5 +330,7 @@ validó entrega real mediante Brevo.
 
 - Backend Auth y Mail: [`backend.md`](./backend.md)
 - Contratos REST: [`endpoints.md`](./endpoints.md)
+- Tutorial Google OAuth (GCP): [`GOOGLE-OAUTH-TUTORIAL.md`](./GOOGLE-OAUTH-TUTORIAL.md)
+- ADR Autenticación con Google: [`ADR-010-autenticacion-federada-google-oauth.md`](./adr/ADR-010-autenticacion-federada-google-oauth.md)
 - Configuración Brevo (paso a paso): [`BREVO-TUTORIAL.md`](./BREVO-TUTORIAL.md)
 - Qué es Brevo en el proyecto: [`brevo.md`](./brevo.md)
