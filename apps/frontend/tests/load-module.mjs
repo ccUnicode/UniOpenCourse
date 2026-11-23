@@ -1,8 +1,11 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import ts from 'typescript';
+
+const nodeRequire = createRequire(import.meta.url);
 
 export const frontendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -24,6 +27,8 @@ export function createModules({
     Response,
     URL,
     URLSearchParams,
+    TextEncoder,
+    TextDecoder,
     console,
     process: { env: { NEXT_PUBLIC_API_URL: 'https://public.example.test', ...env } },
     fetch: async (url, options) => {
@@ -55,15 +60,19 @@ export function createModules({
         ...globals,
         module: loadedModule,
         exports: loadedModule.exports,
-        require: (specifier) =>
-          load(
+        require: (specifier) => {
+          if (!specifier.startsWith('.') && !specifier.startsWith('@/')) {
+            return nodeRequire(specifier);
+          }
+          return load(
             specifier.startsWith('@/')
               ? specifier.slice(2)
               : path.relative(
                   frontendRoot,
                   path.resolve(path.dirname(filename), specifier),
                 ),
-          ),
+          );
+        },
       },
       { filename },
     );
