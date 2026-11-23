@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import CourseCard from '@/components/courses/course-card';
 import { Course } from '@/interfaces/course.interface';
-import { getUserDisplayName } from '@/lib/user-session';
+import { getUserDisplayName, saveUserDisplayName } from '@/lib/user-session';
 import { getStudentDashboard } from '@/services/courses.service';
 import LogoutButton from '@/components/logout-button';
 
@@ -35,7 +35,14 @@ export default function Dashboard() {
         return;
       }
 
-      setUserName(getUserDisplayName());
+      const currentName = getUserDisplayName();
+      if (currentName === 'Estudiante' && session.email) {
+        const fallbackName = session.email.split('@')[0];
+        saveUserDisplayName(fallbackName);
+        setUserName(fallbackName);
+      } else {
+        setUserName(currentName);
+      }
 
       try {
         const response = await getStudentDashboard();

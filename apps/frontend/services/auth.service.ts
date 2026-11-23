@@ -68,3 +68,9 @@ export async function logout() {
   if (!response.ok) throw new Error('No se pudo cerrar la sesión');
   clearUserDisplayName();
 }
+
+/** Obtiene la URL absoluta para iniciar el flujo de autenticación con Google. */
+export function getGoogleAuthUrl(): string {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  return `${apiBase}/auth/google`;
+}

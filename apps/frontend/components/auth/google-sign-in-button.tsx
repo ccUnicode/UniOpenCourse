@@ -1,4 +1,5 @@
 import React from 'react';
+import { getGoogleAuthUrl } from '@/services/auth.service';
 
 interface GoogleSignInButtonProps {
   /** Texto del botón (por defecto: 'Continuar con Google') */
@@ -16,9 +17,7 @@ export default function GoogleSignInButton({
   text = 'Continuar con Google',
   className = '',
 }: GoogleSignInButtonProps) {
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const googleAuthUrl = `${apiBase}/auth/google`;
+  const googleAuthUrl = getGoogleAuthUrl();
 
   return (
     <a
