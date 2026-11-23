@@ -35,7 +35,14 @@ export class AuthController {
     return this.authService.resendVerificationEmail(dto.email);
   }
   @Post('logout')
-  logout() {
+  logout(@Res({ passthrough: true }) res: Response) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
     return this.authService.logout();
   }
   @Post('admin/login')

@@ -9,6 +9,7 @@ describe('AuthController', () => {
   let controller: AuthController;
   const mockAuthService = {
     validateGoogleUser: jest.fn(),
+    logout: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -80,6 +81,30 @@ describe('AuthController', () => {
       expect(mockRedirect).toHaveBeenCalledWith(
         'http://localhost:3000/auth/google/callback?token=jwt-access-token-abc',
       );
+    });
+  });
+
+  describe('logout', () => {
+    it('debe limpiar la cookie access_token y llamar al servicio de logout', () => {
+      const expectedResponse = { message: 'Logout exitoso' };
+      mockAuthService.logout.mockReturnValue(expectedResponse);
+
+      const mockClearCookie = jest.fn();
+      const res = {
+        clearCookie: mockClearCookie,
+      } as unknown as Response;
+
+      const result = controller.logout(res);
+
+      expect(mockClearCookie).toHaveBeenCalledWith(
+        'access_token',
+        expect.objectContaining({
+          httpOnly: true,
+          path: '/',
+        }) as unknown as Record<string, unknown>,
+      );
+      expect(mockAuthService.logout).toHaveBeenCalled();
+      expect(result).toEqual(expectedResponse);
     });
   });
 });
