@@ -527,7 +527,7 @@ describe('AuthService', () => {
             email: 'jeferson@gmail.com',
             email_verified: true,
             role: { connect: { role_name: 'USER' } },
-          }),
+          }) as unknown as Record<string, unknown>,
         }),
       );
       expect(result).toEqual({
@@ -569,7 +569,7 @@ describe('AuthService', () => {
           where: { user_id: 10 },
           data: expect.objectContaining({
             email_verified: true,
-          }),
+          }) as unknown as Record<string, unknown>,
         }),
       );
       expect(result.access_token).toBe('signed_google_jwt');
@@ -598,7 +598,10 @@ describe('AuthService', () => {
 
     it('debe resolver colisiones de username agregando un sufijo único', async () => {
       prismaMock.user.findUnique.mockResolvedValueOnce(null); // por email
-      prismaMock.user.findUnique.mockResolvedValueOnce({ user_id: 1, username: 'jeferson' }); // primer username choca
+      prismaMock.user.findUnique.mockResolvedValueOnce({
+        user_id: 1,
+        username: 'jeferson',
+      }); // primer username choca
       prismaMock.user.findUnique.mockResolvedValueOnce(null); // segundo candidato pasa
 
       const mockCreatedWithSuffix = {

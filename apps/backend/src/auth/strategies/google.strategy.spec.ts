@@ -5,7 +5,6 @@ import { Profile } from 'passport-google-oauth20';
 
 describe('GoogleStrategy', () => {
   let strategy: GoogleStrategy;
-  let configService: ConfigService;
 
   const mockConfigService = {
     getOrThrow: jest.fn((key: string) => {
@@ -34,17 +33,16 @@ describe('GoogleStrategy', () => {
     }).compile();
 
     strategy = module.get<GoogleStrategy>(GoogleStrategy);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('debe estar definida e inicializarse con las credenciales de config', () => {
     expect(strategy).toBeDefined();
-    expect(configService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_ID');
-    expect(configService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_SECRET');
-    expect(configService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CALLBACK_URL');
+    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_ID');
+    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_SECRET');
+    expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CALLBACK_URL');
   });
 
-  it('debe extraer y validar el perfil de Google correctamente', async () => {
+  it('debe extraer y validar el perfil de Google correctamente', () => {
     const mockProfile: Profile = {
       id: '123456789',
       displayName: 'Jeferson Snyder',
@@ -57,17 +55,12 @@ describe('GoogleStrategy', () => {
       provider: 'google',
       profileUrl: 'https://profiles.google.com/123456789',
       _raw: '',
-      _json: {} as any,
+      _json: {} as unknown as Profile['_json'],
     };
 
     const done = jest.fn();
 
-    await strategy.validate(
-      'access-token-123',
-      'refresh-token-123',
-      mockProfile,
-      done,
-    );
+    strategy.validate('access-token-123', 'refresh-token-123', mockProfile, done);
 
     expect(done).toHaveBeenCalledWith(null, {
       email: 'jeferson@gmail.com',
@@ -78,28 +71,25 @@ describe('GoogleStrategy', () => {
     });
   });
 
-  it('debe llamar a done con error si el perfil de Google no contiene emails', async () => {
+  it('debe llamar a done con error si el perfil de Google no contiene emails', () => {
     const mockProfileWithoutEmail: Profile = {
       id: '123456789',
       displayName: 'Usuario Sin Correo',
       provider: 'google',
       profileUrl: 'https://profiles.google.com/123456789',
       _raw: '',
-      _json: {} as any,
+      _json: {} as unknown as Profile['_json'],
     };
 
     const done = jest.fn();
 
-    await strategy.validate(
+    strategy.validate(
       'access-token-123',
       'refresh-token-123',
       mockProfileWithoutEmail,
       done,
     );
 
-    expect(done).toHaveBeenCalledWith(
-      expect.any(Error),
-      false,
-    );
+    expect(done).toHaveBeenCalledWith(expect.any(Error), false);
   });
 });

@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsInt,
-  IsUrl,
-  MaxLength,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsUrl, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /** DTO for creating an external link */

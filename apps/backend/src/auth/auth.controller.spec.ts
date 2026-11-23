@@ -3,6 +3,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -31,7 +32,7 @@ describe('AuthController', () => {
   });
 
   it('googleAuth debe estar definido', () => {
-    expect(controller.googleAuth).toBeDefined();
+    expect(typeof controller.googleAuth).toBe('function');
   });
 
   describe('googleAuthCallback', () => {
@@ -56,25 +57,27 @@ describe('AuthController', () => {
 
       mockAuthService.validateGoogleUser.mockResolvedValue(mockAuthResult);
 
-      const req = { user: mockGoogleUser } as any;
+      const req = { user: mockGoogleUser } as unknown as Request;
+      const mockCookie = jest.fn();
+      const mockRedirect = jest.fn();
       const res = {
-        cookie: jest.fn(),
-        redirect: jest.fn(),
-      } as any;
+        cookie: mockCookie,
+        redirect: mockRedirect,
+      } as unknown as Response;
 
       await controller.googleAuthCallback(req, res);
 
       expect(mockAuthService.validateGoogleUser).toHaveBeenCalledWith(mockGoogleUser);
-      expect(res.cookie).toHaveBeenCalledWith(
+      expect(mockCookie).toHaveBeenCalledWith(
         'access_token',
         'jwt-access-token-abc',
         expect.objectContaining({
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
-        }),
+        }) as unknown as Record<string, unknown>,
       );
-      expect(res.redirect).toHaveBeenCalledWith(
+      expect(mockRedirect).toHaveBeenCalledWith(
         'http://localhost:3000/auth/google/callback?token=jwt-access-token-abc',
       );
     });

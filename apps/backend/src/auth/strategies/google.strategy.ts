@@ -34,17 +34,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
    * @param profile Perfil de usuario devuelto por la API de Google
    * @param done Callback de verificación de Passport
    */
-  async validate(
+  validate(
     accessToken: string,
     _refreshToken: string,
     profile: Profile,
     done: VerifyCallback,
-  ): Promise<void> {
+  ): void {
     const { name, emails, photos } = profile;
     const email = emails?.[0]?.value;
 
     if (!email) {
-      done(new Error('No se encontró un correo electrónico en el perfil de Google'), false);
+      done(
+        new Error('No se encontró un correo electrónico en el perfil de Google'),
+        false,
+      );
       return;
     }
 

@@ -171,7 +171,9 @@ describe('StorageService', () => {
       const result = await service.uploadFile(mockFile, 'materials');
 
       expect(result).toHaveProperty('url');
-      expect(result.url).toMatch(/^http:\/\/localhost:3001\/storage\/materials\/local-test-\d+-\d+\.pdf$/);
+      expect(result.url).toMatch(
+        /^http:\/\/localhost:3001\/storage\/materials\/local-test-\d+-\d+\.pdf$/,
+      );
       expect(fs.promises.mkdir).toHaveBeenCalled();
       expect(fs.promises.writeFile).toHaveBeenCalled();
       expect(mockS3Send).not.toHaveBeenCalled();
@@ -253,7 +255,9 @@ describe('StorageService', () => {
       } as Express.Multer.File;
 
       const uploadResult = await localFallbackService.uploadFile(mockFile, 'materials');
-      expect(uploadResult.url).toMatch(/^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/);
+      expect(uploadResult.url).toMatch(
+        /^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/,
+      );
     });
   });
 });
