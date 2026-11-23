@@ -5,6 +5,7 @@ import { getSession, registerAccount, resendVerification } from '@/services/auth
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import GoogleSignInButton from '@/components/auth/google-sign-in-button';
 
 const EyeIcon = ({ className = 'w-5 h-5' }) => (
   <svg
@@ -366,6 +367,16 @@ export default function Registro() {
                 {isLoading ? 'Registrando...' : 'Registrarse'}
               </button>
             </div>
+
+            {/* Separador y Google Button */}
+            <div className="relative my-6 flex items-center justify-center">
+              <div className="w-full border-t border-white/10" />
+              <span className="absolute bg-[#1A201D] px-3 text-xs text-white/40 uppercase tracking-wider">
+                o
+              </span>
+            </div>
+
+            <GoogleSignInButton text="Registrarse con Google" />
 
             {/* Texto inferior de login (dentro de la tarjeta) */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-2">

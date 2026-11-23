@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saveUserDisplayName } from '@/lib/user-session';
+import GoogleSignInButton from '@/components/auth/google-sign-in-button';
 
 // Iconos SVG simples para el formulario
 const EyeIcon = ({ className = 'w-5 h-5' }) => (
@@ -47,6 +48,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
@@ -75,6 +77,12 @@ export default function Login() {
     } else if (params.get('registered') === 'true') {
       setSuccessMessage('Registro recibido. Verifica tu correo antes de iniciar sesión.');
       router.replace('/login');
+    } else if (params.get('error') === 'google_auth_failed') {
+      setErrorMessage('No se pudo iniciar sesión con Google. Inténtalo nuevamente.');
+      router.replace('/login');
+    } else if (params.get('error') === 'invalid_token') {
+      setErrorMessage('La sesión de Google expiró o es inválida. Inténtalo de nuevo.');
+      router.replace('/login');
     }
   }, [router]);
 
@@ -98,6 +106,7 @@ export default function Login() {
     if (hasErrors) return;
 
     setIsLoading(true);
+    setErrorMessage('');
     setUnverifiedEmail('');
     setResendMessage('');
 
@@ -159,6 +168,12 @@ export default function Login() {
           {successMessage && (
             <div className="mb-4 rounded-lg bg-[#157347]/25 border border-[#157347]/45 p-3 text-sm text-[#45D483] text-center font-medium shadow-md">
               {successMessage}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-4 rounded-lg bg-red-500/15 border border-red-500/40 p-3 text-sm text-red-400 text-center font-medium shadow-md">
+              {errorMessage}
             </div>
           )}
 
@@ -255,6 +270,16 @@ export default function Login() {
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </button>
               </div>
+
+              {/* Separador y Google Button */}
+              <div className="relative my-6 flex items-center justify-center">
+                <div className="w-full border-t border-white/10" />
+                <span className="absolute bg-[#1A201D] px-3 text-xs text-white/40 uppercase tracking-wider">
+                  o
+                </span>
+              </div>
+
+              <GoogleSignInButton text="Continuar con Google" />
             </form>
           </div>
 
