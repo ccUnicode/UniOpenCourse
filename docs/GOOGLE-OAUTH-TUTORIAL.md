@@ -90,4 +90,5 @@ Cuando el backend y frontend se desplieguen en la nube (ej. Render y Vercel):
    `https://tu-dominio.vercel.app`
 3. En **URIs de redireccionamiento autorizados**, añade la URL pública del callback del backend:
    `https://tu-api.onrender.com/auth/google/callback`
-4. En las variables de entorno de producción del backend, actualiza `GOOGLE_CALLBACK_URL` con dicha URL pública.
+4. En las variables de entorno de producción del backend, actualiza `GOOGLE_CALLBACK_URL` con dicha URL pública del backend.
+5. En las variables de entorno de producción del backend, actualiza también `FRONTEND_URL` con la URL pública del frontend (`https://tu-dominio.vercel.app`), asegurando que tras la autenticación exitosa la redirección lleve al usuario a la aplicación desplegada y coincida con el origen CORS permitido.
