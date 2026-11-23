@@ -31,10 +31,7 @@ export class StorageService {
       'uniopencourse-storage',
     );
     this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL', '');
-    this.backendUrl = this.configService.get<string>(
-      'BACKEND_URL',
-      'http://localhost:3001',
-    );
+    this.backendUrl = this.configService.get<string>('BACKEND_URL', '');
     this.localBasePath = this.configService.get<string>(
       'STORAGE_PATH',
       path.join(process.cwd(), 'storage'),
@@ -42,24 +39,25 @@ export class StorageService {
 
     const hasValidPublicUrl = Boolean(
       this.publicUrl &&
-        (this.publicUrl.startsWith('http://') ||
-          this.publicUrl.startsWith('https://')) &&
-        !this.publicUrl.includes('tu-id') &&
-        !this.publicUrl.includes('ejemplo.com'),
+      (this.publicUrl.startsWith('http://') || this.publicUrl.startsWith('https://')) &&
+      !this.publicUrl.includes('tu-id') &&
+      !this.publicUrl.includes('ejemplo.com'),
     );
 
     const hasValidR2Creds = Boolean(
       accountId &&
-        accessKeyId &&
-        secretAccessKey &&
-        !accountId.includes('tu_cloudflare') &&
-        accountId.trim() !== '' &&
-        hasValidPublicUrl,
+      accessKeyId &&
+      secretAccessKey &&
+      !accountId.includes('tu_cloudflare') &&
+      accountId.trim() !== '' &&
+      hasValidPublicUrl,
     );
 
     if (driver === 'local') {
       this.isR2Enabled = false;
-      this.logger.log('StorageService inicializado en MODO LOCAL forzado (STORAGE_DRIVER=local).');
+      this.logger.log(
+        'StorageService inicializado en MODO LOCAL forzado (STORAGE_DRIVER=local).',
+      );
     } else if (hasValidR2Creds) {
       this.isR2Enabled = true;
       this.s3Client = new S3Client({
@@ -131,15 +129,25 @@ export class StorageService {
 
     // Modo Local Automático / Forzado
     try {
+      if (process.env.NODE_ENV === 'production' && !this.backendUrl) {
+        throw new InternalServerErrorException(
+          'En producción se requiere configurar BACKEND_URL con el origen público del backend para almacenamiento local.',
+        );
+      }
+
       const targetDir = path.join(this.localBasePath, folder);
       await fs.promises.mkdir(targetDir, { recursive: true });
       const targetFilePath = path.join(targetDir, filenameWithSuffix);
       await fs.promises.writeFile(targetFilePath, file.buffer);
 
-      const cleanBackendUrl = this.backendUrl.replace(/\/$/, '');
-      const localFileUrl = `${cleanBackendUrl}/storage/${folder}/${filenameWithSuffix}`;
+      const cleanBackendUrl = this.backendUrl ? this.backendUrl.replace(/\/$/, '') : '';
+      const localFileUrl = cleanBackendUrl
+        ? `${cleanBackendUrl}/storage/${folder}/${filenameWithSuffix}`
+        : `/storage/${folder}/${filenameWithSuffix}`;
 
-      this.logger.log(`Archivo guardado exitosamente en almacenamiento local: ${targetFilePath}`);
+      this.logger.log(
+        `Archivo guardado exitosamente en almacenamiento local: ${targetFilePath}`,
+      );
 
       return {
         url: localFileUrl,
@@ -192,7 +200,32 @@ export class StorageService {
         this.logger.log(`Archivo eliminado de R2: ${key}`);
         return true;
       } catch (error) {
-        this.logger.warn(`No se pudo eliminar el archivo de R2 (${fileUrlOrKey}):`, error);
+        this.logger.warn(
+          `No se pudo eliminar el archivo de R2 (${fileUrlOrKey}):`,
+          error,
+        );
+        return false;
+      }
+    }
+
+    // Si es una URL absoluta externa que no coincide con el backend ni con localhost,
+    // no podemos identificar el almacenamiento correspondiente. Retornamos false para conservar el registro.
+    if (fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://')) {
+      try {
+        const parsed = new URL(fileUrlOrKey);
+        const cleanBackendUrl = this.backendUrl ? this.backendUrl.replace(/\/$/, '') : '';
+        const isBackendOrigin =
+          cleanBackendUrl !== '' && fileUrlOrKey.startsWith(cleanBackendUrl);
+        const isLocalHost =
+          parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+
+        if (!isBackendOrigin && !isLocalHost) {
+          this.logger.warn(
+            `No se pudo identificar el tipo de almacenamiento para la URL externa: ${fileUrlOrKey}`,
+          );
+          return false;
+        }
+      } catch {
         return false;
       }
     }
@@ -224,7 +257,9 @@ export class StorageService {
 
       const relative = path.relative(resolvedBasePath, resolvedPath);
       if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-        this.logger.warn(`Intento de Path Traversal bloqueado al eliminar: ${fileUrlOrKey}`);
+        this.logger.warn(
+          `Intento de Path Traversal bloqueado al eliminar: ${fileUrlOrKey}`,
+        );
         return false;
       }
 

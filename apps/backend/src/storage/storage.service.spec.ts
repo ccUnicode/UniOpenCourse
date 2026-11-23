@@ -171,7 +171,9 @@ describe('StorageService', () => {
       const result = await service.uploadFile(mockFile, 'materials');
 
       expect(result).toHaveProperty('url');
-      expect(result.url).toMatch(/^http:\/\/localhost:3001\/storage\/materials\/local-test-\d+-\d+\.pdf$/);
+      expect(result.url).toMatch(
+        /^http:\/\/localhost:3001\/storage\/materials\/local-test-\d+-\d+\.pdf$/,
+      );
       expect(fs.promises.mkdir).toHaveBeenCalled();
       expect(fs.promises.writeFile).toHaveBeenCalled();
       expect(mockS3Send).not.toHaveBeenCalled();
@@ -211,6 +213,96 @@ describe('StorageService', () => {
       expect(success).toBe(false);
       expect(fs.promises.unlink).not.toHaveBeenCalled();
       expect(mockS3Send).not.toHaveBeenCalled();
+    });
+
+    it('should return false when trying to delete an unknown external domain URL without matching backend origin', async () => {
+      const unknownUrl = 'https://cdn.mi-dominio-propio.com/materials/test.pdf';
+      const success = await service.deleteFile(unknownUrl);
+
+      expect(success).toBe(false);
+      expect(fs.promises.unlink).not.toHaveBeenCalled();
+      expect(mockS3Send).not.toHaveBeenCalled();
+    });
+
+    it('should return relative path when BACKEND_URL is not configured in local mode', async () => {
+      const mockConfigNoBackend = {
+        get: jest.fn((key: string, defaultValue?: string) => {
+          switch (key) {
+            case 'STORAGE_DRIVER':
+              return 'local';
+            case 'BACKEND_URL':
+              return '';
+            case 'STORAGE_PATH':
+              return 'C:\\mock\\storage';
+            default:
+              return defaultValue;
+          }
+        }),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          StorageService,
+          {
+            provide: ConfigService,
+            useValue: mockConfigNoBackend,
+          },
+        ],
+      }).compile();
+
+      const localNoBackendService = module.get<StorageService>(StorageService);
+      const mockFile = {
+        originalname: 'test.pdf',
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('content'),
+      } as Express.Multer.File;
+
+      const uploadResult = await localNoBackendService.uploadFile(mockFile, 'courses');
+      expect(uploadResult.url).toMatch(/^\/storage\/courses\/test-\d+-\d+\.pdf$/);
+    });
+
+    it('should throw in production when BACKEND_URL is missing in local mode', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        const mockConfigNoBackend = {
+          get: jest.fn((key: string, defaultValue?: string) => {
+            switch (key) {
+              case 'STORAGE_DRIVER':
+                return 'local';
+              case 'BACKEND_URL':
+                return '';
+              case 'STORAGE_PATH':
+                return 'C:\\mock\\storage';
+              default:
+                return defaultValue;
+            }
+          }),
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            StorageService,
+            {
+              provide: ConfigService,
+              useValue: mockConfigNoBackend,
+            },
+          ],
+        }).compile();
+
+        const prodService = module.get<StorageService>(StorageService);
+        const mockFile = {
+          originalname: 'test.pdf',
+          mimetype: 'application/pdf',
+          buffer: Buffer.from('content'),
+        } as Express.Multer.File;
+
+        await expect(prodService.uploadFile(mockFile, 'courses')).rejects.toThrow(
+          InternalServerErrorException,
+        );
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
     });
 
     it('should fall back to local mode if R2_PUBLIC_URL is missing despite valid S3 keys', async () => {
@@ -253,7 +345,9 @@ describe('StorageService', () => {
       } as Express.Multer.File;
 
       const uploadResult = await localFallbackService.uploadFile(mockFile, 'materials');
-      expect(uploadResult.url).toMatch(/^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/);
+      expect(uploadResult.url).toMatch(
+        /^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/,
+      );
     });
   });
 });
