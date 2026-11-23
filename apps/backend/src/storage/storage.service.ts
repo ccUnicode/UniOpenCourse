@@ -1,7 +1,13 @@
 import 'multer';
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { parse } from 'path';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -103,6 +109,7 @@ export class StorageService {
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,
+          ContentDisposition: `attachment; filename="${encodeURIComponent(file.originalname)}"`,
         });
 
         await this.s3Client.send(command);
@@ -273,6 +280,87 @@ export class StorageService {
     } catch (error) {
       this.logger.warn(`No se pudo eliminar el archivo local (${fileUrlOrKey}):`, error);
       return false;
+    }
+  }
+
+  /**
+   * Obtiene el stream de lectura de un archivo ya sea de Cloudflare R2 o de disco local.
+   *
+   * @param fileUrlOrKey - URL pública o key/ruta del archivo.
+   * @returns Stream de lectura o null si no se encuentra.
+   */
+  async getFileStream(fileUrlOrKey: string): Promise<Readable | null> {
+    if (!fileUrlOrKey) return null;
+
+    const cleanPublicUrl = this.publicUrl ? this.publicUrl.replace(/\/$/, '') : '';
+    const isCloudflareUrl =
+      fileUrlOrKey.includes('.r2.dev') ||
+      fileUrlOrKey.includes('.r2.cloudflarestorage.com') ||
+      (cleanPublicUrl !== '' && fileUrlOrKey.startsWith(cleanPublicUrl));
+
+    if (isCloudflareUrl) {
+      if (!this.isR2Enabled || !this.s3Client) {
+        this.logger.warn(
+          `No se puede obtener stream de R2 porque el modo R2 está deshabilitado: ${fileUrlOrKey}`,
+        );
+        return null;
+      }
+      try {
+        const key = this.extractKeyFromUrl(fileUrlOrKey);
+        if (!key) return null;
+
+        const command = new GetObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        });
+
+        const response = await this.s3Client.send(command);
+        return (response.Body as Readable) ?? null;
+      } catch (error) {
+        this.logger.error(`Error al obtener stream de R2 (${fileUrlOrKey}):`, error);
+        return null;
+      }
+    }
+
+    // Modo Local
+    try {
+      let relativePath = fileUrlOrKey;
+      if (fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://')) {
+        const parsed = new URL(fileUrlOrKey);
+        relativePath = parsed.pathname.replace(/^\/storage\//, '').replace(/^\//, '');
+      } else {
+        relativePath = fileUrlOrKey.replace(/^\/?storage\//, '');
+      }
+
+      const localPath = path.join(this.localBasePath, relativePath);
+      let resolvedPath = path.resolve(localPath);
+      const resolvedBasePath = path.resolve(this.localBasePath);
+
+      if (!fs.existsSync(resolvedPath)) {
+        const inMaterials = path.resolve(this.localBasePath, 'materials', relativePath);
+        const inCourses = path.resolve(this.localBasePath, 'courses', relativePath);
+        if (fs.existsSync(inMaterials)) {
+          resolvedPath = inMaterials;
+        } else if (fs.existsSync(inCourses)) {
+          resolvedPath = inCourses;
+        }
+      }
+
+      const relative = path.relative(resolvedBasePath, resolvedPath);
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+        this.logger.warn(
+          `Intento de Path Traversal bloqueado al obtener stream: ${fileUrlOrKey}`,
+        );
+        return null;
+      }
+
+      if (fs.existsSync(resolvedPath)) {
+        return fs.createReadStream(resolvedPath);
+      }
+      return null;
+    } catch (error) {
+      this.logger.warn(`Error al obtener stream local (${fileUrlOrKey}):`, error);
+      return null;
     }
   }
 

@@ -17,6 +17,8 @@ describe('CoursesService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
     },
     lastCourseVisit: {
       upsert: jest.fn(),
@@ -266,6 +268,42 @@ describe('CoursesService', () => {
           link: 'https://trikaweb.ccunicode.org/test#section-EVAL2',
         },
       ]);
+    });
+  });
+
+  describe('pendingCleanups', () => {
+    it('returns empty array initially', () => {
+      expect(service.getPendingCleanups()).toEqual([]);
+    });
+
+    it('records failed image cleanup when remove fails to delete from R2', async () => {
+      const coverUrl = 'https://pub-test.r2.dev/courses/cover-1.jpg';
+      mockPrisma.course.findUnique.mockResolvedValue({
+        course_id: 1,
+        url_image: coverUrl,
+      });
+      mockPrisma.course.delete.mockResolvedValue({ course_id: 1 });
+      mockStorageService.deleteFile.mockResolvedValue(false);
+
+      await service.remove('1');
+
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(coverUrl);
+      expect(service.getPendingCleanups()).toContain(coverUrl);
+    });
+
+    it('does not record cleanup when remove deletes image from R2 successfully', async () => {
+      const coverUrl = 'https://pub-test.r2.dev/courses/cover-2.jpg';
+      mockPrisma.course.findUnique.mockResolvedValue({
+        course_id: 2,
+        url_image: coverUrl,
+      });
+      mockPrisma.course.delete.mockResolvedValue({ course_id: 2 });
+      mockStorageService.deleteFile.mockResolvedValue(true);
+
+      await service.remove('2');
+
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(coverUrl);
+      expect(service.getPendingCleanups()).not.toContain(coverUrl);
     });
   });
 });

@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { ReadStream } from 'fs';
+import { Readable } from 'stream';
 
 jest.mock('fs', () => ({
   ...jest.requireActual<typeof fs>('fs'),
@@ -45,6 +45,7 @@ describe('MaterialsService', () => {
   const mockStorageService = {
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
+    getFileStream: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -309,72 +310,66 @@ describe('MaterialsService', () => {
       await expect(service.getDownloadableFile(1)).rejects.toThrow(BadRequestException);
     });
 
-    it('should return R2 url and filename when file is stored in Cloudflare R2', async () => {
+    it('should return stream and filename when file is stored in Cloudflare R2', async () => {
       const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
         file_path: r2Url,
         filename: 'documento',
       });
+      mockStorageService.getFileStream.mockResolvedValue(mockStream);
 
       const result = await service.getDownloadableFile(1);
 
+      expect(mockStorageService.getFileStream).toHaveBeenCalledWith(r2Url);
       expect(result).toEqual({
-        url: r2Url,
+        stream: mockStream,
         filename: 'documento.pdf',
       });
     });
 
-    it('should throw NotFoundException if physical local file is missing from server', async () => {
+    it('should throw NotFoundException if physical file stream is null', async () => {
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
         file_path: 'test.pdf',
       });
-      (fs.existsSync as jest.Mock).mockReturnValue(false);
+      mockStorageService.getFileStream.mockResolvedValue(null);
 
       await expect(service.getDownloadableFile(1)).rejects.toThrow(NotFoundException);
     });
 
     it('should return a read stream and filename if local file exists', async () => {
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
         file_path: 'test.pdf',
         filename: 'original.pdf',
       });
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-
-      const mockStream = {
-        pipe: jest.fn(),
-        on: jest.fn(),
-      } as unknown as ReadStream;
-      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+      mockStorageService.getFileStream.mockResolvedValue(mockStream);
 
       const result = await service.getDownloadableFile(1);
 
+      expect(mockStorageService.getFileStream).toHaveBeenCalledWith('test.pdf');
       expect(result).toEqual({
         stream: mockStream,
         filename: 'original.pdf',
       });
-      expect(fs.existsSync).toHaveBeenCalled();
-      expect(fs.createReadStream).toHaveBeenCalled();
     });
 
     it('should return a read stream and original filename when file is stored as local URL', async () => {
+      const localUrl = 'http://localhost:3001/storage/materials/TAREA-3-12345.pdf';
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       mockPrismaService.material.findUnique.mockResolvedValue({
         material_type: 'file',
-        file_path: 'http://localhost:3001/storage/materials/TAREA-3-12345.pdf',
+        file_path: localUrl,
         filename: 'TAREA 3',
       });
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-
-      const mockStream = {
-        pipe: jest.fn(),
-        on: jest.fn(),
-      } as unknown as ReadStream;
-      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+      mockStorageService.getFileStream.mockResolvedValue(mockStream);
 
       const result = await service.getDownloadableFile(1);
 
+      expect(mockStorageService.getFileStream).toHaveBeenCalledWith(localUrl);
       expect(result).toEqual({
         stream: mockStream,
         filename: 'TAREA 3.pdf',

@@ -3,6 +3,7 @@ import { MaterialsController } from './materials.controller';
 import { MaterialsService } from './materials.service';
 import { StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
+import { Readable } from 'stream';
 
 describe('MaterialsController', () => {
   let controller: MaterialsController;
@@ -34,27 +35,8 @@ describe('MaterialsController', () => {
   });
 
   describe('download', () => {
-    it('should redirect if getDownloadableFile returns a url', async () => {
-      const r2Url = 'https://pub-abc.r2.dev/materials/materials-123.pdf';
-      mockMaterialsService.getDownloadableFile.mockResolvedValue({
-        url: r2Url,
-        filename: 'test.pdf',
-      } as never);
-
-      const mockRedirect = jest.fn();
-      const mockRes = {
-        redirect: mockRedirect,
-      } as unknown as Response;
-
-      const result = await controller.download(1, mockRes);
-
-      expect(mockMaterialsService.getDownloadableFile).toHaveBeenCalledWith(1);
-      expect(mockRedirect).toHaveBeenCalledWith(r2Url);
-      expect(result).toBeUndefined();
-    });
-
     it('should set headers and return a StreamableFile', async () => {
-      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       const expectedFilename = 'test.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({
@@ -80,7 +62,7 @@ describe('MaterialsController', () => {
     });
 
     it('should validate download with names containing spaces, accents or Unicode', async () => {
-      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       const expectedFilename = 'prueba.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({

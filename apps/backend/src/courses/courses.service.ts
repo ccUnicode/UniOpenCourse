@@ -20,6 +20,7 @@ import { join } from 'path';
 export class CoursesService {
   private readonly storageDir: string;
   private readonly logger = new Logger(CoursesService.name);
+  private readonly pendingCleanups = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -27,6 +28,13 @@ export class CoursesService {
     private readonly storageService: StorageService,
   ) {
     this.storageDir = this.configService.get<string>('STORAGE_PATH', './storage');
+  }
+
+  /**
+   * Retorna las rutas o URLs de portadas cuya eliminación falló para su posterior reintento.
+   */
+  getPendingCleanups(): string[] {
+    return Array.from(this.pendingCleanups);
   }
 
   // --- Admin Methods ---
@@ -160,8 +168,15 @@ export class CoursesService {
     } catch (error) {
       if (newUpload) {
         try {
-          await this.storageService.deleteFile(newUpload.url);
+          const deleted = await this.storageService.deleteFile(newUpload.url);
+          if (!deleted) {
+            this.pendingCleanups.add(newUpload.url);
+            this.logger.warn(
+              `No se pudo eliminar la imagen nueva de R2 tras fallo: ${newUpload.url}`,
+            );
+          }
         } catch (cleanupError) {
+          this.pendingCleanups.add(newUpload.url);
           this.logger.error(
             `No se pudo eliminar la imagen nueva de R2 tras fallo: ${newUpload.url}`,
             cleanupError,
@@ -216,13 +231,20 @@ export class CoursesService {
     if (!imagePathOrUrl) return;
 
     if (imagePathOrUrl.startsWith('http://') || imagePathOrUrl.startsWith('https://')) {
-      await this.storageService.deleteFile(imagePathOrUrl);
+      const deleted = await this.storageService.deleteFile(imagePathOrUrl);
+      if (!deleted) {
+        this.pendingCleanups.add(imagePathOrUrl);
+        this.logger.warn(
+          `No se pudo eliminar la portada de R2. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
+        );
+      }
     } else {
       try {
         await unlink(join(this.storageDir, imagePathOrUrl));
       } catch (error) {
+        this.pendingCleanups.add(imagePathOrUrl);
         this.logger.warn(
-          `No se pudo eliminar la imagen local antigua: ${imagePathOrUrl}`,
+          `No se pudo eliminar la imagen local antigua. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
           error,
         );
       }

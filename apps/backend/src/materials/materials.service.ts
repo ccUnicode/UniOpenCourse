@@ -13,9 +13,8 @@ import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
 import { MaterialTypes, Prisma } from '../generated/prisma';
-import * as fs from 'fs';
 import * as path from 'path';
-import type { ReadStream } from 'fs';
+import { Readable } from 'stream';
 
 @Injectable()
 export class MaterialsService {
@@ -179,10 +178,9 @@ export class MaterialsService {
     return deleted;
   }
 
-  /** Gets the downloadable file information (either Cloudflare R2 URL or local read stream) */
+  /** Gets the downloadable file information (either Cloudflare R2 stream or local read stream) */
   async getDownloadableFile(id: number): Promise<{
-    url?: string;
-    stream?: ReadStream;
+    stream: Readable;
     filename: string;
   }> {
     const material = await this.prisma.material.findUnique({
@@ -199,49 +197,30 @@ export class MaterialsService {
 
     let filename = material.filename || 'material';
 
-    const isCloudflareUrl =
-      (material.file_path.startsWith('http://') ||
-        material.file_path.startsWith('https://')) &&
-      !material.file_path.includes('/storage/') &&
-      !material.file_path.includes('localhost');
-
-    if (isCloudflareUrl) {
-      const urlExt = path.extname(new URL(material.file_path).pathname);
-      if (!path.extname(filename) && urlExt) {
-        filename += urlExt;
+    let ext = '';
+    try {
+      if (
+        material.file_path.startsWith('http://') ||
+        material.file_path.startsWith('https://')
+      ) {
+        ext = path.extname(new URL(material.file_path).pathname);
+      } else {
+        ext = path.extname(material.file_path);
       }
-      return {
-        url: material.file_path,
-        filename,
-      };
+    } catch {
+      ext = '';
+    }
+    if (!path.extname(filename) && ext) {
+      filename += ext;
     }
 
-    const storagePath = this.configService.get<string>(
-      'STORAGE_PATH',
-      path.join(process.cwd(), 'storage'),
-    );
-
-    let relativePath = material.file_path;
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-      const parsed = new URL(relativePath);
-      relativePath = parsed.pathname.replace(/^\/storage\//, '').replace(/^\//, '');
-    } else {
-      relativePath = relativePath.replace(/^\/?storage\//, '');
-    }
-
-    const filePath = path.join(storagePath, relativePath);
-
-    if (!fs.existsSync(filePath)) {
+    const stream = await this.storageService.getFileStream(material.file_path);
+    if (!stream) {
       throw new NotFoundException('El archivo físico no se encuentra en el servidor.');
     }
 
-    const extension = path.extname(filePath);
-    if (!path.extname(filename) && extension) {
-      filename += extension;
-    }
-
     return {
-      stream: fs.createReadStream(filePath),
+      stream,
       filename,
     };
   }

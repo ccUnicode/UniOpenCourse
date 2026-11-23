@@ -3,13 +3,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StorageService } from './storage.service';
 import { ConfigService } from '@nestjs/config';
 import { InternalServerErrorException } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import * as fs from 'fs';
 
 jest.mock('@aws-sdk/client-s3');
 jest.mock('fs', () => ({
   ...jest.requireActual<typeof fs>('fs'),
   existsSync: jest.fn(),
+  createReadStream: jest.fn(),
   promises: {
     mkdir: jest.fn().mockResolvedValue(undefined),
     writeFile: jest.fn().mockResolvedValue(undefined),
@@ -80,6 +86,10 @@ describe('StorageService', () => {
       expect(result.key).toMatch(/^materials\/silabo-2026-\d+-\d+\.pdf$/);
       expect(result.url).toBe(`https://pub-test.r2.dev/${result.key}`);
       expect(mockS3Send).toHaveBeenCalledWith(expect.any(PutObjectCommand));
+      const putCalls = (PutObjectCommand as unknown as jest.Mock).mock
+        .calls as unknown[][];
+      const putInput = putCalls[0][0] as { ContentDisposition?: string };
+      expect(putInput.ContentDisposition).toBe('attachment; filename="silabo-2026.pdf"');
     });
 
     it('should infer extension from mimetype when filename lacks one', async () => {
@@ -115,6 +125,28 @@ describe('StorageService', () => {
 
       expect(success).toBe(true);
       expect(mockS3Send).toHaveBeenCalledWith(expect.any(DeleteObjectCommand));
+    });
+
+    it('should get file stream from R2 when URL is from R2', async () => {
+      const mockStream = { pipe: jest.fn() };
+      mockS3Send.mockResolvedValueOnce({ Body: mockStream });
+
+      const stream = await service.getFileStream(
+        'https://pub-test.r2.dev/materials/test.pdf',
+      );
+
+      expect(stream).toBe(mockStream);
+      expect(mockS3Send).toHaveBeenCalledWith(expect.any(GetObjectCommand));
+    });
+
+    it('should return null when R2 GetObjectCommand fails', async () => {
+      mockS3Send.mockRejectedValueOnce(new Error('R2 error'));
+
+      const stream = await service.getFileStream(
+        'https://pub-test.r2.dev/materials/missing.pdf',
+      );
+
+      expect(stream).toBeNull();
     });
 
     it('should delete legacy local file from disk even when R2 mode is enabled', async () => {
@@ -348,6 +380,30 @@ describe('StorageService', () => {
       expect(uploadResult.url).toMatch(
         /^http:\/\/localhost:3001\/storage\/materials\/test-\d+-\d+\.pdf$/,
       );
+    });
+
+    it('should get file stream from local storage when file exists', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      const mockStream = { pipe: jest.fn() };
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockStream);
+
+      const stream = await service.getFileStream('/storage/materials/local.pdf');
+
+      expect(stream).toBe(mockStream);
+    });
+
+    it('should return null when local file does not exist', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+      const stream = await service.getFileStream('/storage/materials/missing.pdf');
+
+      expect(stream).toBeNull();
+    });
+
+    it('should return null and block path traversal in getFileStream', async () => {
+      const stream = await service.getFileStream('/storage/../../etc/passwd');
+
+      expect(stream).toBeNull();
     });
   });
 });
