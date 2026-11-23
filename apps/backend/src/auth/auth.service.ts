@@ -380,9 +380,17 @@ export class AuthService {
 
     if (user) {
       if (!user.email_verified) {
+        const randomPassword = randomBytes(32).toString('hex');
+        const invalidatedPassword = await bcrypt.hash(randomPassword, 10);
+
+        await this.prisma.emailVerificationToken.deleteMany({
+          where: { user_id: user.user_id },
+        });
+
         user = await this.prisma.user.update({
           where: { user_id: user.user_id },
           data: {
+            password: invalidatedPassword,
             email_verified: true,
             email_verified_at: new Date(),
           },

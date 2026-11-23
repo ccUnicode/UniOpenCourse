@@ -543,7 +543,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('debe actualizar email_verified a true si el usuario ya existía sin verificar', async () => {
+    it('debe actualizar email_verified a true e invalidar la contraseña previa si el usuario no estaba verificado', async () => {
       const mockUnverifiedUser = {
         user_id: 10,
         email: 'jeferson@gmail.com',
@@ -564,10 +564,14 @@ describe('AuthService', () => {
 
       const result = await service.validateGoogleUser(mockGooglePayload);
 
+      expect(prismaMock.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
+        where: { user_id: 10 },
+      });
       expect(prismaMock.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { user_id: 10 },
           data: expect.objectContaining({
+            password: expect.any(String) as unknown as string,
             email_verified: true,
           }) as unknown as Record<string, unknown>,
         }),
