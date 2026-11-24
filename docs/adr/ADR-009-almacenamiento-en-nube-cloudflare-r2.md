@@ -25,12 +25,10 @@ Se decidió implementar un **módulo de almacenamiento híbrido con interruptor 
 
 1. **Módulo Centralizado (`StorageModule`):** Se creó `StorageService`, que encapsula toda la lógica de almacenamiento (nube y local) para que `CoursesService` y `MaterialsService` permanezcan agnósticos al destino físico del archivo.
 2. **Subida en Memoria (`memoryStorage`):** Multer se configuró para recibir los archivos en memoria RAM temporal (`Buffer`) sin tocar el disco durante la recepción del stream HTTP.
-3. **Interruptor Automático Inteligente:**
-   - **Modo Cloudflare R2:** Se activa automáticamente si las variables de entorno de R2 (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`) están presentes y configuradas con valores válidos. Sube a la nube y devuelve URLs públicas de R2 (`https://pub-...r2.dev/...`).
-   - **Modo Local (Fallback):** Si las credenciales de R2 no están configuradas, si tienen valores de marcador de posición, o si se define explícitamente `STORAGE_DRIVER=local` en el `.env`, el servicio guarda el buffer directamente en disco (`apps/backend/storage/<carpeta>/`) y devuelve la URL estática local (`http://localhost:3001/storage/...`).
-4. **Descargas Optimizadas y Transparentes:** Para los materiales descargables (`/materials/:id/download`), el controlador ejecuta una redirección HTTP 302 directa a la URL del archivo (sea de Cloudflare R2 o servida por `ServeStaticModule`).
-5. **Retrocompatibilidad y Deuda Técnica Controlada:** Se preserva el soporte para leer y eliminar archivos locales preexistentes en la base de datos de desarrollo. Si en el futuro se decide retirar completamente el modo local, la migración estará aislada únicamente dentro de `StorageService`.
-6. **Configuración en Frontend:** Se configuró `next.config.ts` para autorizar los subdominios `*.r2.dev` y admitir dinámicamente cualquier dominio personalizado configurado en `R2_PUBLIC_URL` o `NEXT_PUBLIC_R2_PUBLIC_URL` en `remotePatterns`, y `image-url.ts` para servir URLs absolutas sin prefijos erróneos.
+3. **Destino de nuevas subidas:** R2 se activa con credenciales y `R2_PUBLIC_URL` válidas. Si falta configuración o se fuerza `STORAGE_DRIVER=local`, las nuevas subidas van a disco. En producción, configura `BACKEND_URL` y usa un volumen persistente para ese modo.
+4. **Descarga de materiales:** NestJS transmite el archivo con `StreamableFile` y `Content-Disposition: attachment` para conservar el nombre del material. Cambiar a modo local mantiene las lecturas de R2. Con un dominio propio, se conserva `R2_PUBLIC_URL` para reconocer sus objetos.
+5. **Compatibilidad y limpieza:** Se mantienen los archivos locales preexistentes. Al actualizar o eliminar un curso, el backend registra en PostgreSQL las portadas que debe borrar y reintenta los fallos.
+6. **Portadas en el frontend:** Next.js permite los subdominios `*.r2.dev` y el dominio configurado en `NEXT_PUBLIC_R2_PUBLIC_URL`. Las portadas siguen cargándose desde su URL pública.
 
 ## Consecuencias
 
@@ -42,4 +40,5 @@ Se decidió implementar un **módulo de almacenamiento híbrido con interruptor 
   - Toda la complejidad de decisión de almacenamiento vive en un solo lugar (`StorageService`).
 - **Costos/Desventajas (Deuda técnica asumida):**
   - Coexistencia temporal de código de escritura en disco local junto al cliente de S3. Se asume como una deuda técnica menor y controlada que no afecta el rendimiento ni la seguridad en producción.
-  - Para producción en Render es obligatorio configurar las 5 variables de entorno de R2 para que la conmutación a la nube ocurra automáticamente.
+  - Las descargas de materiales consumen ancho de banda del backend. El stream evita cargar el archivo completo en memoria.
+  - El despliegue debe aplicar la migración de la cola antes de iniciar el backend.

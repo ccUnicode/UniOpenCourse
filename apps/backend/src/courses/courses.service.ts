@@ -3,10 +3,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma';
@@ -16,19 +18,12 @@ import * as cheerio from 'cheerio';
 @Injectable()
 export class CoursesService {
   private readonly logger = new Logger(CoursesService.name);
-  private readonly pendingCleanups = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly cleanup: StorageCleanupService,
   ) {}
-
-  /**
-   * Retorna las rutas o URLs de portadas cuya eliminación falló para su posterior reintento.
-   */
-  getPendingCleanups(): string[] {
-    return Array.from(this.pendingCleanups);
-  }
 
   // --- Admin Methods ---
   async create(data: CreateCourseDto, file?: Express.Multer.File) {
@@ -75,27 +70,12 @@ export class CoursesService {
         });
       });
     } catch (error) {
-      try {
-        const deleted = await this.storageService.deleteFile(uploadResult.url);
-        if (!deleted) {
-          this.pendingCleanups.add(uploadResult.url);
-          this.logger.warn(
-            `No se pudo eliminar la imagen tras fallo al crear curso. Registrada para limpieza pendiente: ${uploadResult.url}`,
-          );
-        }
-      } catch (cleanupError) {
-        this.pendingCleanups.add(uploadResult.url);
-        this.logger.error(
-          `No se pudo eliminar la imagen de R2 tras fallo al crear curso: ${uploadResult.url}`,
-          cleanupError,
-        );
-      }
+      await this.cleanup.discardUpload(uploadResult.url);
       throw error;
     }
   }
 
   async update(id: string, data: CreateCourseDto, file?: Express.Multer.File) {
-    let imagenAnterior: string | null = null;
     let newUpload: { url: string; key: string } | null = null;
 
     if (file) {
@@ -137,7 +117,10 @@ export class CoursesService {
         }
 
         const cursoActualizado = await tx.course.update({
-          where: { course_id: Number(id) },
+          where: {
+            course_id: Number(id),
+            ...(newUpload && { url_image: cursoExistente.url_image }),
+          },
           data: {
             name: data.name,
             course_code: data.course_code,
@@ -155,31 +138,24 @@ export class CoursesService {
             }),
           },
         });
-        imagenAnterior = cursoExistente.url_image;
+        if (newUpload && cursoExistente.url_image) {
+          await this.cleanup.enqueue(cursoExistente.url_image, tx);
+        }
         return cursoActualizado;
       });
 
-      if (newUpload && imagenAnterior) {
-        await this.deletePreviousImage(imagenAnterior);
-      }
       this.scrapeCache.delete(Number(id));
 
       return resultado;
     } catch (error) {
       if (newUpload) {
-        try {
-          const deleted = await this.storageService.deleteFile(newUpload.url);
-          if (!deleted) {
-            this.pendingCleanups.add(newUpload.url);
-            this.logger.warn(
-              `No se pudo eliminar la imagen nueva de R2 tras fallo: ${newUpload.url}`,
-            );
-          }
-        } catch (cleanupError) {
-          this.pendingCleanups.add(newUpload.url);
-          this.logger.error(
-            `No se pudo eliminar la imagen nueva de R2 tras fallo: ${newUpload.url}`,
-            cleanupError,
+        await this.cleanup.discardUpload(newUpload.url);
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw new ConflictException(
+            'El curso cambi� durante la edici�n. Vuelve a cargarlo.',
           );
         }
       }
@@ -189,25 +165,11 @@ export class CoursesService {
 
   async remove(id: string) {
     try {
-      const curso = await this.prisma.course.findUnique({
-        where: {
-          course_id: Number(id),
-        },
-        select: {
-          url_image: true,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const course = await tx.course.delete({ where: { course_id: Number(id) } });
+        if (course.url_image) await this.cleanup.enqueue(course.url_image, tx);
+        return course;
       });
-      if (!curso) {
-        throw new NotFoundException(`El curso con ID ${id} no existe.`);
-      }
-      const imagen = curso.url_image;
-      const cursoEliminado = await this.prisma.course.delete({
-        where: { course_id: Number(id) },
-      });
-      if (imagen) {
-        await this.deletePreviousImage(imagen);
-      }
-      return cursoEliminado;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
@@ -220,26 +182,6 @@ export class CoursesService {
         }
       }
       throw error;
-    }
-  }
-
-  /**
-   * Elimina una imagen ya sea de Cloudflare R2 (si es una URL)
-   * o del disco local (si es un nombre de archivo heredado antiguo).
-   */
-  /**
-   * Elimina una imagen ya sea de Cloudflare R2 o del disco local
-   * delegando en StorageService. Si falla, la registra para limpieza pendiente.
-   */
-  private async deletePreviousImage(imagePathOrUrl: string) {
-    if (!imagePathOrUrl) return;
-
-    const deleted = await this.storageService.deleteFile(imagePathOrUrl);
-    if (!deleted) {
-      this.pendingCleanups.add(imagePathOrUrl);
-      this.logger.warn(
-        `No se pudo eliminar la portada previa. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
-      );
     }
   }
 

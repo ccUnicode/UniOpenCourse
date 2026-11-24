@@ -90,11 +90,13 @@ R2_BUCKET_NAME=uniopencourse-bucket
 R2_PUBLIC_URL=https://pub-xxxxxxxxxxxxxxxx.r2.dev
 ```
 
-> **Interruptor de desarrollo local:** Si no configuras las variables `R2_*` o si defines `STORAGE_DRIVER=local`, el sistema conmutará automáticamente al almacenamiento en disco local (`apps/backend/storage`), permitiendo que cualquier desarrollador pueda probar la plataforma sin necesidad de contar con una cuenta de Cloudflare.
+Con `STORAGE_DRIVER=local` puedes subir archivos al disco y seguir descargando los materiales existentes de R2. Si usas un dominio propio, conserva `R2_PUBLIC_URL` en el backend al cambiar de modo. Si despliegas con almacenamiento local, configura `BACKEND_URL` con el origen público del backend y monta un volumen persistente para `STORAGE_PATH`.
+
+Antes de iniciar el backend, ejecuta `npx prisma migrate deploy` desde `apps/backend` para crear la cola de limpieza.
 
 ### Frontend (`apps/frontend/.env.local`)
 
-No requiere variables adicionales de R2. El frontend consume automáticamente las URLs públicas que el backend le proporciona desde la base de datos o mediante redirección directa para descargas.
+Si usas un dominio propio, configura `NEXT_PUBLIC_R2_PUBLIC_URL` con la URL pública de R2 para que Next.js permita las portadas desde ese dominio.
 
 ---
 
@@ -103,4 +105,5 @@ No requiere variables adicionales de R2. El frontend consume automáticamente la
 1. Inicia el backend (`npm run start:dev --prefix apps/backend`).
 2. Crea un nuevo curso y sube una imagen de portada.
 3. Verifica que la URL del curso comience con tu URL pública de R2 y que la imagen cargue correctamente en el frontend.
-4. Sube un material PDF en una clase y haz clic en el botón de descarga. Tu navegador descargará el archivo directamente desde Cloudflare R2 sin sobrecargar el servidor de la aplicación.
+4. Sube un PDF y haz clic en Descargar. El backend transmite el archivo desde R2 y el navegador lo descarga con el nombre del material.
+5. Cambia a `STORAGE_DRIVER=local` y reinicia. Comprueba que el PDF anterior se descarga y que las nuevas subidas se guardan en disco.

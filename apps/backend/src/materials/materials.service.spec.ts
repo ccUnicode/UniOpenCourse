@@ -2,7 +2,7 @@ import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma.service';
-import { ConfigService } from '@nestjs/config';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
 import { StorageService } from '../storage/storage.service';
 import {
   BadRequestException,
@@ -10,7 +10,6 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as fs from 'fs';
-import * as path from 'path';
 import { Readable } from 'stream';
 
 jest.mock('fs', () => ({
@@ -33,14 +32,7 @@ describe('MaterialsService', () => {
     },
   };
 
-  const mockConfigService = {
-    get: jest.fn((key: string) => {
-      if (key === 'STORAGE_PATH') {
-        return path.join(process.cwd(), 'storage');
-      }
-      return undefined;
-    }),
-  };
+  const mockCleanup = { discardUpload: jest.fn() };
 
   const mockStorageService = {
     uploadFile: jest.fn(),
@@ -57,8 +49,8 @@ describe('MaterialsService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: ConfigService,
-          useValue: mockConfigService,
+          provide: StorageCleanupService,
+          useValue: mockCleanup,
         },
         {
           provide: StorageService,
@@ -144,7 +136,7 @@ describe('MaterialsService', () => {
       await expect(service.createFile(dto, mockFile)).rejects.toThrow(
         'DB connection failed',
       );
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(r2Url);
+      expect(mockCleanup.discardUpload).toHaveBeenCalledWith(r2Url);
     });
   });
 

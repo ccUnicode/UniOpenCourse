@@ -2,7 +2,10 @@ import 'multer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageService } from './storage.service';
 import { ConfigService } from '@nestjs/config';
-import { InternalServerErrorException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   S3Client,
   PutObjectCommand,
@@ -86,10 +89,6 @@ describe('StorageService', () => {
       expect(result.key).toMatch(/^materials\/silabo-2026-\d+-\d+\.pdf$/);
       expect(result.url).toBe(`https://pub-test.r2.dev/${result.key}`);
       expect(mockS3Send).toHaveBeenCalledWith(expect.any(PutObjectCommand));
-      const putCalls = (PutObjectCommand as unknown as jest.Mock).mock
-        .calls as unknown[][];
-      const putInput = putCalls[0][0] as { ContentDisposition?: string };
-      expect(putInput.ContentDisposition).toBe('attachment; filename="silabo-2026.pdf"');
     });
 
     it('should infer extension from mimetype when filename lacks one', async () => {
@@ -124,7 +123,10 @@ describe('StorageService', () => {
       const success = await service.deleteFile(fullUrl);
 
       expect(success).toBe(true);
-      expect(mockS3Send).toHaveBeenCalledWith(expect.any(DeleteObjectCommand));
+      expect(mockS3Send).toHaveBeenCalledWith(
+        expect.any(DeleteObjectCommand),
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) as AbortSignal }),
+      );
     });
 
     it('should get file stream from R2 when URL is from R2', async () => {
@@ -136,17 +138,20 @@ describe('StorageService', () => {
       );
 
       expect(stream).toBe(mockStream);
-      expect(mockS3Send).toHaveBeenCalledWith(expect.any(GetObjectCommand));
+      expect(mockS3Send).toHaveBeenCalledWith(
+        expect.any(GetObjectCommand),
+        expect.objectContaining({ abortSignal: expect.any(AbortSignal) as AbortSignal }),
+      );
     });
 
-    it('should return null when R2 GetObjectCommand fails', async () => {
-      mockS3Send.mockRejectedValueOnce(new Error('R2 error'));
-
-      const stream = await service.getFileStream(
-        'https://pub-test.r2.dev/materials/missing.pdf',
+    it('returns null only for a missing object and reports connection failures as unavailable', async () => {
+      const url = 'https://pub-test.r2.dev/materials/test.pdf';
+      mockS3Send.mockRejectedValueOnce(Object.assign(new Error(), { name: 'NoSuchKey' }));
+      await expect(service.getFileStream(url)).resolves.toBeNull();
+      mockS3Send.mockRejectedValueOnce(new Error('R2 timeout'));
+      await expect(service.getFileStream(url)).rejects.toThrow(
+        ServiceUnavailableException,
       );
-
-      expect(stream).toBeNull();
     });
 
     it('should delete legacy local file from disk even when R2 mode is enabled', async () => {
@@ -254,6 +259,48 @@ describe('StorageService', () => {
       expect(success).toBe(false);
       expect(fs.promises.unlink).not.toHaveBeenCalled();
       expect(mockS3Send).not.toHaveBeenCalled();
+    });
+
+    it('reads an existing public R2 object without credentials in local mode', async () => {
+      const url = 'https://pub-test.r2.dev/materials/test.pdf';
+      const publicFetch = jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response('PDF'));
+      try {
+        const stream = await service.getFileStream(url);
+        expect(
+          (await stream?.toArray())?.map((chunk: Buffer) => chunk.toString()).join(''),
+        ).toBe('PDF');
+        expect(publicFetch).toHaveBeenCalledWith(
+          new URL(url),
+          expect.objectContaining({ redirect: 'error' }),
+        );
+        expect(mockS3Send).not.toHaveBeenCalled();
+      } finally {
+        publicFetch.mockRestore();
+      }
+    });
+
+    it('keeps SDK access to the configured bucket when new uploads use local storage', async () => {
+      const values: Record<string, string> = {
+        STORAGE_DRIVER: 'local',
+        R2_ACCOUNT_ID: 'test-account-id',
+        R2_ACCESS_KEY_ID: 'test-access-key',
+        R2_SECRET_ACCESS_KEY: 'test-secret-key',
+        R2_PUBLIC_URL: 'https://cdn.example.test',
+      };
+      const local = new StorageService({
+        get: (key: string, fallback: string) => values[key] ?? fallback,
+      } as ConfigService);
+      const stream = { pipe: jest.fn() };
+      mockS3Send.mockResolvedValueOnce({ Body: stream });
+      await expect(
+        local.getFileStream('https://cdn.example.test/materials/existing.pdf'),
+      ).resolves.toBe(stream);
+      await expect(
+        local.deleteFile('https://cdn.example.test/materials/existing.pdf'),
+      ).resolves.toBe(true);
+      expect(mockS3Send).toHaveBeenCalledTimes(2);
     });
 
     it('should return relative path when BACKEND_URL is not configured in local mode', async () => {

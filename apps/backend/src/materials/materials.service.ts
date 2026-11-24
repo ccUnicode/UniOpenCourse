@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { ConfigService } from '@nestjs/config';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { CreateLinkDto } from './dto/create-link.dto';
@@ -22,8 +22,8 @@ export class MaterialsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
     private readonly storageService: StorageService,
+    private readonly cleanup: StorageCleanupService,
   ) {}
 
   /**
@@ -103,14 +103,7 @@ export class MaterialsService {
         },
       });
     } catch (error) {
-      try {
-        await this.storageService.deleteFile(uploadResult.url);
-      } catch (cleanupError) {
-        this.logger.error(
-          `No se pudo eliminar el archivo de R2 tras fallo: ${uploadResult.url}`,
-          cleanupError,
-        );
-      }
+      await this.cleanup.discardUpload(uploadResult.url);
       throw error;
     }
   }

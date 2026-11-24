@@ -4,7 +4,7 @@ import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
 import { StorageService } from '../storage/storage.service';
 import axios from 'axios';
-import { ConfigService } from '@nestjs/config';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -13,6 +13,7 @@ describe('CoursesService', () => {
   let service: CoursesService;
 
   const mockPrisma = {
+    $transaction: jest.fn(),
     course: {
       findMany: jest.fn(),
       count: jest.fn(),
@@ -25,9 +26,7 @@ describe('CoursesService', () => {
       findMany: jest.fn(),
     },
   };
-  const mockConfigService = {
-    get: jest.fn(),
-  };
+  const mockCleanup = { enqueue: jest.fn(), discardUpload: jest.fn() };
   const mockStorageService = {
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
@@ -35,12 +34,15 @@ describe('CoursesService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(
+      (run: (tx: typeof mockPrisma) => unknown) => run(mockPrisma),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CoursesService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: StorageCleanupService, useValue: mockCleanup },
         { provide: StorageService, useValue: mockStorageService },
       ],
     }).compile();
@@ -271,69 +273,12 @@ describe('CoursesService', () => {
     });
   });
 
-  describe('pendingCleanups', () => {
-    it('returns empty array initially', () => {
-      expect(service.getPendingCleanups()).toEqual([]);
-    });
-
-    it('records failed image cleanup when remove fails to delete from R2', async () => {
-      const coverUrl = 'https://pub-test.r2.dev/courses/cover-1.jpg';
-      mockPrisma.course.findUnique.mockResolvedValue({
-        course_id: 1,
-        url_image: coverUrl,
-      });
-      mockPrisma.course.delete.mockResolvedValue({ course_id: 1 });
-      mockStorageService.deleteFile.mockResolvedValue(false);
-
-      await service.remove('1');
-
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(coverUrl);
-      expect(service.getPendingCleanups()).toContain(coverUrl);
-    });
-
-    it('does not record cleanup when remove deletes image from R2 successfully', async () => {
-      const coverUrl = 'https://pub-test.r2.dev/courses/cover-2.jpg';
-      mockPrisma.course.findUnique.mockResolvedValue({
-        course_id: 2,
-        url_image: coverUrl,
-      });
-      mockPrisma.course.delete.mockResolvedValue({ course_id: 2 });
-      mockStorageService.deleteFile.mockResolvedValue(true);
-
-      await service.remove('2');
-
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(coverUrl);
-      expect(service.getPendingCleanups()).not.toContain(coverUrl);
-    });
-
-    it('records failed image cleanup when remove fails to delete local image path', async () => {
-      const localPath = '/storage/courses/local-cover.jpg';
-      mockPrisma.course.findUnique.mockResolvedValue({
-        course_id: 3,
-        url_image: localPath,
-      });
-      mockPrisma.course.delete.mockResolvedValue({ course_id: 3 });
-      mockStorageService.deleteFile.mockResolvedValue(false);
-
-      await service.remove('3');
-
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(localPath);
-      expect(service.getPendingCleanups()).toContain(localPath);
-    });
-
-    it('does not record cleanup when remove deletes local image path successfully', async () => {
-      const localPath = '/storage/courses/local-cover.jpg';
-      mockPrisma.course.findUnique.mockResolvedValue({
-        course_id: 4,
-        url_image: localPath,
-      });
-      mockPrisma.course.delete.mockResolvedValue({ course_id: 4 });
-      mockStorageService.deleteFile.mockResolvedValue(true);
-
-      await service.remove('4');
-
-      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(localPath);
-      expect(service.getPendingCleanups()).not.toContain(localPath);
-    });
+  it('queues the deleted course cover in the same transaction as the delete', async () => {
+    const cover = '/storage/courses/cover.jpg';
+    mockPrisma.course.delete.mockResolvedValueOnce({ course_id: 1, url_image: cover });
+    await service.remove('1');
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(mockCleanup.enqueue).toHaveBeenCalledWith(cover, mockPrisma);
+    expect(mockStorageService.deleteFile).not.toHaveBeenCalled();
   });
 });
