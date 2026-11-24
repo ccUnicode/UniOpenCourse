@@ -7,28 +7,21 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage/storage.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { Prisma } from '../generated/prisma';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
 
 @Injectable()
 export class CoursesService {
-  private readonly storageDir: string;
   private readonly logger = new Logger(CoursesService.name);
   private readonly pendingCleanups = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
     private readonly storageService: StorageService,
-  ) {
-    this.storageDir = this.configService.get<string>('STORAGE_PATH', './storage');
-  }
+  ) {}
 
   /**
    * Retorna las rutas o URLs de portadas cuya eliminación falló para su posterior reintento.
@@ -83,8 +76,15 @@ export class CoursesService {
       });
     } catch (error) {
       try {
-        await this.storageService.deleteFile(uploadResult.url);
+        const deleted = await this.storageService.deleteFile(uploadResult.url);
+        if (!deleted) {
+          this.pendingCleanups.add(uploadResult.url);
+          this.logger.warn(
+            `No se pudo eliminar la imagen tras fallo al crear curso. Registrada para limpieza pendiente: ${uploadResult.url}`,
+          );
+        }
       } catch (cleanupError) {
+        this.pendingCleanups.add(uploadResult.url);
         this.logger.error(
           `No se pudo eliminar la imagen de R2 tras fallo al crear curso: ${uploadResult.url}`,
           cleanupError,
@@ -227,27 +227,19 @@ export class CoursesService {
    * Elimina una imagen ya sea de Cloudflare R2 (si es una URL)
    * o del disco local (si es un nombre de archivo heredado antiguo).
    */
+  /**
+   * Elimina una imagen ya sea de Cloudflare R2 o del disco local
+   * delegando en StorageService. Si falla, la registra para limpieza pendiente.
+   */
   private async deletePreviousImage(imagePathOrUrl: string) {
     if (!imagePathOrUrl) return;
 
-    if (imagePathOrUrl.startsWith('http://') || imagePathOrUrl.startsWith('https://')) {
-      const deleted = await this.storageService.deleteFile(imagePathOrUrl);
-      if (!deleted) {
-        this.pendingCleanups.add(imagePathOrUrl);
-        this.logger.warn(
-          `No se pudo eliminar la portada de R2. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
-        );
-      }
-    } else {
-      try {
-        await unlink(join(this.storageDir, imagePathOrUrl));
-      } catch (error) {
-        this.pendingCleanups.add(imagePathOrUrl);
-        this.logger.warn(
-          `No se pudo eliminar la imagen local antigua. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
-          error,
-        );
-      }
+    const deleted = await this.storageService.deleteFile(imagePathOrUrl);
+    if (!deleted) {
+      this.pendingCleanups.add(imagePathOrUrl);
+      this.logger.warn(
+        `No se pudo eliminar la portada previa. Registrada para limpieza pendiente: ${imagePathOrUrl}`,
+      );
     }
   }
 

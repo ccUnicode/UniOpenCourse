@@ -305,5 +305,35 @@ describe('CoursesService', () => {
       expect(mockStorageService.deleteFile).toHaveBeenCalledWith(coverUrl);
       expect(service.getPendingCleanups()).not.toContain(coverUrl);
     });
+
+    it('records failed image cleanup when remove fails to delete local image path', async () => {
+      const localPath = '/storage/courses/local-cover.jpg';
+      mockPrisma.course.findUnique.mockResolvedValue({
+        course_id: 3,
+        url_image: localPath,
+      });
+      mockPrisma.course.delete.mockResolvedValue({ course_id: 3 });
+      mockStorageService.deleteFile.mockResolvedValue(false);
+
+      await service.remove('3');
+
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(localPath);
+      expect(service.getPendingCleanups()).toContain(localPath);
+    });
+
+    it('does not record cleanup when remove deletes local image path successfully', async () => {
+      const localPath = '/storage/courses/local-cover.jpg';
+      mockPrisma.course.findUnique.mockResolvedValue({
+        course_id: 4,
+        url_image: localPath,
+      });
+      mockPrisma.course.delete.mockResolvedValue({ course_id: 4 });
+      mockStorageService.deleteFile.mockResolvedValue(true);
+
+      await service.remove('4');
+
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(localPath);
+      expect(service.getPendingCleanups()).not.toContain(localPath);
+    });
   });
 });
