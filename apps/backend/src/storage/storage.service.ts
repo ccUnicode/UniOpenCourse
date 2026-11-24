@@ -1,7 +1,19 @@
 import 'multer';
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+import type { ReadableStream } from 'node:stream/web';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { parse } from 'path';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -31,10 +43,7 @@ export class StorageService {
       'uniopencourse-storage',
     );
     this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL', '');
-    this.backendUrl = this.configService.get<string>(
-      'BACKEND_URL',
-      'http://localhost:3001',
-    );
+    this.backendUrl = this.configService.get<string>('BACKEND_URL', '');
     this.localBasePath = this.configService.get<string>(
       'STORAGE_PATH',
       path.join(process.cwd(), 'storage'),
@@ -44,7 +53,8 @@ export class StorageService {
       this.publicUrl &&
       (this.publicUrl.startsWith('http://') || this.publicUrl.startsWith('https://')) &&
       !this.publicUrl.includes('tu-id') &&
-      !this.publicUrl.includes('ejemplo.com'),
+      !this.publicUrl.includes('ejemplo.com') &&
+      this.parseHttpUrl(this.publicUrl),
     );
 
     const hasValidR2Creds = Boolean(
@@ -52,32 +62,20 @@ export class StorageService {
       accessKeyId &&
       secretAccessKey &&
       !accountId.includes('tu_cloudflare') &&
-      accountId.trim() !== '' &&
-      hasValidPublicUrl,
+      accountId.trim() !== '',
     );
 
-    if (driver === 'local') {
-      this.isR2Enabled = false;
-      this.logger.log(
-        'StorageService inicializado en MODO LOCAL forzado (STORAGE_DRIVER=local).',
-      );
-    } else if (hasValidR2Creds) {
-      this.isR2Enabled = true;
+    this.isR2Enabled = driver !== 'local' && hasValidR2Creds && hasValidPublicUrl;
+    if (hasValidR2Creds && accountId && accessKeyId && secretAccessKey) {
       this.s3Client = new S3Client({
         region: 'auto',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId: accessKeyId!,
-          secretAccessKey: secretAccessKey!,
-        },
+        credentials: { accessKeyId, secretAccessKey },
       });
-      this.logger.log('StorageService inicializado en MODO CLOUDFLARE R2.');
-    } else {
-      this.isR2Enabled = false;
-      this.logger.warn(
-        'Credenciales de Cloudflare R2 no detectadas o incompletas. StorageService funcionando en MODO LOCAL automático.',
-      );
     }
+    this.logger.log(
+      `Nuevas subidas: ${this.isR2Enabled ? 'Cloudflare R2' : 'disco local'}.`,
+    );
   }
 
   /**
@@ -95,7 +93,9 @@ export class StorageService {
     const { name, ext } = parse(file.originalname);
     const safeBaseName = name.replace(/[^a-zA-Z0-9-_]/g, '-').slice(0, 60);
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const extension = ext ? ext.toLowerCase() : this.guessExtension(file.mimetype);
+    const extension = /^\.[a-z0-9]+$/i.test(ext)
+      ? ext.toLowerCase()
+      : this.guessExtension(file.mimetype);
     const filenameWithSuffix = `${safeBaseName}-${uniqueSuffix}${extension}`;
     const key = `${folder}/${filenameWithSuffix}`;
 
@@ -130,15 +130,22 @@ export class StorageService {
       }
     }
 
-    // Modo Local Automático / Forzado
+    if (process.env.NODE_ENV === 'production' && !this.parseHttpUrl(this.backendUrl)) {
+      throw new InternalServerErrorException(
+        'En producción BACKEND_URL debe indicar el origen público del backend para almacenamiento local.',
+      );
+    }
+
     try {
       const targetDir = path.join(this.localBasePath, folder);
       await fs.promises.mkdir(targetDir, { recursive: true });
       const targetFilePath = path.join(targetDir, filenameWithSuffix);
       await fs.promises.writeFile(targetFilePath, file.buffer);
 
-      const cleanBackendUrl = this.backendUrl.replace(/\/$/, '');
-      const localFileUrl = `${cleanBackendUrl}/storage/${folder}/${filenameWithSuffix}`;
+      const cleanBackendUrl = this.backendUrl ? this.backendUrl.replace(/\/$/, '') : '';
+      const localFileUrl = cleanBackendUrl
+        ? `${cleanBackendUrl}/storage/${folder}/${filenameWithSuffix}`
+        : `/storage/${folder}/${filenameWithSuffix}`;
 
       this.logger.log(
         `Archivo guardado exitosamente en almacenamiento local: ${targetFilePath}`,
@@ -159,108 +166,168 @@ export class StorageService {
     }
   }
 
-  /**
-   * Deletes an object given its public URL or key (handles both R2 and local paths).
-   *
-   * @param fileUrlOrKey - Public URL or key of the object to delete.
-   */
-  async deleteFile(fileUrlOrKey: string): Promise<boolean> {
-    if (!fileUrlOrKey) return false;
-
-    // Determina si el recurso pertenece explícitamente a Cloudflare R2
-    const cleanPublicUrl = this.publicUrl ? this.publicUrl.replace(/\/$/, '') : '';
-    const isCloudflareUrl =
-      fileUrlOrKey.includes('.r2.dev') ||
-      fileUrlOrKey.includes('.r2.cloudflarestorage.com') ||
-      (cleanPublicUrl !== '' && fileUrlOrKey.startsWith(cleanPublicUrl));
-
-    if (isCloudflareUrl) {
-      if (!this.isR2Enabled || !this.s3Client) {
-        this.logger.warn(
-          `No se pudo eliminar el archivo de Cloudflare R2 porque el modo R2 está deshabilitado: ${fileUrlOrKey}`,
-        );
-        return false;
-      }
-
-      try {
-        const key = this.extractKeyFromUrl(fileUrlOrKey);
-        if (!key) return false;
-
-        const command = new DeleteObjectCommand({
-          Bucket: this.bucketName,
-          Key: key,
-        });
-
-        await this.s3Client.send(command);
-        this.logger.log(`Archivo eliminado de R2: ${key}`);
-        return true;
-      } catch (error) {
-        this.logger.warn(
-          `No se pudo eliminar el archivo de R2 (${fileUrlOrKey}):`,
-          error,
-        );
-        return false;
-      }
-    }
-
-    // Modo Local (para URLs locales o archivos locales antiguos como legacy.pdf)
+  async deleteFile(reference: string): Promise<boolean> {
     try {
-      let relativePath = fileUrlOrKey;
-      if (fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://')) {
-        const parsed = new URL(fileUrlOrKey);
-        relativePath = parsed.pathname.replace(/^\/storage\//, '').replace(/^\//, '');
-      } else {
-        relativePath = fileUrlOrKey.replace(/^\/?storage\//, '');
-      }
+      const location = this.resolveLocation(reference);
+      if (!location) return false;
 
-      const localPath = path.join(this.localBasePath, relativePath);
-      let resolvedPath = path.resolve(localPath);
-      const resolvedBasePath = path.resolve(this.localBasePath);
-
-      // Si no existe directamente en storage/<relativePath>, revisar si está en subcarpetas (materials o courses)
-      if (!fs.existsSync(resolvedPath)) {
-        const inMaterials = path.resolve(this.localBasePath, 'materials', relativePath);
-        const inCourses = path.resolve(this.localBasePath, 'courses', relativePath);
-        if (fs.existsSync(inMaterials)) {
-          resolvedPath = inMaterials;
-        } else if (fs.existsSync(inCourses)) {
-          resolvedPath = inCourses;
-        }
-      }
-
-      const relative = path.relative(resolvedBasePath, resolvedPath);
-      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-        this.logger.warn(
-          `Intento de Path Traversal bloqueado al eliminar: ${fileUrlOrKey}`,
+      if (location.type === 'r2') {
+        if (!location.key || !this.s3Client) return false;
+        await this.s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucketName,
+            Key: location.key,
+          }),
+          { abortSignal: AbortSignal.timeout(10_000) },
         );
-        return false;
-      }
-
-      if (fs.existsSync(resolvedPath)) {
-        await fs.promises.unlink(resolvedPath);
-        this.logger.log(`Archivo local eliminado del disco: ${resolvedPath}`);
       } else {
-        this.logger.warn(`El archivo local ya no existía en disco: ${resolvedPath}`);
+        const filePath = this.findLocalPath(location.key);
+        if (filePath) await fs.promises.unlink(filePath);
       }
       return true;
     } catch (error) {
-      this.logger.warn(`No se pudo eliminar el archivo local (${fileUrlOrKey}):`, error);
+      if (this.hasErrorCode(error, 'ENOENT')) return true;
+      this.logger.warn(`No se pudo eliminar ${reference}`, error);
       return false;
     }
   }
 
-  /** Extracts the object key from a full URL or returns the key if already relative */
-  private extractKeyFromUrl(urlOrKey: string): string | null {
-    if (!urlOrKey.startsWith('http://') && !urlOrKey.startsWith('https://')) {
-      return urlOrKey;
+  async getFileStream(reference: string): Promise<Readable | null> {
+    const location = this.resolveLocation(reference);
+    if (!location) {
+      if (!/^https?:/i.test(reference)) return null;
+      throw new ServiceUnavailableException('No se pudo identificar el almacenamiento.');
+    }
+
+    if (location.type === 'local') {
+      const filePath = this.findLocalPath(location.key);
+      return filePath ? fs.createReadStream(filePath) : null;
     }
 
     try {
-      const parsed = new URL(urlOrKey);
-      return parsed.pathname.replace(/^\//, '');
+      if (location.key && this.s3Client) {
+        const response = await this.s3Client.send(
+          new GetObjectCommand({
+            Bucket: this.bucketName,
+            Key: location.key,
+          }),
+          { abortSignal: AbortSignal.timeout(15_000) },
+        );
+        if (response.Body) return response.Body as Readable;
+      } else {
+        const response = await fetch(location.url, {
+          redirect: 'error',
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (response.ok && response.body) {
+          return Readable.fromWeb(response.body as ReadableStream);
+        }
+        await response.body?.cancel();
+        if (response.status === 404) return null;
+      }
+    } catch (error) {
+      if (this.hasErrorCode(error, 'NoSuchKey')) return null;
+      this.logger.warn(`No se pudo leer ${reference} desde R2`, error);
+    }
+    throw new ServiceUnavailableException(
+      'El almacenamiento de archivos no está disponible.',
+    );
+  }
+
+  private resolveLocation(
+    reference: string,
+  ): { type: 'local'; key: string } | { type: 'r2'; url: URL; key?: string } | null {
+    if (!reference) return null;
+    if (!/^https?:/i.test(reference)) {
+      const key = reference.replace(/^\/?storage\//, '');
+      return this.safeLocalPath(key) ? { type: 'local', key } : null;
+    }
+
+    const url = this.parseHttpUrl(reference);
+    if (!url) return null;
+    const r2 = this.parseHttpUrl(this.publicUrl);
+    const prefix = r2 ? r2.pathname.replace(/\/$/, '') + '/' : '';
+    if (r2 && url.origin === r2.origin && url.pathname.startsWith(prefix)) {
+      try {
+        const key = decodeURIComponent(url.pathname.slice(prefix.length));
+        return key ? { type: 'r2', url, key } : null;
+      } catch {
+        return null;
+      }
+    }
+
+    // A known development URL can still serve public reads after credentials are removed.
+    // Without a configured bucket URL, never send its key to the current S3 bucket.
+    if (url.protocol === 'https:' && !url.port && url.hostname.endsWith('.r2.dev')) {
+      return { type: 'r2', url };
+    }
+
+    const backend = this.parseHttpUrl(this.backendUrl);
+    const backendPrefix = backend
+      ? backend.pathname.replace(/\/$/, '') + '/storage/'
+      : '';
+    const localPrefix =
+      backend && url.origin === backend.origin && url.pathname.startsWith(backendPrefix)
+        ? backendPrefix
+        : '/storage/';
+    const isLoopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    if (
+      (isLoopback || (backend && url.origin === backend.origin)) &&
+      url.pathname.startsWith(localPrefix)
+    ) {
+      try {
+        const key = decodeURIComponent(url.pathname.slice(localPrefix.length));
+        return this.safeLocalPath(key) ? { type: 'local', key } : null;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  private parseHttpUrl(value: string): URL | null {
+    try {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+        ? url
+        : null;
     } catch {
       return null;
     }
+  }
+
+  private safeLocalPath(key: string): string | null {
+    const base = path.resolve(this.localBasePath);
+    const filePath = path.resolve(base, key);
+    const relative = path.relative(base, filePath);
+    return relative &&
+      relative !== '..' &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative)
+      ? filePath
+      : null;
+  }
+
+  private findLocalPath(key: string): string | undefined {
+    const candidates =
+      path.basename(key) === key
+        ? [key, path.join('materials', key), path.join('courses', key)]
+        : [key];
+    for (const candidate of candidates) {
+      const filePath = this.safeLocalPath(candidate);
+      if (filePath && fs.existsSync(filePath)) return filePath;
+    }
+    return undefined;
+  }
+
+  private hasErrorCode(error: unknown, code: string): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      (('name' in error && error.name === code) ||
+        ('code' in error && error.code === code))
+    );
   }
 
   /** Infers file extension from MIME type when missing from filename */

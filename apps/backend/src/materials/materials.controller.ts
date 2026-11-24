@@ -19,20 +19,17 @@ export class MaterialsController {
     @Param('id', ParseIntPipe) id: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const fileData = await this.materialsService.getDownloadableFile(id);
+    const { stream, filename } = await this.materialsService.getDownloadableFile(id);
 
-    if (fileData.url) {
-      res.redirect(fileData.url);
-      return;
-    }
-
-    const { stream, filename } = fileData;
     const extension = path.extname(filename).toLowerCase();
     const mimeTypes: Record<string, string> = {
       '.pdf': 'application/pdf',
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
+      '.zip': 'application/zip',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
 
     res.set({
@@ -40,6 +37,6 @@ export class MaterialsController {
     });
     res.attachment(filename);
 
-    return new StreamableFile(stream!);
+    return new StreamableFile(stream);
   }
 }

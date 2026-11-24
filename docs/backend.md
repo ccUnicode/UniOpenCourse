@@ -312,13 +312,11 @@ Centralizar la interacción con el almacenamiento de archivos (modo híbrido con
 
 ### Reglas de negocio
 
-- **Conmutación Inteligente (Patrón Driver):**
-  - **Modo Cloudflare R2:** Se activa automáticamente en presencia de credenciales válidas (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`). Sube archivos mediante `@aws-sdk/client-s3` (`PutObjectCommand`) y devuelve URLs públicas de CDN.
-  - **Modo Local:** Si no se configuran credenciales o se define `STORAGE_DRIVER=local` en el `.env`, guarda el buffer en disco físico (`storage/<carpeta>/`) y devuelve URLs servidas por `ServeStaticModule`.
-- Sube archivos a carpetas lógicas (`courses/` o `materials/`) con nombres sanitizados (máximo 60 caracteres alfanuméricos) y sufijos únicos timestamp.
-- Elimina objetos huérfanos cuando se actualiza la portada de un curso o se elimina un material/curso (detecta si el recurso es de R2 o de disco local y aplica la eliminación correspondiente).
-- Transfiere descargas de materiales directamente a la CDN pública de Cloudflare vía redirección HTTP 302, reduciendo el consumo de ancho de banda del backend a \$0 en producción.
-- Permite que nuevos desarrolladores prueben la plataforma en local sin estar obligados a crear una cuenta con tarjeta en Cloudflare, preservando también los registros históricos de prueba.
+- Las cargas nuevas van a R2 con credenciales válidas y `R2_PUBLIC_URL`. Con `STORAGE_DRIVER=local` o configuración R2 incompleta, van a disco. En producción, el modo local requiere `BACKEND_URL` y un volumen persistente.
+- La referencia guardada determina de dónde se lee cada archivo. Conserva `R2_PUBLIC_URL` si usas un dominio propio, incluso al cambiar a modo local.
+- `GET /materials/:id/download` transmite el archivo por el backend y envía `Content-Disposition: attachment` con el nombre del material. Un objeto inexistente devuelve 404. Un fallo de R2 o de su configuración devuelve 503.
+- PostgreSQL guarda las limpiezas de portadas cuando el curso se actualiza o se borra. El backend recoge la cola cada minuto y reintenta fallos después de cinco minutos. Ejecuta `npx prisma migrate deploy` desde `apps/backend` antes de iniciar el backend.
+- Los archivos locales anteriores y las rutas relativas `/storage/…` siguen disponibles. Para borrar objetos de R2, conserva la URL pública y las credenciales del bucket correspondiente.
 
 ### Dependencias
 

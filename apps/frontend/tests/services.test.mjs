@@ -226,3 +226,33 @@ test('raw fetch stays in api-client and UI delegates HTTP calls to services', ()
     visit(source);
   }
 });
+
+test('getStorageImageUrl normalizes R2, relative /storage/ and legacy image paths correctly', () => {
+  const state = createModules({
+    env: { NEXT_PUBLIC_API_URL: 'http://localhost:3001' },
+  });
+  const { getStorageImageUrl } = state.load('utils/image-url');
+
+  assert.equal(getStorageImageUrl(null), '');
+  assert.equal(getStorageImageUrl(''), '');
+  assert.equal(
+    getStorageImageUrl('https://pub-abc.r2.dev/courses/cover.png'),
+    'https://pub-abc.r2.dev/courses/cover.png',
+  );
+  assert.equal(
+    getStorageImageUrl('http://localhost:3001/storage/courses/cover.png'),
+    'http://localhost:3001/storage/courses/cover.png',
+  );
+  assert.equal(
+    getStorageImageUrl('/storage/courses/cover.png'),
+    'http://localhost:3001/storage/courses/cover.png',
+  );
+  assert.equal(
+    getStorageImageUrl('storage/courses/cover.png'),
+    'http://localhost:3001/storage/courses/cover.png',
+  );
+  assert.equal(
+    getStorageImageUrl('legacy-cover.png'),
+    'http://localhost:3001/storage/legacy-cover.png',
+  );
+});

@@ -225,11 +225,6 @@ export default function AdminClassesPage() {
                           <p className="text-sm font-semibold text-white">
                             {classItem.title}
                           </p>
-                          {classItem.description && (
-                            <p className="mt-1 text-xs text-white/35">
-                              {classItem.description}
-                            </p>
-                          )}
                         </td>
                         <td className="px-5 py-4 [overflow-wrap:anywhere]">
                           <span className="text-sm font-medium text-white/85">
