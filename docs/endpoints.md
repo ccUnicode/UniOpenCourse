@@ -1311,3 +1311,217 @@ Stream del archivo binario.
 ### Requerimientos relacionados
 
 - RF-12.11
+
+---
+
+## GET /categories
+
+### Descripción
+
+Lista todas las categorías disponibles para el uso general de estudiantes y selectores.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público / Estudiantes.
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Arreglo de categorías ordenadas alfabéticamente por nombre.
+
+```json
+[
+  {
+    "category_id": 1,
+    "name": "Ciencias de la Computación",
+    "description": "Cursos relacionados con programación y algoritmos",
+    "creation_date": "2026-11-24T21:00:00.000Z"
+  }
+]
+```
+
+### Requerimientos relacionados
+
+- UOC-7
+
+---
+
+## GET /admin/categories
+
+### Descripción
+
+Lista paginada de categorías para administración, con búsqueda opcional por nombre y conteo de cursos asociados.
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>` (JWT).
+
+### Roles permitidos
+
+`ADMIN`.
+
+### Parámetros de consulta (Query)
+
+| Parámetro | Tipo   | Requerido | Descripción                                                 |
+| --------- | ------ | --------- | ----------------------------------------------------------- |
+| page      | number | No        | Número de página (por defecto `1`, mínimo `1`).             |
+| limit     | number | No        | Cantidad por página (por defecto `10`, entre `1` y `50`).   |
+| q         | string | No        | Búsqueda insensible a mayúsculas por nombre de la categoría. |
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Objeto paginado con `data`, `total`, `page`, `limit` y `totalPages`.
+
+```json
+{
+  "data": [
+    {
+      "category_id": 1,
+      "name": "Ciencias de la Computación",
+      "description": "Cursos relacionados con programación y algoritmos",
+      "creation_date": "2026-11-24T21:00:00.000Z",
+      "_count": {
+        "courses": 5
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 1
+}
+```
+
+### Errores posibles
+
+| Código | Caso                     |
+| ------ | ------------------------ |
+| 401    | Token ausente o inválido |
+| 403    | Rol no autorizado        |
+
+### Requerimientos relacionados
+
+- UOC-7
+
+---
+
+## POST /admin/categories
+
+### Descripción
+
+Crea una nueva categoría.
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>` (JWT).
+
+### Roles permitidos
+
+`ADMIN`.
+
+### Body (`application/json`)
+
+| Campo       | Tipo   | Requerido | Restricciones                             |
+| ----------- | ------ | --------- | ----------------------------------------- |
+| name        | string | Sí        | No vacío, máximo 100 caracteres, único    |
+| description | string | Sí        | No vacío                                  |
+
+```json
+{
+  "name": "Matemáticas Discretas",
+  "description": "Fundamentos lógicos y matemáticos para computación"
+}
+```
+
+### Respuesta 201
+
+Objeto de la categoría creada.
+
+```json
+{
+  "category_id": 2,
+  "name": "Matemáticas Discretas",
+  "description": "Fundamentos lógicos y matemáticos para computación",
+  "creation_date": "2026-11-24T21:00:00.000Z"
+}
+```
+
+### Errores posibles
+
+| Código | Caso                                                     |
+| ------ | -------------------------------------------------------- |
+| 400    | Datos inválidos (campos vacíos o exceden longitud)       |
+| 401    | Token ausente o inválido                                 |
+| 403    | Rol no autorizado                                        |
+| 409    | Ya existe una categoría con ese nombre                   |
+
+### Requerimientos relacionados
+
+- UOC-7
+
+---
+
+## DELETE /admin/categories/:id
+
+### Descripción
+
+Elimina una categoría sin afectar ni eliminar los cursos existentes asociados a ella.
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>` (JWT).
+
+### Roles permitidos
+
+`ADMIN`.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción                     |
+| --------- | ------ | --------- | ------------------------------- |
+| id        | number | Sí        | Identificador de la categoría   |
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Datos de la categoría eliminada.
+
+```json
+{
+  "category_id": 2,
+  "name": "Matemáticas Discretas",
+  "description": "Fundamentos lógicos y matemáticos para computación",
+  "creation_date": "2026-11-24T21:00:00.000Z"
+}
+```
+
+### Errores posibles
+
+| Código | Caso                                   |
+| ------ | -------------------------------------- |
+| 401    | Token ausente o inválido               |
+| 403    | Rol no autorizado                      |
+| 404    | La categoría especificada no existe    |
+
+### Requerimientos relacionados
+
+- UOC-7
+

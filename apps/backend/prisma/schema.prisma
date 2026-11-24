@@ -61,6 +61,15 @@ model Course {
   classes              Class[]
   teacher              Teacher           @relation(fields: [teacher_id], references: [teacher_id])
   visiting_users       LastCourseVisit[]
+  categories           Category[]
+}
+
+model Category {
+  category_id   Int      @id @default(autoincrement())
+  name          String   @unique @db.VarChar(100)
+  description   String
+  creation_date DateTime @default(now())
+  courses       Course[]
 }
 
 model LastCourseVisit {

@@ -11,6 +11,7 @@ import { ClassesModule } from './classes/classes.module';
 import { AuthModule } from './auth/auth.module';
 import { MaterialsModule } from './materials/materials.module';
 import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
     MaterialsModule,
     AuthModule,
     GlobalSearcherModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

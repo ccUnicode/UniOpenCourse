@@ -78,6 +78,38 @@ Gestionar cursos, búsqueda, detalle, visitas y operaciones administrativas.
 
 ---
 
+## Módulo: Categories
+
+### Responsabilidad
+
+Gestionar las categorías temáticas de los cursos, su listado público para estudiantes y selectores, así como el CRUD administrativo protegido con paginación y conteo de cursos asociados.
+
+### Requerimientos relacionados
+
+- UOC-7
+
+### Archivos principales
+
+- `src/categories/categories.controller.ts`
+- `src/categories/admin-categories.controller.ts`
+- `src/categories/categories.service.ts`
+- `src/categories/categories.module.ts`
+- `src/categories/dto/create-category.dto.ts`
+
+### Reglas de negocio
+
+- `GET /categories` devuelve la lista alfabética de todas las categorías disponibles sin requerir autenticación.
+- `GET /admin/categories` provee paginación (`page`, `limit` de 1 a 50) y búsqueda (`q`) por nombre insensible a mayúsculas, incluyendo `_count: { select: { courses: true } }`. Requiere rol `ADMIN`.
+- `POST /admin/categories` valida longitud y presencia del nombre y descripción, capturando violaciones de unicidad (P2002) para responder con conflicto HTTP 409.
+- `DELETE /admin/categories/:id` elimina la categoría manteniendo intactos los cursos existentes gracias a la relación muchos a muchos implícita de Prisma.
+
+### Dependencias
+
+- `PrismaService` (acceso a tabla Category y relación implícita).
+- `AuthModule` / `JwtAuthGuard` / `RolesGuard` (`ADMIN`).
+
+---
+
 ## Módulo: Classes
 
 ### Responsabilidad
