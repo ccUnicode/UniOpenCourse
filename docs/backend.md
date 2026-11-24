@@ -162,8 +162,9 @@ Administrar los recursos adicionales de las clases (archivos físicos, enlaces e
 ### Dependencias
 
 - `PrismaService` (para acceso a la base de datos).
-- `@nestjs/platform-express` y `multer` (para la intercepción y carga física de archivos).
-- `storageConfig` (configuración personalizada de destino y sanitización de archivos).
+- `@nestjs/platform-express` y `multer` (para la intercepción de archivos en memoria con `memoryStorage()`).
+- `StorageModule` / `StorageService` (subida a Cloudflare R2 y eliminación de archivos).
+- `storageConfig` (reglas de validación de tamaño y tipos MIME admitidos).
 
 ---
 
@@ -285,3 +286,35 @@ Enviar correos transaccionales de verificación de cuenta mediante la API HTTP d
 ### Dependencias
 
 - `ConfigService` (lectura de credenciales y URLs).
+
+---
+
+## Módulo: Storage
+
+### Responsabilidad
+
+Centralizar la interacción con el almacenamiento de archivos (modo híbrido con Cloudflare R2 para producción y fallback local en disco para desarrollo) para portadas de cursos y archivos de materiales adjuntos.
+
+### Requerimientos relacionados
+
+- RF-12.12
+- RF-18.2.1
+
+### Archivos principales
+
+- `src/storage/storage.module.ts`
+- `src/storage/storage.service.ts`
+- `src/storage/storage.service.spec.ts`
+
+### Reglas de negocio
+
+- Las cargas nuevas van a R2 con credenciales válidas y `R2_PUBLIC_URL`. Con `STORAGE_DRIVER=local` o configuración R2 incompleta, van a disco. En producción, el modo local requiere `BACKEND_URL` y un volumen persistente.
+- La referencia guardada determina de dónde se lee cada archivo. Conserva `R2_PUBLIC_URL` si usas un dominio propio, incluso al cambiar a modo local.
+- `GET /materials/:id/download` transmite el archivo por el backend y envía `Content-Disposition: attachment` con el nombre del material. Un objeto inexistente devuelve 404. Un fallo de R2 o de su configuración devuelve 503.
+- PostgreSQL guarda las limpiezas de portadas cuando el curso se actualiza o se borra. El backend recoge la cola cada minuto y reintenta fallos después de cinco minutos. Ejecuta `npx prisma migrate deploy` desde `apps/backend` antes de iniciar el backend.
+- Los archivos locales anteriores y las rutas relativas `/storage/…` siguen disponibles. Para borrar objetos de R2, conserva la URL pública y las credenciales del bucket correspondiente.
+
+### Dependencias
+
+- `@aws-sdk/client-s3` (cliente S3 estándar para Cloudflare R2).
+- `ConfigService` (lectura de credenciales `R2_*` y switch `STORAGE_DRIVER`).

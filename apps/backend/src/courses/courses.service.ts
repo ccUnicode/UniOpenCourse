@@ -1,34 +1,38 @@
+import 'multer';
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { ConfigService } from '@nestjs/config';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
 
 @Injectable()
 export class CoursesService {
-  private readonly storageDir: string;
+  private readonly logger = new Logger(CoursesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
-  ) {
-    this.storageDir = this.configService.get<string>('STORAGE_PATH', './storage');
-  }
+    private readonly storageService: StorageService,
+    private readonly cleanup: StorageCleanupService,
+  ) {}
 
   // --- Admin Methods ---
   async create(data: CreateCourseDto, file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Debes adjuntar una imagen .jpeg o .png');
     }
+
+    const uploadResult = await this.storageService.uploadFile(file, 'courses');
+
     try {
       return await this.prisma.$transaction(async (tx) => {
         let docenteId = data.teacher_id;
@@ -60,26 +64,24 @@ export class CoursesService {
             course_code: data.course_code,
             description: data.description,
             url_trikaweb: data.url_trikaweb,
-            url_image: file.filename,
+            url_image: uploadResult.url,
             teacher: { connect: { teacher_id: docenteId } },
           },
         });
       });
     } catch (error) {
-      try {
-        await unlink(join(this.storageDir, file.filename));
-      } catch (unlinkError) {
-        console.error(
-          `No se pudo eliminar la imagen nueva: ${file.filename}`,
-          unlinkError,
-        );
-      }
+      await this.cleanup.discardUpload(uploadResult.url);
       throw error;
     }
   }
 
   async update(id: string, data: CreateCourseDto, file?: Express.Multer.File) {
-    let imagenAnterior: string | null = null;
+    let newUpload: { url: string; key: string } | null = null;
+
+    if (file) {
+      newUpload = await this.storageService.uploadFile(file, 'courses');
+    }
+
     try {
       const resultado = await this.prisma.$transaction(async (tx) => {
         const cursoExistente = await tx.course.findUnique({
@@ -115,7 +117,10 @@ export class CoursesService {
         }
 
         const cursoActualizado = await tx.course.update({
-          where: { course_id: Number(id) },
+          where: {
+            course_id: Number(id),
+            ...(newUpload && { url_image: cursoExistente.url_image }),
+          },
           data: {
             name: data.name,
             course_code: data.course_code,
@@ -128,33 +133,29 @@ export class CoursesService {
                 },
               },
             }),
-            ...(file && {
-              url_image: file.filename,
+            ...(newUpload && {
+              url_image: newUpload.url,
             }),
           },
         });
-        imagenAnterior = cursoExistente.url_image;
+        if (newUpload && cursoExistente.url_image) {
+          await this.cleanup.enqueue(cursoExistente.url_image, tx);
+        }
         return cursoActualizado;
       });
-      if (file && imagenAnterior) {
-        try {
-          await unlink(join(this.storageDir, imagenAnterior));
-        } catch (error) {
-          console.error('No se pudo eliminar la imagen anterior:', imagenAnterior, error);
-        }
-      }
+
       this.scrapeCache.delete(Number(id));
 
       return resultado;
     } catch (error) {
-      if (file) {
-        try {
-          await unlink(join(this.storageDir, file.filename));
-        } catch (unlinkError) {
-          console.error(
-            'No se pudo eliminar la imagen nueva:',
-            file.filename,
-            unlinkError,
+      if (newUpload) {
+        await this.cleanup.discardUpload(newUpload.url);
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw new ConflictException(
+            'El curso cambió durante la edición. Vuelve a cargarlo.',
           );
         }
       }
@@ -164,29 +165,11 @@ export class CoursesService {
 
   async remove(id: string) {
     try {
-      const curso = await this.prisma.course.findUnique({
-        where: {
-          course_id: Number(id),
-        },
-        select: {
-          url_image: true,
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const course = await tx.course.delete({ where: { course_id: Number(id) } });
+        if (course.url_image) await this.cleanup.enqueue(course.url_image, tx);
+        return course;
       });
-      if (!curso) {
-        throw new NotFoundException(`El curso con ID ${id} no existe.`);
-      }
-      const imagen = curso.url_image;
-      const cursoEliminado = await this.prisma.course.delete({
-        where: { course_id: Number(id) },
-      });
-      if (imagen) {
-        try {
-          await unlink(join(this.storageDir, imagen));
-        } catch (error) {
-          console.error(`No se pudo eliminar la imagen del curso: ${imagen}`, error);
-        }
-      }
-      return cursoEliminado;
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
@@ -399,8 +382,6 @@ export class CoursesService {
       })),
     };
   }
-
-  private readonly logger = new Logger(CoursesService.name);
 
   private readonly scrapeCache = new Map<
     number,

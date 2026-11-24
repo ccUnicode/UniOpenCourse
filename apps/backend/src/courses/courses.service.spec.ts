@@ -2,8 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma.service';
+import { StorageService } from '../storage/storage.service';
 import axios from 'axios';
-import { ConfigService } from '@nestjs/config';
+import { StorageCleanupService } from '../storage/storage-cleanup.service';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -12,28 +13,37 @@ describe('CoursesService', () => {
   let service: CoursesService;
 
   const mockPrisma = {
+    $transaction: jest.fn(),
     course: {
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
     },
     lastCourseVisit: {
       upsert: jest.fn(),
       findMany: jest.fn(),
     },
   };
-  const mockConfigService = {
-    get: jest.fn(),
+  const mockCleanup = { enqueue: jest.fn(), discardUpload: jest.fn() };
+  const mockStorageService = {
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(
+      (run: (tx: typeof mockPrisma) => unknown) => run(mockPrisma),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CoursesService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: StorageCleanupService, useValue: mockCleanup },
+        { provide: StorageService, useValue: mockStorageService },
       ],
     }).compile();
 
@@ -261,5 +271,14 @@ describe('CoursesService', () => {
         },
       ]);
     });
+  });
+
+  it('queues the deleted course cover in the same transaction as the delete', async () => {
+    const cover = '/storage/courses/cover.jpg';
+    mockPrisma.course.delete.mockResolvedValueOnce({ course_id: 1, url_image: cover });
+    await service.remove('1');
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(mockCleanup.enqueue).toHaveBeenCalledWith(cover, mockPrisma);
+    expect(mockStorageService.deleteFile).not.toHaveBeenCalled();
   });
 });

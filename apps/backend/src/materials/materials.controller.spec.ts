@@ -3,6 +3,7 @@ import { MaterialsController } from './materials.controller';
 import { MaterialsService } from './materials.service';
 import { StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
+import { Readable } from 'stream';
 
 describe('MaterialsController', () => {
   let controller: MaterialsController;
@@ -35,7 +36,7 @@ describe('MaterialsController', () => {
 
   describe('download', () => {
     it('should set headers and return a StreamableFile', async () => {
-      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
       const expectedFilename = 'test.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({
@@ -61,8 +62,8 @@ describe('MaterialsController', () => {
     });
 
     it('should validate download with names containing spaces, accents or Unicode', async () => {
-      const mockStream = { pipe: jest.fn() } as unknown as NodeJS.ReadableStream;
-      const expectedFilename = 'prueba.pdf';
+      const mockStream = { pipe: jest.fn() } as unknown as Readable;
+      const expectedFilename = 'Guía de programación.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({
         stream: mockStream,

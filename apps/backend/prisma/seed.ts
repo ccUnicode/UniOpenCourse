@@ -48,8 +48,25 @@ async function main() {
         last_name: 'System',
         password: hashedPassword,
         role_id: adminRole.role_id,
+        email_verified: true,
+        email_verified_at: new Date(),
       },
     });
+  } else if (
+    existingAdmin.role_id === adminRole.role_id &&
+    !existingAdmin.email_verified
+  ) {
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: {
+        email_verified: true,
+        email_verified_at: new Date(),
+      },
+    });
+  } else if (existingAdmin.role_id !== adminRole.role_id) {
+    console.warn(
+      `[Seed Warning] Usuario existente con email ${adminEmail} no posee rol ADMIN. Se omite verificación automática.`,
+    );
   }
 }
 

@@ -20,15 +20,18 @@ export class MaterialsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { stream, filename } = await this.materialsService.getDownloadableFile(id);
+
     const extension = path.extname(filename).toLowerCase();
     const mimeTypes: Record<string, string> = {
       '.pdf': 'application/pdf',
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
+      '.zip': 'application/zip',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
 
-    // Obliga al navegador a descargar el archivo con el nombre original
     res.set({
       'Content-Type': mimeTypes[extension] || 'application/octet-stream',
     });

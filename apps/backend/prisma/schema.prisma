@@ -103,3 +103,10 @@ enum MaterialTypes {
   link
   reference
 }
+
+model StorageCleanup {
+  reference  String   @id
+  retryAfter DateTime @default(now())
+
+  @@index([retryAfter])
+}
