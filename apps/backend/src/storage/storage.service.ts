@@ -230,7 +230,7 @@ export class StorageService {
       this.logger.warn(`No se pudo leer ${reference} desde R2`, error);
     }
     throw new ServiceUnavailableException(
-      'El almacenamiento de archivos no est� disponible.',
+      'El almacenamiento de archivos no está disponible.',
     );
   }
 

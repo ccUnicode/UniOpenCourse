@@ -63,7 +63,7 @@ describe('MaterialsController', () => {
 
     it('should validate download with names containing spaces, accents or Unicode', async () => {
       const mockStream = { pipe: jest.fn() } as unknown as Readable;
-      const expectedFilename = 'Gu�a de programaci�n.pdf';
+      const expectedFilename = 'Guía de programación.pdf';
 
       mockMaterialsService.getDownloadableFile.mockResolvedValue({
         stream: mockStream,

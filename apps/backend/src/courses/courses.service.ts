@@ -155,7 +155,7 @@ export class CoursesService {
           error.code === 'P2025'
         ) {
           throw new ConflictException(
-            'El curso cambi� durante la edici�n. Vuelve a cargarlo.',
+            'El curso cambió durante la edición. Vuelve a cargarlo.',
           );
         }
       }
