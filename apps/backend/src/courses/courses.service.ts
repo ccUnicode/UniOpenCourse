@@ -62,6 +62,11 @@ export class CoursesService {
             url_trikaweb: data.url_trikaweb,
             url_image: file.filename,
             teacher: { connect: { teacher_id: docenteId } },
+            ...(data.category_ids && data.category_ids.length > 0 && {
+              categories: {
+                connect: data.category_ids.map((catId) => ({ category_id: catId })),
+              },
+            }),
           },
         });
       });
@@ -130,6 +135,11 @@ export class CoursesService {
             }),
             ...(file && {
               url_image: file.filename,
+            }),
+            ...(data.category_ids !== undefined && {
+              categories: {
+                set: data.category_ids.map((catId) => ({ category_id: catId })),
+              },
             }),
           },
         });
@@ -216,6 +226,9 @@ export class CoursesService {
         teacher: {
           select: { teacher_id: true, name: true, last_name: true },
         },
+        categories: {
+          select: { category_id: true, name: true },
+        },
       },
     });
   }
@@ -299,6 +312,9 @@ export class CoursesService {
         },
         teacher: {
           select: { teacher_id: true, name: true, last_name: true },
+        },
+        categories: {
+          select: { category_id: true, name: true },
         },
       },
     });

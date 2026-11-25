@@ -12,6 +12,8 @@ describe('CategoriesService', () => {
       count: jest.Mock;
       create: jest.Mock;
       delete: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -22,6 +24,8 @@ describe('CategoriesService', () => {
         count: jest.fn(),
         create: jest.fn(),
         delete: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -202,6 +206,117 @@ describe('CategoriesService', () => {
       prisma.category.delete.mockRejectedValue(new Error('DB error'));
 
       await expect(service.remove(1)).rejects.toThrow('DB error');
+    });
+  });
+
+  describe('findOneAdmin', () => {
+    it('returns category with associated courses', async () => {
+      const mockCategory = {
+        category_id: 1,
+        name: 'Ciencias',
+        description: 'Desc',
+        creation_date: new Date(),
+        courses: [{ course_id: 10, name: 'Física I' }],
+      };
+      prisma.category.findUnique.mockResolvedValue(mockCategory);
+
+      const result = await service.findOneAdmin(1);
+
+      expect(prisma.category.findUnique).toHaveBeenCalledWith({
+        where: { category_id: 1 },
+        select: {
+          category_id: true,
+          name: true,
+          description: true,
+          creation_date: true,
+          courses: {
+            select: {
+              course_id: true,
+              name: true,
+              course_code: true,
+              url_image: true,
+              description: true,
+            },
+            orderBy: { course_creation_date: 'desc' },
+          },
+        },
+      });
+      expect(result).toEqual(mockCategory);
+    });
+
+    it('throws NotFoundException when category does not exist', async () => {
+      prisma.category.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOneAdmin(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateAdmin', () => {
+    it('updates category data and syncs courses', async () => {
+      prisma.category.findUnique.mockResolvedValue({ category_id: 1, name: 'Old' });
+      const updated = {
+        category_id: 1,
+        name: 'New Name',
+        description: 'New Desc',
+        creation_date: new Date(),
+        courses: [{ course_id: 20 }],
+      };
+      prisma.category.update.mockResolvedValue(updated);
+
+      const result = await service.updateAdmin(1, {
+        name: '  New Name  ',
+        description: '  New Desc  ',
+        course_ids: [20],
+      });
+
+      expect(prisma.category.update).toHaveBeenCalledWith({
+        where: { category_id: 1 },
+        data: {
+          name: 'New Name',
+          description: 'New Desc',
+          courses: {
+            set: [{ course_id: 20 }],
+          },
+        },
+        select: {
+          category_id: true,
+          name: true,
+          description: true,
+          creation_date: true,
+          courses: {
+            select: {
+              course_id: true,
+              name: true,
+              course_code: true,
+              url_image: true,
+              description: true,
+            },
+            orderBy: { course_creation_date: 'desc' },
+          },
+        },
+      });
+      expect(result).toEqual(updated);
+    });
+
+    it('throws NotFoundException if category does not exist', async () => {
+      prisma.category.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateAdmin(999, { name: 'Test' })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws ConflictException on duplicate name (P2002)', async () => {
+      prisma.category.findUnique.mockResolvedValue({ category_id: 1 });
+      const error = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.0',
+      });
+      prisma.category.update.mockRejectedValue(error);
+
+      await expect(service.updateAdmin(1, { name: 'Existing' })).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 });

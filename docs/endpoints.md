@@ -1525,3 +1525,142 @@ Datos de la categoría eliminada.
 
 - UOC-7
 
+---
+
+## GET /admin/categories/:id
+
+### Descripción
+
+Obtiene el detalle de una categoría específica incluyendo el listado de sus cursos asociados.
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>` (JWT).
+
+### Roles permitidos
+
+`ADMIN`.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción                     |
+| --------- | ------ | --------- | ------------------------------- |
+| id        | number | Sí        | Identificador de la categoría   |
+
+### Query params
+
+Ninguno.
+
+### Body
+
+Ninguno.
+
+### Respuesta 200
+
+Detalle de la categoría con sus cursos asociados ordenados por fecha de creación descendente.
+
+```json
+{
+  "category_id": 1,
+  "name": "Ciencias de la Computación",
+  "description": "Cursos relacionados con programación y algoritmos",
+  "creation_date": "2026-11-24T21:00:00.000Z",
+  "courses": [
+    {
+      "course_id": 10,
+      "name": "Estructuras de Datos",
+      "course_code": "CS102",
+      "url_image": "1732485600-cs102.png",
+      "description": "Introducción a listas, árboles y grafos"
+    }
+  ]
+}
+```
+
+### Errores posibles
+
+| Código | Caso                                   |
+| ------ | -------------------------------------- |
+| 401    | Token ausente o inválido               |
+| 403    | Rol no autorizado                      |
+| 404    | La categoría especificada no existe    |
+
+### Requerimientos relacionados
+
+- UOC-8
+
+---
+
+## PATCH /admin/categories/:id
+
+### Descripción
+
+Actualiza el nombre, la descripción o la lista de cursos asociados de una categoría.
+
+### Autenticación
+
+Requerida. Header `Authorization: Bearer <token>` (JWT).
+
+### Roles permitidos
+
+`ADMIN`.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo   | Requerido | Descripción                     |
+| --------- | ------ | --------- | ------------------------------- |
+| id        | number | Sí        | Identificador de la categoría   |
+
+### Body (`application/json`)
+
+Todos los campos son opcionales.
+
+| Campo        | Tipo     | Requerido | Restricciones                             |
+| ------------ | -------- | --------- | ----------------------------------------- |
+| name         | string   | No        | Máximo 100 caracteres, único              |
+| description  | string   | No        | Cadena de texto                           |
+| course_ids   | number[] | No        | Arreglo con los IDs de los cursos a fijar |
+
+```json
+{
+  "name": "Ciencias de la Computación Avanzada",
+  "course_ids": [10, 15, 22]
+}
+```
+
+### Respuesta 200
+
+Categoría actualizada con el nuevo conjunto de cursos asociados.
+
+```json
+{
+  "category_id": 1,
+  "name": "Ciencias de la Computación Avanzada",
+  "description": "Cursos relacionados con programación y algoritmos",
+  "creation_date": "2026-11-24T21:00:00.000Z",
+  "courses": [
+    {
+      "course_id": 10,
+      "name": "Estructuras de Datos",
+      "course_code": "CS102",
+      "url_image": "1732485600-cs102.png",
+      "description": "Introducción a listas, árboles y grafos"
+    }
+  ]
+}
+```
+
+### Errores posibles
+
+| Código | Caso                                                     |
+| ------ | -------------------------------------------------------- |
+| 400    | Datos inválidos (exceden longitud o tipos erróneos)      |
+| 401    | Token ausente o inválido                                 |
+| 403    | Rol no autorizado                                        |
+| 404    | La categoría especificada no existe                      |
+| 409    | Ya existe otra categoría con ese nombre                  |
+
+### Requerimientos relacionados
+
+- UOC-8
+

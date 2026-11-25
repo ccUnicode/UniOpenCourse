@@ -9,6 +9,8 @@ describe('AdminCategoriesController', () => {
     findAllAdmin: jest.fn(),
     create: jest.fn(),
     remove: jest.fn(),
+    findOneAdmin: jest.fn(),
+    updateAdmin: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -74,6 +76,31 @@ describe('AdminCategoriesController', () => {
 
       expect(mockCategoriesService.remove).toHaveBeenCalledWith(5);
       expect(result).toEqual(deleted);
+    });
+  });
+
+  describe('findOne', () => {
+    it('delegates retrieval of category detail to service', async () => {
+      const category = { category_id: 1, name: 'Ciencias', courses: [] };
+      mockCategoriesService.findOneAdmin.mockResolvedValue(category);
+
+      const result = await controller.findOne(1);
+
+      expect(mockCategoriesService.findOneAdmin).toHaveBeenCalledWith(1);
+      expect(result).toEqual(category);
+    });
+  });
+
+  describe('update', () => {
+    it('delegates updating to service with id and dto', async () => {
+      const dto = { name: 'Ciencias Exactas', course_ids: [1, 2] };
+      const updated = { category_id: 1, ...dto };
+      mockCategoriesService.updateAdmin.mockResolvedValue(updated);
+
+      const result = await controller.update(1, dto);
+
+      expect(mockCategoriesService.updateAdmin).toHaveBeenCalledWith(1, dto);
+      expect(result).toEqual(updated);
     });
   });
 });

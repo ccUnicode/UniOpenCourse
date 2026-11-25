@@ -33,4 +33,26 @@ describe('CreateCourseDto', () => {
     expect(dto.url_trikaweb).toBe(12);
     expect(errors.some((error) => error.property === 'url_trikaweb')).toBe(true);
   });
+
+  it('acepta y transforma category_ids como arreglo de números', async () => {
+    const dto = toDto({
+      ...validCourse,
+      category_ids: [1, 2, 3],
+    });
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+    expect(dto.category_ids).toEqual([1, 2, 3]);
+  });
+
+  it('transforma category_ids enviados como string separado por comas', async () => {
+    const dto = toDto({
+      ...validCourse,
+      category_ids: '1, 2, 3',
+    });
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+    expect(dto.category_ids).toEqual([1, 2, 3]);
+  });
 });

@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
   Matches,
+  IsArray,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
@@ -57,4 +58,24 @@ export class CreateCourseDto {
     message: 'La URL debe ser segura (HTTPS) y pertenecer a trikaweb.ccunicode.org',
   })
   url_trikaweb?: string;
+
+  @IsArray({ message: 'Los IDs de las categorías deben ser un arreglo' })
+  @IsInt({ each: true, message: 'Cada ID de categoría debe ser un número entero' })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (Array.isArray(value)) return value.map(Number);
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.map(Number);
+      } catch {}
+      return value
+        .split(',')
+        .map((v) => Number(v.trim()))
+        .filter((v) => !isNaN(v));
+    }
+    return [Number(value)];
+  })
+  category_ids?: number[];
 }

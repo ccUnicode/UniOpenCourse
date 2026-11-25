@@ -100,8 +100,11 @@ Gestionar las categorías temáticas de los cursos, su listado público para est
 
 - `GET /categories` devuelve la lista alfabética de todas las categorías disponibles sin requerir autenticación.
 - `GET /admin/categories` provee paginación (`page`, `limit` de 1 a 50) y búsqueda (`q`) por nombre insensible a mayúsculas, incluyendo `_count: { select: { courses: true } }`. Requiere rol `ADMIN`.
+- `GET /admin/categories/:id` devuelve el detalle de la categoría con sus cursos asociados ordenados por fecha de creación descendente.
+- `PATCH /admin/categories/:id` permite actualizar nombre, descripción y sincronizar (`set`) la lista de cursos asociados mediante sus IDs.
 - `POST /admin/categories` valida longitud y presencia del nombre y descripción, capturando violaciones de unicidad (P2002) para responder con conflicto HTTP 409.
 - `DELETE /admin/categories/:id` elimina la categoría manteniendo intactos los cursos existentes gracias a la relación muchos a muchos implícita de Prisma.
+- En la creación (`POST /admin/courses`) y actualización (`PATCH /admin/courses/:id`) de cursos, se acepta el campo opcional `category_ids` para asociar categorías temáticas.
 
 ### Dependencias
 
