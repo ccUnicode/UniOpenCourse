@@ -18,7 +18,9 @@ async function main() {
   const adminUsername = process.env.SEED_ADMIN_USERNAME || 'admin';
 
   if (!adminEmail || !adminPassword) {
-    throw new Error('SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD son requeridos para crear el admin inicial');
+    throw new Error(
+      'SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD son requeridos para crear el admin inicial',
+    );
   }
 
   const adminRole = await prisma.role.upsert({
@@ -64,9 +66,7 @@ async function main() {
       },
     });
   } else if (existingAdmin.role_id !== adminRole.role_id) {
-    console.warn(
-      `[Seed Warning] Usuario existente con email ${adminEmail} no posee rol ADMIN. Se omite verificación automática.`,
-    );
+    throw new Error(`El usuario con email ${adminEmail} existe pero no tiene rol ADMIN.`);
   }
 }
 
@@ -76,6 +76,7 @@ main()
   })
   .catch((e) => {
     console.error(e);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
