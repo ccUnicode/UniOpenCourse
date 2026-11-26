@@ -7,6 +7,7 @@ export class LoginDto {
   })
   email: string;
 
+  @IsString()
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @MaxLength(255, {
     message: 'La contraseña no puede tener más de 255 caracteres',

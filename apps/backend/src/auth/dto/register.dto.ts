@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'El correo electrónico debe ser válido' })
@@ -8,24 +8,28 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
   email: string;
 
+  @IsString()
   @IsNotEmpty({ message: 'El nombre es obligatorio' })
   @MaxLength(50, {
     message: 'El nombre no puede tener más de 50 caracteres',
   })
   name: string;
 
+  @IsString()
   @IsNotEmpty({ message: 'El apellido es obligatorio' })
   @MaxLength(50, {
     message: 'El apellido no puede tener más de 50 caracteres',
   })
   last_name: string;
 
+  @IsString()
   @IsNotEmpty({ message: 'El nombre de usuario es obligatorio' })
   @MaxLength(70, {
     message: 'El nombre de usuario no puede tener más de 70 caracteres',
   })
   username: string;
 
+  @IsString()
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @MaxLength(255, {
     message: 'La contraseña no puede tener más de 255 caracteres',
