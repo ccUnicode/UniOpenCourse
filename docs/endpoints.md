@@ -6,6 +6,80 @@ Referencia de rutas, parámetros y respuestas de la API REST.
 
 ---
 
+## GET /admin/users
+
+### Descripción
+
+Lista usuarios registrados, incluyendo administradores y cuentas pendientes de
+verificar. No representa sesiones activas. Implementado para UOC-1.
+
+### Autenticación
+
+Requiere JWT válido mediante `Authorization: Bearer <token>` o cookie
+`access_token`, siguiendo la autenticación existente. El frontend puede consumirlo
+mediante el proxy autenticado `/api/proxy/admin/users`.
+
+### Roles permitidos
+
+Solo `ADMIN`.
+
+### Parámetros de consulta (Query)
+
+| Parámetro | Tipo    | Requerido | Descripción                                                                                                                                                  |
+| --------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| page      | integer | No        | Página desde `1`, por defecto `1`, máximo `21474836` para evitar desbordamientos del desplazamiento en Prisma.                                               |
+| limit     | integer | No        | Registros por página: entre `1` y `100`, por defecto `10`.                                                                                                   |
+| search    | string  | No        | Hasta 100 caracteres tras recortar espacios externos. Busca por nombre, apellido, username o correo, sin distinguir mayúsculas. Vacío equivale a no filtrar. |
+
+Los parámetros desconocidos, repetidos como arreglos o con tipos y valores
+inválidos se rechazan con `400`. `page` y `limit` deben ser enteros.
+
+### Respuesta 200
+
+```json
+{
+  "data": [
+    {
+      "user_id": 7,
+      "name": "Gabriel",
+      "last_name": "Eustaquio",
+      "username": "gabriel",
+      "email": "gabriel@example.com",
+      "email_verified": true,
+      "register_date": "2026-11-26T12:00:00.000Z",
+      "role": { "role_id": 2, "role_name": "USER" }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 1
+}
+```
+
+`total` cuenta los usuarios que coinciden con la búsqueda, no solo los de la
+página. Orden estable por `register_date` descendente y después `user_id`
+descendente. Sin coincidencias devuelve `data: []`, `total: 0` y `totalPages: 0`.
+Una página fuera de rango devuelve `data: []`, manteniendo el total y la página
+solicitada.
+
+La consulta selecciona exclusivamente los campos mostrados: no lee ni devuelve
+`password`, tokens de verificación ni relaciones con datos sensibles.
+
+### Errores
+
+| Código | Motivo                                           |
+| ------ | ------------------------------------------------ |
+| 400    | Parámetros de consulta inválidos o desconocidos. |
+| 401    | JWT ausente, inválido o expirado.                |
+| 403    | Sesión válida sin rol `ADMIN`.                   |
+
+### Requerimientos relacionados
+
+- UOC-1: módulo de usuarios y listado administrativo paginado.
+
+---
+
 ## GET /courses
 
 ### Descripción

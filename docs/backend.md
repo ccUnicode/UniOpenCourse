@@ -2,6 +2,43 @@
 
 Documentación del backend del monorepo (NestJS, Prisma, PostgreSQL).
 
+## Módulo: Users
+
+### Responsabilidad
+
+Consultar usuarios registrados desde administración (UOC-1). Expone
+`GET /admin/users`, protegido por `JwtAuthGuard`, `RolesGuard` y `@Roles('ADMIN')`.
+No representa usuarios conectados en tiempo real.
+
+### Archivos principales
+
+- `src/users/users.module.ts`: registrado en `AppModule`, importa `PrismaModule`.
+- `src/users/admin-users.controller.ts`: ruta administrativa y validación de query.
+- `src/users/users.service.ts`: consulta y conteo mediante transacción de Prisma.
+- `src/users/dto/find-all-users.dto.ts`: búsqueda y paginación.
+
+### Reglas de negocio
+
+- Paginación desde página 1, tamaño predeterminado 10 y máximo 100.
+- Búsqueda parcial por nombre, apellido, username o correo sin distinguir mayúsculas;
+  recorta espacios externos y admite hasta 100 caracteres.
+- Orden por fecha de registro descendente y, en caso de empate, ID descendente.
+- Devuelve `data`, `total`, `page`, `limit` y `totalPages`; el conteo usa el mismo
+  filtro que el listado.
+- Usa una selección explícita de campos básicos, estado de verificación y rol.
+  No consulta ni devuelve hashes de contraseña ni tokens.
+- No modifica usuarios ni requiere cambios en el esquema de base de datos.
+
+### Pruebas
+
+`users.service.spec.ts` comprueba selección de campos, búsqueda, orden y
+paginación. `admin-users.controller.spec.ts` comprueba por HTTP la ruta del módulo
+con JWT y guards reales, sustituyendo únicamente la base de datos: acceso de
+administrador, rechazo de usuarios regulares, tokens inválidos/expirados y
+validación de parámetros.
+
+Contrato completo: [GET /admin/users](./endpoints.md#get-adminusers).
+
 **Convención:**
 
 - El código vive en `apps/backend/`.

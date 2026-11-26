@@ -11,6 +11,7 @@ import { ClassesModule } from './classes/classes.module';
 import { AuthModule } from './auth/auth.module';
 import { MaterialsModule } from './materials/materials.module';
 import { GlobalSearcherModule } from './global-searcher/global-searcher.module';
+import { UsersModule } from './users/users.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { StorageModule } from './storage/storage.module';
     MaterialsModule,
     AuthModule,
     GlobalSearcherModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
