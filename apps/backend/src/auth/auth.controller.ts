@@ -1,4 +1,14 @@
-import { Controller, Body, Post, Get, UseGuards, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Post,
+  Get,
+  UseGuards,
+  Req,
+  Res,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -11,6 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 
 @Controller('auth')
+@UsePipes(new ValidationPipe({ whitelist: true }))
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
