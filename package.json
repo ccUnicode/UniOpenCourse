@@ -18,11 +18,26 @@
     "url": "git+https://github.com/ccUnicode/UniOpenCourse.git"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/passport-jwt": "^4.0.1",
     "concurrently": "^9.2.1",
     "prettier": "^3.8.1"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.0",
-    "class-validator": "^0.14.0"
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/serve-static": "^5.0.5",
+    "@prisma/client": "^7.10.0",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "bcrypt": "^6.0.0",
+    "class-validator": "^0.14.1",
+    "multer": "^2.1.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "prisma": "^7.10.0"
   }
 }
