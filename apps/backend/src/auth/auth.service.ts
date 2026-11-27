@@ -380,22 +380,38 @@ export class AuthService {
 
     if (user) {
       if (!user.email_verified) {
+        const userId = user.user_id;
         const randomPassword = randomBytes(32).toString('hex');
         const invalidatedPassword = await bcrypt.hash(randomPassword, 10);
 
-        await this.prisma.emailVerificationToken.deleteMany({
-          where: { user_id: user.user_id },
+        await this.prisma.$transaction(async (tx) => {
+          const updated = await tx.user.updateMany({
+            where: {
+              user_id: userId,
+              email_verified: false,
+            },
+            data: {
+              password: invalidatedPassword,
+              email_verified: true,
+              email_verified_at: new Date(),
+            },
+          });
+
+          if (updated.count > 0) {
+            await tx.emailVerificationToken.deleteMany({
+              where: { user_id: userId },
+            });
+          }
         });
 
-        user = await this.prisma.user.update({
-          where: { user_id: user.user_id },
-          data: {
-            password: invalidatedPassword,
-            email_verified: true,
-            email_verified_at: new Date(),
-          },
+        const refreshedUser = await this.prisma.user.findUnique({
+          where: { user_id: userId },
           include: { role: true },
         });
+        if (!refreshedUser) {
+          throw new UnauthorizedException('Usuario no encontrado');
+        }
+        user = refreshedUser;
       }
     } else {
       const baseUsername = this.generateBaseUsername(

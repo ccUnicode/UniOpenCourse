@@ -35,22 +35,22 @@ describe('GoogleStrategy', () => {
     strategy = module.get<GoogleStrategy>(GoogleStrategy);
   });
 
-  it('debe estar definida e inicializarse con las credenciales de config', () => {
+  it('should be defined and initialized with config credentials', () => {
     expect(strategy).toBeDefined();
     expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_ID');
     expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CLIENT_SECRET');
     expect(mockConfigService.getOrThrow).toHaveBeenCalledWith('GOOGLE_CALLBACK_URL');
   });
 
-  it('debe extraer y validar el perfil de Google correctamente', () => {
+  it('should extract and validate Google profile correctly', () => {
     const mockProfile: Profile = {
       id: '123456789',
-      displayName: 'Jeferson Snyder',
+      displayName: 'Test User',
       name: {
-        givenName: 'Jeferson',
-        familyName: 'Snyder',
+        givenName: 'Test',
+        familyName: 'User',
       },
-      emails: [{ value: 'jeferson@gmail.com', verified: true }],
+      emails: [{ value: 'user@example.com', verified: true }],
       photos: [{ value: 'https://lh3.googleusercontent.com/photo.jpg' }],
       provider: 'google',
       profileUrl: 'https://profiles.google.com/123456789',
@@ -63,18 +63,18 @@ describe('GoogleStrategy', () => {
     strategy.validate('access-token-123', 'refresh-token-123', mockProfile, done);
 
     expect(done).toHaveBeenCalledWith(null, {
-      email: 'jeferson@gmail.com',
-      firstName: 'Jeferson',
-      lastName: 'Snyder',
+      email: 'user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
       picture: 'https://lh3.googleusercontent.com/photo.jpg',
       accessToken: 'access-token-123',
     });
   });
 
-  it('debe llamar a done con error si el perfil de Google no contiene emails', () => {
+  it('should invoke done with error when Google profile has no emails', () => {
     const mockProfileWithoutEmail: Profile = {
       id: '123456789',
-      displayName: 'Usuario Sin Correo',
+      displayName: 'User Without Email',
       provider: 'google',
       profileUrl: 'https://profiles.google.com/123456789',
       _raw: '',

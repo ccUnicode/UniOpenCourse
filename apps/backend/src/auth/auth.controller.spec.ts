@@ -32,12 +32,12 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('googleAuth debe estar definido', () => {
+  it('googleAuth should be defined', () => {
     expect(typeof controller.googleAuth).toBe('function');
   });
 
   describe('googleAuthCallback', () => {
-    it('debe validar el usuario de Google, setear la cookie y redirigir al frontend', async () => {
+    it('should validate Google user, set cookie and redirect to frontend', async () => {
       const mockGoogleUser = {
         email: 'test@gmail.com',
         firstName: 'Test',
@@ -85,7 +85,7 @@ describe('AuthController', () => {
   });
 
   describe('logout', () => {
-    it('debe limpiar la cookie access_token y llamar al servicio de logout', () => {
+    it('should clear access_token cookie and invoke logout service', () => {
       const expectedResponse = { message: 'Logout exitoso' };
       mockAuthService.logout.mockReturnValue(expectedResponse);
 

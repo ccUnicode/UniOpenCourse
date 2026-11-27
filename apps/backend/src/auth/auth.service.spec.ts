@@ -18,6 +18,7 @@ describe('AuthService', () => {
     user: {
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       findFirst: jest.Mock;
       findUnique: jest.Mock;
       delete: jest.Mock;
@@ -47,6 +48,7 @@ describe('AuthService', () => {
       user: {
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn().mockResolvedValue(null),
         delete: jest.fn(),
@@ -490,25 +492,25 @@ describe('AuthService', () => {
 
   describe('validateGoogleUser', () => {
     const mockGooglePayload = {
-      email: 'jeferson@gmail.com',
-      firstName: 'Jeferson',
-      lastName: 'Snyder',
+      email: 'user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
       picture: 'https://lh3.googleusercontent.com/pic.jpg',
       accessToken: 'token-xyz',
     };
 
-    it('debe registrar un usuario nuevo y emitir JWT si no existe en BD', async () => {
-      // 1. findUnique por email no encuentra al usuario
+    it('should register a new user and issue a JWT if not found in DB', async () => {
+      // 1. findUnique by email does not find the user
       prismaMock.user.findUnique.mockResolvedValueOnce(null);
-      // 2. findUnique por username no encuentra colisión
+      // 2. findUnique by username finds no collision
       prismaMock.user.findUnique.mockResolvedValueOnce(null);
 
       const mockCreatedUser = {
         user_id: 10,
-        email: 'jeferson@gmail.com',
-        username: 'jeferson',
-        name: 'Jeferson',
-        last_name: 'Snyder',
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
         email_verified: true,
         role: { role_name: 'USER' },
       };
@@ -518,13 +520,13 @@ describe('AuthService', () => {
       const result = await service.validateGoogleUser(mockGooglePayload);
 
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
-        where: { email: 'jeferson@gmail.com' },
+        where: { email: 'user@example.com' },
         include: { role: true },
       });
       expect(prismaMock.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            email: 'jeferson@gmail.com',
+            email: 'user@example.com',
             email_verified: true,
             role: { connect: { role_name: 'USER' } },
           }) as unknown as Record<string, unknown>,
@@ -534,58 +536,92 @@ describe('AuthService', () => {
         access_token: 'signed_google_jwt',
         user: {
           user_id: 10,
-          email: 'jeferson@gmail.com',
-          username: 'jeferson',
-          name: 'Jeferson',
-          last_name: 'Snyder',
+          email: 'user@example.com',
+          username: 'testuser',
+          name: 'Test',
+          last_name: 'User',
           role: 'USER',
         },
       });
     });
 
-    it('debe actualizar email_verified a true e invalidar la contraseña previa si el usuario no estaba verificado', async () => {
+    it('should mark email_verified as true and invalidate previous password when user is unverified', async () => {
       const mockUnverifiedUser = {
         user_id: 10,
-        email: 'jeferson@gmail.com',
-        username: 'jeferson',
-        name: 'Jeferson',
-        last_name: 'Snyder',
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
         email_verified: false,
         role: { role_name: 'USER' },
       };
 
-      prismaMock.user.findUnique.mockResolvedValueOnce(mockUnverifiedUser);
-      prismaMock.user.update.mockResolvedValueOnce({
-        ...mockUnverifiedUser,
-        email_verified: true,
-        email_verified_at: new Date(),
-      });
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(mockUnverifiedUser)
+        .mockResolvedValueOnce({
+          ...mockUnverifiedUser,
+          email_verified: true,
+          email_verified_at: new Date(),
+        });
+      prismaMock.user.updateMany.mockResolvedValueOnce({ count: 1 });
       jwtMock.sign.mockReturnValue('signed_google_jwt');
 
       const result = await service.validateGoogleUser(mockGooglePayload);
 
-      expect(prismaMock.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
-        where: { user_id: 10 },
-      });
-      expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { user_id: 10 },
+          where: { user_id: 10, email_verified: false },
           data: expect.objectContaining({
             password: expect.any(String) as unknown as string,
             email_verified: true,
           }) as unknown as Record<string, unknown>,
         }),
       );
+      expect(prismaMock.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
+        where: { user_id: 10 },
+      });
       expect(result.access_token).toBe('signed_google_jwt');
     });
 
-    it('debe reutilizar el usuario si ya existe y está verificado', async () => {
+    it('should preserve password and skip token deletion if account was concurrently verified before write', async () => {
+      const mockUnverifiedUser = {
+        user_id: 10,
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: false,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(mockUnverifiedUser)
+        .mockResolvedValueOnce({
+          ...mockUnverifiedUser,
+          email_verified: true,
+          email_verified_at: new Date(),
+        });
+      prismaMock.user.updateMany.mockResolvedValueOnce({ count: 0 });
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: 10, email_verified: false },
+        }),
+      );
+      expect(prismaMock.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('should reuse the existing user when already verified', async () => {
       const mockVerifiedUser = {
         user_id: 10,
-        email: 'jeferson@gmail.com',
-        username: 'jeferson',
-        name: 'Jeferson',
-        last_name: 'Snyder',
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
         email_verified: true,
         role: { role_name: 'USER' },
       };
@@ -596,24 +632,25 @@ describe('AuthService', () => {
       const result = await service.validateGoogleUser(mockGooglePayload);
 
       expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.user.create).not.toHaveBeenCalled();
-      expect(result.user.email).toBe('jeferson@gmail.com');
+      expect(result.user.email).toBe('user@example.com');
     });
 
-    it('debe resolver colisiones de username agregando un sufijo único', async () => {
-      prismaMock.user.findUnique.mockResolvedValueOnce(null); // por email
+    it('should resolve username collisions by appending a unique suffix', async () => {
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // by email
       prismaMock.user.findUnique.mockResolvedValueOnce({
         user_id: 1,
-        username: 'jeferson',
-      }); // primer username choca
-      prismaMock.user.findUnique.mockResolvedValueOnce(null); // segundo candidato pasa
+        username: 'test',
+      }); // first username collides
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // second candidate passes
 
       const mockCreatedWithSuffix = {
         user_id: 11,
-        email: 'jeferson@gmail.com',
-        username: 'jeferson_a1b2',
-        name: 'Jeferson',
-        last_name: 'Snyder',
+        email: 'user@example.com',
+        username: 'test_a1b2',
+        name: 'Test',
+        last_name: 'User',
         email_verified: true,
         role: { role_name: 'USER' },
       };
@@ -623,7 +660,7 @@ describe('AuthService', () => {
       const result = await service.validateGoogleUser(mockGooglePayload);
 
       expect(prismaMock.user.create).toHaveBeenCalled();
-      expect(result.user.username).toBe('jeferson_a1b2');
+      expect(result.user.username).toBe('test_a1b2');
     });
   });
 });
