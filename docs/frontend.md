@@ -76,6 +76,34 @@ El proyecto sigue una arquitectura modular y separada por responsabilidades:
 
 El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.ts`.
 
+### Administración de usuarios (UOC-5)
+
+- `/admin/usuarios` muestra el listado de usuarios registrados y aparece debajo
+  de Materiales en `AdminSidebar`. La sección activa se identifica visualmente y
+  mediante `aria-current`.
+- `services/users.service.ts` consume `GET /admin/users` mediante `apiFetch` y el
+  proxy autenticado. Los tipos del contrato están en `interfaces/user.interface.ts`.
+- La tarjeta superior cuenta todos los usuarios mediante una consulta sin filtro,
+  independiente de la búsqueda. El listado muestra username, correo, nombre completo,
+  rol, verificación y fecha de registro.
+- La búsqueda espera 300 ms antes de consultar; cambiar búsqueda o tamaño de página
+  vuelve a la página 1. El selector permite 10 o 15 registros y la navegación numérica
+  muestra un conjunto acotado de páginas para evitar desbordamientos.
+- Al cambiar de consulta se cancelan peticiones anteriores y se ignoran respuestas
+  obsoletas. Carga, lista vacía y error son estados separados, con opción de reintento.
+- Las cadenas largas se ajustan dentro de las celdas. En móvil, solo la tabla conserva
+  desplazamiento horizontal; los controles se distribuyen en varias líneas.
+- Cada botón Gestionar enlaza a `/admin/usuarios/[userId]`; la pantalla individual
+  pertenece a UOC-6 y todavía no forma parte de esta entrega.
+
+Comprobación manual: abrir con sesión de administrador, buscar por nombre, usuario
+o correo; navegar entre páginas; alternar 10/15 registros y comprobar que vuelve
+a la primera página. Revisar el total global mientras se filtra, resultados vacíos,
+fallos de sesión y reintento. Probar cadenas largas y la navegación móvil.
+
+Pruebas del contrato HTTP en `tests/users.test.mjs`: proxy autenticado, búsqueda
+codificada, paginación, total independiente, resultados vacíos y errores.
+
 ---
 
 ## Apariencia y contenido de cursos

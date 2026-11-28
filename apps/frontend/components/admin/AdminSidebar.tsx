@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Video, FileText, LogOut, Menu, X } from 'lucide-react';
+import { BookOpen, Video, FileText, LogOut, Menu, X, Users } from 'lucide-react';
 
 import { logout } from '@/services/auth.service';
 
@@ -20,6 +20,7 @@ export const AdminSidebar = () => {
     { icon: BookOpen, label: 'Cursos', href: '/admin/cursos' },
     { icon: Video, label: 'Clases', href: '/admin/clases' },
     { icon: FileText, label: 'Materiales', href: '/admin/materiales' },
+    { icon: Users, label: 'Usuarios', href: '/admin/usuarios' },
   ];
 
   return (
@@ -57,6 +58,7 @@ export const AdminSidebar = () => {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-200 cursor-pointer ${
                   isActive
