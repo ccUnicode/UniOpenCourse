@@ -18,6 +18,9 @@ import { GoogleUserPayload } from './strategies/google.strategy';
 
 const GENERIC_RESEND_MESSAGE =
   'Si el correo existe y aún no está verificado, recibirás un enlace de verificación.';
+const MAX_GOOGLE_USER_CREATE_ATTEMPTS = 5;
+
+type UserWithRole = Prisma.UserGetPayload<{ include: { role: true } }>;
 
 @Injectable()
 export class AuthService {
@@ -363,87 +366,24 @@ export class AuthService {
   }
 
   /**
-   * Valida un usuario autenticado mediante Google OAuth 2.0.
-   * Si el usuario no existe, lo crea con rol USER y estado verificado;
-   * si ya existe, actualiza su estado de verificación si estaba pendiente.
+   * Validates a user authenticated through Google OAuth.
+   * Creates the account with role USER and verified status if it does not exist,
+   * or completes email verification if an unverified account already exists.
    *
-   * @param googleUser Perfil normalizado devuelto por la estrategia de Google
-   * @returns Objeto con access_token firmado y datos públicos del usuario
+   * @param googleUser Normalized profile returned by the Google strategy
+   * @returns Signed access_token and public user details
    */
   async validateGoogleUser(googleUser: GoogleUserPayload) {
     const email = googleUser.email.trim().toLowerCase();
 
-    let user = await this.prisma.user.findUnique({
+    const existingUser = await this.prisma.user.findUnique({
       where: { email },
       include: { role: true },
     });
 
-    if (user) {
-      if (!user.email_verified) {
-        const userId = user.user_id;
-        const randomPassword = randomBytes(32).toString('hex');
-        const invalidatedPassword = await bcrypt.hash(randomPassword, 10);
-
-        await this.prisma.$transaction(async (tx) => {
-          const updated = await tx.user.updateMany({
-            where: {
-              user_id: userId,
-              email_verified: false,
-            },
-            data: {
-              password: invalidatedPassword,
-              email_verified: true,
-              email_verified_at: new Date(),
-            },
-          });
-
-          if (updated.count > 0) {
-            await tx.emailVerificationToken.deleteMany({
-              where: { user_id: userId },
-            });
-          }
-        });
-
-        const refreshedUser = await this.prisma.user.findUnique({
-          where: { user_id: userId },
-          include: { role: true },
-        });
-        if (!refreshedUser) {
-          throw new UnauthorizedException('Usuario no encontrado');
-        }
-        user = refreshedUser;
-      }
-    } else {
-      const baseUsername = this.generateBaseUsername(
-        googleUser.email,
-        googleUser.firstName,
-      );
-      const uniqueUsername = await this.generateUniqueUsername(baseUsername);
-
-      const randomPassword = randomBytes(32).toString('hex');
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      const name = (googleUser.firstName || 'Usuario').trim().slice(0, 50);
-      const lastName = (googleUser.lastName || '').trim().slice(0, 50);
-
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          username: uniqueUsername,
-          name,
-          last_name: lastName,
-          password: hashedPassword,
-          email_verified: true,
-          email_verified_at: new Date(),
-          role: {
-            connect: {
-              role_name: 'USER',
-            },
-          },
-        },
-        include: { role: true },
-      });
-    }
+    const user = existingUser
+      ? await this.ensureGoogleUserVerified(existingUser)
+      : await this.createGoogleUser(email, googleUser);
 
     const payload = {
       sub: user.user_id,
@@ -464,6 +404,118 @@ export class AuthService {
     };
   }
 
+  /**
+   * Ensures an existing account matched by Google OAuth is marked verified and
+   * has any legacy password/token invalidated atomically if still unverified.
+   */
+  private async ensureGoogleUserVerified(user: UserWithRole): Promise<UserWithRole> {
+    if (user.email_verified) {
+      return user;
+    }
+
+    const userId = user.user_id;
+    const randomPassword = randomBytes(32).toString('hex');
+    const invalidatedPassword = await bcrypt.hash(randomPassword, 10);
+
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.updateMany({
+        where: {
+          user_id: userId,
+          email_verified: false,
+        },
+        data: {
+          password: invalidatedPassword,
+          email_verified: true,
+          email_verified_at: new Date(),
+        },
+      });
+
+      if (updated.count > 0) {
+        await tx.emailVerificationToken.deleteMany({
+          where: { user_id: userId },
+        });
+      }
+    });
+
+    const refreshedUser = await this.prisma.user.findUnique({
+      where: { user_id: userId },
+      include: { role: true },
+    });
+    if (!refreshedUser) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+    return refreshedUser;
+  }
+
+  /**
+   * Creates a new Google user with bounded recovery on P2002 unique-constraint
+   * conflicts for either email or username races.
+   */
+  private async createGoogleUser(
+    email: string,
+    googleUser: GoogleUserPayload,
+  ): Promise<UserWithRole> {
+    const baseUsername = this.generateBaseUsername(
+      googleUser.email,
+      googleUser.firstName,
+    );
+    let candidateUsername = await this.generateUniqueUsername(baseUsername);
+
+    const randomPassword = randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    const name = (googleUser.firstName || 'Usuario').trim().slice(0, 50);
+    const lastName = (googleUser.lastName || '').trim().slice(0, 50);
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt < MAX_GOOGLE_USER_CREATE_ATTEMPTS; attempt++) {
+      try {
+        return await this.prisma.user.create({
+          data: {
+            email,
+            username: candidateUsername,
+            name,
+            last_name: lastName,
+            password: hashedPassword,
+            email_verified: true,
+            email_verified_at: new Date(),
+            role: {
+              connect: {
+                role_name: 'USER',
+              },
+            },
+          },
+          include: { role: true },
+        });
+      } catch (error: unknown) {
+        if (
+          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+          error.code !== 'P2002'
+        ) {
+          throw error;
+        }
+
+        // Check by email first because driver adapters may populate meta.table rather than target columns.
+        const existingByEmail = await this.prisma.user.findUnique({
+          where: { email },
+          include: { role: true },
+        });
+        if (existingByEmail) {
+          return this.ensureGoogleUserVerified(existingByEmail);
+        }
+
+        lastError = error;
+        if (attempt < MAX_GOOGLE_USER_CREATE_ATTEMPTS - 1) {
+          candidateUsername = await this.generateUniqueUsername(baseUsername, {
+            skipBase: true,
+          });
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
   private generateBaseUsername(email: string, firstName?: string): string {
     const raw = (firstName || email.split('@')[0])
       .toLowerCase()
@@ -471,21 +523,30 @@ export class AuthService {
     return (raw || 'user').slice(0, 50);
   }
 
-  private async generateUniqueUsername(baseUsername: string): Promise<string> {
-    const existing = await this.prisma.user.findUnique({
-      where: { username: baseUsername },
-    });
-    if (!existing) {
-      return baseUsername;
+  private buildSuffixedUsername(baseUsername: string, suffix: string): string {
+    return `${baseUsername.slice(0, 70 - suffix.length)}${suffix}`;
+  }
+
+  private async generateUniqueUsername(
+    baseUsername: string,
+    options: { skipBase?: boolean } = {},
+  ): Promise<string> {
+    if (!options.skipBase) {
+      const existing = await this.prisma.user.findUnique({
+        where: { username: baseUsername },
+      });
+      if (!existing) {
+        return baseUsername;
+      }
     }
     for (let i = 0; i < 5; i++) {
       const suffix = `_${randomBytes(2).toString('hex')}`;
-      const candidate = `${baseUsername.slice(0, 70 - suffix.length)}${suffix}`;
+      const candidate = this.buildSuffixedUsername(baseUsername, suffix);
       const found = await this.prisma.user.findUnique({
         where: { username: candidate },
       });
       if (!found) return candidate;
     }
-    return `${baseUsername.slice(0, 55)}_${Date.now()}`;
+    return this.buildSuffixedUsername(baseUsername, `_${Date.now()}`);
   }
 }

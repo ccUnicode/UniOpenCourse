@@ -62,18 +62,18 @@ export class AuthController {
   }
 
   /**
-   * Inicia el flujo de autenticación federada con Google OAuth 2.0.
-   * Redirige al navegador del usuario a la pantalla de consentimiento de Google.
+   * Starts federated authentication with Google OAuth 2.0.
+   * Redirects the user's browser to Google's consent screen.
    */
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleAuth() {
-    // Manejado por GoogleAuthGuard
+    // Handled by GoogleAuthGuard
   }
 
   /**
-   * Callback de retorno de Google OAuth 2.0.
-   * Valida o registra al usuario en base de datos, establece la cookie de sesión y redirige al frontend.
+   * Google OAuth 2.0 callback handler.
+   * Validates or registers the user, sets the session cookie, and redirects to the frontend.
    */
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
