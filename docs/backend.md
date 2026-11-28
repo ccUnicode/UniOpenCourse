@@ -6,8 +6,9 @@ Documentación del backend del monorepo (NestJS, Prisma, PostgreSQL).
 
 ### Responsabilidad
 
-Consultar usuarios registrados desde administración (UOC-1). Expone
-`GET /admin/users`, protegido por `JwtAuthGuard`, `RolesGuard` y `@Roles('ADMIN')`.
+Consultar usuarios registrados desde administración (UOC-1 y UOC-4). Expone
+`GET /admin/users` y `GET /admin/users/:id`, protegidos por `JwtAuthGuard`,
+`RolesGuard` y `@Roles('ADMIN')`.
 No representa usuarios conectados en tiempo real.
 
 ### Archivos principales
@@ -16,6 +17,7 @@ No representa usuarios conectados en tiempo real.
 - `src/users/admin-users.controller.ts`: ruta administrativa y validación de query.
 - `src/users/users.service.ts`: consulta y conteo mediante transacción de Prisma.
 - `src/users/dto/find-all-users.dto.ts`: búsqueda y paginación.
+- `src/users/dto/find-one-user.dto.ts`: ID entero positivo dentro del rango de PostgreSQL.
 
 ### Reglas de negocio
 
@@ -28,6 +30,13 @@ No representa usuarios conectados en tiempo real.
 - Usa una selección explícita de campos básicos, estado de verificación y rol.
   No consulta ni devuelve hashes de contraseña ni tokens.
 - No modifica usuarios ni requiere cambios en el esquema de base de datos.
+- El detalle devuelve el perfil, la fecha de verificación (nullable), el rol y
+  `visited_courses` con los datos básicos de cada curso y su docente. Solo selecciona
+  campos permitidos en cada nivel; no carga contraseñas ni tokens.
+- Las visitas corresponden al usuario solicitado y se ordenan por última visita
+  descendente, con ID de curso descendente como desempate. Sin visitas devuelve `[]`.
+- Un ID inválido devuelve `400`; un usuario inexistente devuelve `404` con el mensaje
+  `Usuario no encontrado`. Un fallo de base de datos no se transforma en `404`.
 
 ### Pruebas
 
@@ -35,9 +44,12 @@ No representa usuarios conectados en tiempo real.
 paginación. `admin-users.controller.spec.ts` comprueba por HTTP la ruta del módulo
 con JWT y guards reales, sustituyendo únicamente la base de datos: acceso de
 administrador, rechazo de usuarios regulares, tokens inválidos/expirados y
-validación de parámetros.
+validación de parámetros. El detalle incluye casos de usuario sin visitas,
+verificación pendiente y usuario inexistente; el servicio comprueba la selección
+segura de campos y la propagación de fallos de base de datos.
 
 Contrato completo: [GET /admin/users](./endpoints.md#get-adminusers).
+Detalle: [GET /admin/users/:id](./endpoints.md#get-adminusersid).
 
 **Convención:**
 

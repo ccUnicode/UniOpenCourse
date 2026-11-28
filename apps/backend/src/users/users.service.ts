@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma';
 import { PrismaService } from '../prisma.service';
 import { FindAllUsersDto } from './dto/find-all-users.dto';
@@ -46,5 +46,49 @@ export class UsersService {
     ]);
 
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * Retrieves a profile, its role and course visits using explicit safe fields.
+   * @param id - Validated positive user identifier.
+   * @returns Profile and visits ordered by most recent visit, without credentials.
+   * @throws NotFoundException when the user does not exist.
+   */
+  async findOne(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { user_id: id },
+      select: {
+        user_id: true,
+        name: true,
+        last_name: true,
+        username: true,
+        email: true,
+        email_verified: true,
+        email_verified_at: true,
+        register_date: true,
+        role: { select: { role_id: true, role_name: true } },
+        visited_courses: {
+          orderBy: [{ last_visit_date: 'desc' }, { course_id: 'desc' }],
+          select: {
+            course_id: true,
+            start_date: true,
+            last_visit_date: true,
+            course: {
+              select: {
+                course_id: true,
+                name: true,
+                course_code: true,
+                url_image: true,
+                description: true,
+                teacher: { select: { name: true, last_name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    return user;
   }
 }

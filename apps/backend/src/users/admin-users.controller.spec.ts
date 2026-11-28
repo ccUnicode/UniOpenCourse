@@ -13,7 +13,7 @@ describe('GET /admin/users', () => {
   let app: INestApplication<App>;
   let jwt: JwtService;
   const prisma = {
-    user: { findMany: jest.fn(), count: jest.fn() },
+    user: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -37,6 +37,7 @@ describe('GET /admin/users', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.user.findUnique.mockResolvedValue(null);
   });
 
   afterAll(async () => {
@@ -146,5 +147,123 @@ describe('GET /admin/users', () => {
       .auth(tokenFor('ADMIN'), { type: 'bearer' })
       .expect(400);
     expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
+  describe('GET /admin/users/:id', () => {
+    const profile = {
+      user_id: 7,
+      name: 'Gabriel',
+      last_name: 'Eustaquio',
+      username: 'gabriel',
+      email: 'gabriel@example.test',
+      email_verified: true,
+      email_verified_at: new Date('2026-11-25T12:00:00Z'),
+      register_date: new Date('2026-11-24T12:00:00Z'),
+      role: { role_id: 2, role_name: 'USER' },
+      visited_courses: [
+        {
+          course_id: 3,
+          start_date: new Date('2026-11-25T13:00:00Z'),
+          last_visit_date: new Date('2026-11-26T12:00:00Z'),
+          course: {
+            course_id: 3,
+            name: 'Algoritmia',
+            course_code: 'ALG-001',
+            url_image: 'courses/algoritmia.png',
+            description: 'Curso de algoritmos',
+            teacher: { name: 'Docente', last_name: 'Prueba' },
+          },
+        },
+      ],
+    };
+
+    it('allows an ADMIN to retrieve another user and their course visits', async () => {
+      prisma.user.findUnique.mockResolvedValue(profile);
+      await request(app.getHttpServer())
+        .get('/admin/users/7')
+        .auth(tokenFor('ADMIN'), { type: 'bearer' })
+        .expect(200)
+        .expect(JSON.parse(JSON.stringify(profile)) as object);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { user_id: 7 } }),
+      );
+    });
+
+    it('returns an unverified user with no course visits', async () => {
+      const unverified = {
+        ...profile,
+        email_verified: false,
+        email_verified_at: null,
+        visited_courses: [],
+      };
+      prisma.user.findUnique.mockResolvedValue(unverified);
+      await request(app.getHttpServer())
+        .get('/admin/users/7')
+        .auth(tokenFor('ADMIN'), { type: 'bearer' })
+        .expect(200)
+        .expect(JSON.parse(JSON.stringify(unverified)) as object);
+    });
+
+    it('accepts the existing administrator cookie', async () => {
+      prisma.user.findUnique.mockResolvedValue(profile);
+      await request(app.getHttpServer())
+        .get('/admin/users/7')
+        .set('Cookie', `access_token=${tokenFor('ADMIN')}`)
+        .expect(200);
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 404 for a missing user', async () => {
+      await request(app.getHttpServer())
+        .get('/admin/users/999')
+        .auth(tokenFor('ADMIN'), { type: 'bearer' })
+        .expect(404)
+        .expect({
+          statusCode: 404,
+          message: 'Usuario no encontrado',
+          error: 'Not Found',
+        });
+    });
+
+    it('rejects unauthenticated requests before looking up the profile', async () => {
+      await request(app.getHttpServer()).get('/admin/users/7').expect(401);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid tokens', async () => {
+      await request(app.getHttpServer())
+        .get('/admin/users/7')
+        .auth('invalid', { type: 'bearer' })
+        .expect(401);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects expired administrator tokens', async () => {
+      const expired = jwt.sign({ sub: 1, role: 'ADMIN' }, { expiresIn: -1 });
+      await request(app.getHttpServer())
+        .get('/admin/users/7')
+        .auth(expired, { type: 'bearer' })
+        .expect(401);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('denies USER access even to their own profile through the admin route', async () => {
+      await request(app.getHttpServer())
+        .get('/admin/users/1')
+        .auth(tokenFor('USER'), { type: 'bearer' })
+        .expect(403);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it.each(['0', '-1', '1.5', 'abc', '2147483648', '999999999999999999999'])(
+      'rejects invalid identifier %s without querying the database',
+      async (id) => {
+        await request(app.getHttpServer())
+          .get(`/admin/users/${id}`)
+          .auth(tokenFor('ADMIN'), { type: 'bearer' })
+          .expect(400);
+        expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      },
+    );
   });
 });

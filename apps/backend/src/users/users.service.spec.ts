@@ -1,11 +1,12 @@
 import 'reflect-metadata';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { FindAllUsersDto } from './dto/find-all-users.dto';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   const prisma = {
-    user: { findMany: jest.fn(), count: jest.fn() },
+    user: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
   const service = new UsersService(prisma as unknown as PrismaService);
@@ -84,5 +85,73 @@ describe('UsersService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 20 }),
     );
+  });
+
+  describe('findOne', () => {
+    it('loads only safe profile and visit fields with a deterministic visit order', async () => {
+      const user = { user_id: 7, role: { role_name: 'USER' }, visited_courses: [] };
+      prisma.user.findUnique.mockResolvedValue(user);
+
+      await expect(service.findOne(7)).resolves.toEqual(user);
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { user_id: 7 },
+        select: {
+          user_id: true,
+          name: true,
+          last_name: true,
+          username: true,
+          email: true,
+          email_verified: true,
+          email_verified_at: true,
+          register_date: true,
+          role: { select: { role_id: true, role_name: true } },
+          visited_courses: {
+            orderBy: [{ last_visit_date: 'desc' }, { course_id: 'desc' }],
+            select: {
+              course_id: true,
+              start_date: true,
+              last_visit_date: true,
+              course: {
+                select: {
+                  course_id: true,
+                  name: true,
+                  course_code: true,
+                  url_image: true,
+                  description: true,
+                  teacher: { select: { name: true, last_name: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it('returns the requested profile including its course visits', async () => {
+      const user = {
+        user_id: 42,
+        role: { role_id: 2, role_name: 'USER' },
+        visited_courses: [
+          {
+            course_id: 3,
+            last_visit_date: new Date('2026-11-26T12:00:00Z'),
+            course: { course_id: 3, name: 'Algoritmia' },
+          },
+        ],
+      };
+      prisma.user.findUnique.mockResolvedValue(user);
+      await expect(service.findOne(42)).resolves.toEqual(user);
+    });
+
+    it('throws 404 for an unknown user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+
+    it('propagates database failures instead of reporting a missing user', async () => {
+      const failure = new Error('Database unavailable');
+      prisma.user.findUnique.mockRejectedValue(failure);
+      await expect(service.findOne(7)).rejects.toThrow(failure);
+    });
   });
 });

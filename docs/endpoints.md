@@ -80,6 +80,84 @@ La consulta selecciona exclusivamente los campos mostrados: no lee ni devuelve
 
 ---
 
+## GET /admin/users/:id
+
+### Descripción
+
+Consulta el perfil de un usuario registrado, su rol y su historial de cursos
+visitados. Implementado para UOC-4; no consulta sesiones activas ni modifica datos.
+
+### Autenticación
+
+Requiere JWT válido mediante `Authorization: Bearer <token>` o cookie
+`access_token`. Desde el frontend se puede usar el proxy autenticado
+`/api/proxy/admin/users/:id`.
+
+### Roles permitidos
+
+Solo `ADMIN`, incluso si quien consulta solicita su propio perfil.
+
+### Parámetros de ruta
+
+| Parámetro | Tipo    | Requerido | Descripción                                                                                |
+| --------- | ------- | --------- | ------------------------------------------------------------------------------------------ |
+| id        | integer | Sí        | Identificador `user_id`, entre `1` y `2147483647` (rango positivo de `Int` en PostgreSQL). |
+
+### Respuesta 200
+
+```json
+{
+  "user_id": 7,
+  "name": "Gabriel",
+  "last_name": "Eustaquio",
+  "username": "gabriel",
+  "email": "gabriel@example.com",
+  "email_verified": true,
+  "email_verified_at": "2026-11-25T12:00:00.000Z",
+  "register_date": "2026-11-24T12:00:00.000Z",
+  "role": { "role_id": 2, "role_name": "USER" },
+  "visited_courses": [
+    {
+      "course_id": 3,
+      "start_date": "2026-11-25T13:00:00.000Z",
+      "last_visit_date": "2026-11-26T12:00:00.000Z",
+      "course": {
+        "course_id": 3,
+        "name": "Algoritmia",
+        "course_code": "ALG-001",
+        "url_image": "courses/algoritmia.png",
+        "description": "Curso de algoritmos",
+        "teacher": { "name": "Docente", "last_name": "Prueba" }
+      }
+    }
+  ]
+}
+```
+
+El perfil incluye únicamente los campos del ejemplo. Las contraseñas, los tokens
+de verificación y sus hashes quedan excluidos mediante selección explícita de
+campos en Prisma, también en las relaciones anidadas.
+
+`visited_courses` contiene los cursos visitados por el usuario solicitado y se
+ordena por `last_visit_date` descendente, con `course_id` descendente como desempate.
+Devuelve un arreglo vacío si no tiene visitas. `email_verified_at` puede ser `null`.
+Las fechas se serializan en formato ISO 8601.
+
+### Errores
+
+| Código | Motivo                                                           |
+| ------ | ---------------------------------------------------------------- |
+| 400    | Identificador no entero, menor que 1 o fuera del rango admitido. |
+| 401    | JWT ausente, inválido o expirado.                                |
+| 403    | Sesión válida sin rol `ADMIN`.                                   |
+| 404    | No existe un usuario con ese ID (`Usuario no encontrado`).       |
+
+### Requerimientos relacionados
+
+- UOC-4: consulta administrativa del detalle de un usuario por ID.
+
+---
+
 ## GET /courses
 
 ### Descripción
