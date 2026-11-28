@@ -11,6 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import bcrypt from 'bcrypt';
+import { Prisma } from '../generated/prisma';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -18,6 +19,7 @@ describe('AuthService', () => {
     user: {
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       findFirst: jest.Mock;
       findUnique: jest.Mock;
       delete: jest.Mock;
@@ -47,6 +49,7 @@ describe('AuthService', () => {
       user: {
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         findFirst: jest.fn(),
         findUnique: jest.fn().mockResolvedValue(null),
         delete: jest.fn(),
@@ -97,6 +100,12 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
   });
+
+  const createUniqueConstraintError = () =>
+    new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -226,6 +235,87 @@ describe('AuthService', () => {
 
       await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
       expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on P2002 when Google OAuth or another signup registered the email concurrently', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 50,
+          email: 'test@example.com',
+          email_verified: true,
+        });
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El correo electrónico ya está registrado'),
+      );
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on P2002 when another user concurrently claimed the username', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 51,
+          email: 'other@example.com',
+          username: 'testuser',
+          email_verified: true,
+        });
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El nombre de usuario ya está en uso'),
+      );
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should clean an expired conflicting account and retry registration once on P2002', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 99,
+          email: 'test@example.com',
+          username: 'testuser',
+          email_verified: false,
+        })
+        .mockResolvedValueOnce(null);
+      prismaMock.emailVerificationToken.findFirst.mockResolvedValue(null);
+      prismaMock.user.create
+        .mockRejectedValueOnce(createUniqueConstraintError())
+        .mockResolvedValueOnce(mockCreatedUser);
+
+      const result = await service.register(registerDto);
+
+      expect(prismaMock.user.delete).toHaveBeenCalledWith({
+        where: { user_id: 99 },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(2);
+      expect(result).toHaveProperty('email', 'test@example.com');
+    });
+
+    it('should throw generic ConflictException if bounded register retries remain P2002', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValue(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El correo electrónico o nombre de usuario ya está en uso'),
+      );
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(2);
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should propagate non-P2002 errors immediately from register without retrying', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValueOnce(new Error('Database timeout'));
+
+      await expect(service.register(registerDto)).rejects.toThrow('Database timeout');
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -485,6 +575,300 @@ describe('AuthService', () => {
       await expect(
         service.adminLogin({ email: 'normal@example.com', password: 'adminpass' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('validateGoogleUser', () => {
+    const mockGooglePayload = {
+      email: 'user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      picture: 'https://lh3.googleusercontent.com/pic.jpg',
+      accessToken: 'token-xyz',
+    };
+
+    it('should register a new user and issue a JWT if not found in DB', async () => {
+      // 1. findUnique by email does not find the user
+      prismaMock.user.findUnique.mockResolvedValueOnce(null);
+      // 2. findUnique by username finds no collision
+      prismaMock.user.findUnique.mockResolvedValueOnce(null);
+
+      const mockCreatedUser = {
+        user_id: 10,
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+      prismaMock.user.create.mockResolvedValueOnce(mockCreatedUser);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'user@example.com' },
+        include: { role: true },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'user@example.com',
+            email_verified: true,
+            role: { connect: { role_name: 'USER' } },
+          }) as unknown as Record<string, unknown>,
+        }),
+      );
+      expect(result).toEqual({
+        access_token: 'signed_google_jwt',
+        user: {
+          user_id: 10,
+          email: 'user@example.com',
+          username: 'testuser',
+          name: 'Test',
+          last_name: 'User',
+          role: 'USER',
+        },
+      });
+    });
+
+    it('should mark email_verified as true and invalidate previous password when user is unverified', async () => {
+      const mockUnverifiedUser = {
+        user_id: 10,
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: false,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(mockUnverifiedUser)
+        .mockResolvedValueOnce({
+          ...mockUnverifiedUser,
+          email_verified: true,
+          email_verified_at: new Date(),
+        });
+      prismaMock.user.updateMany.mockResolvedValueOnce({ count: 1 });
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: 10, email_verified: false },
+          data: expect.objectContaining({
+            password: expect.any(String) as unknown as string,
+            email_verified: true,
+          }) as unknown as Record<string, unknown>,
+        }),
+      );
+      expect(prismaMock.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
+        where: { user_id: 10 },
+      });
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('should preserve password and skip token deletion if account was concurrently verified before write', async () => {
+      const mockUnverifiedUser = {
+        user_id: 10,
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: false,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(mockUnverifiedUser)
+        .mockResolvedValueOnce({
+          ...mockUnverifiedUser,
+          email_verified: true,
+          email_verified_at: new Date(),
+        });
+      prismaMock.user.updateMany.mockResolvedValueOnce({ count: 0 });
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: 10, email_verified: false },
+        }),
+      );
+      expect(prismaMock.emailVerificationToken.deleteMany).not.toHaveBeenCalled();
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('should reuse the existing user when already verified', async () => {
+      const mockVerifiedUser = {
+        user_id: 10,
+        email: 'user@example.com',
+        username: 'testuser',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique.mockResolvedValueOnce(mockVerifiedUser);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+      expect(result.user.email).toBe('user@example.com');
+    });
+
+    it('should resolve username collisions by appending a unique suffix', async () => {
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // by email
+      prismaMock.user.findUnique.mockResolvedValueOnce({
+        user_id: 1,
+        username: 'test',
+      }); // first username collides
+      prismaMock.user.findUnique.mockResolvedValueOnce(null); // second candidate passes
+
+      const mockCreatedWithSuffix = {
+        user_id: 11,
+        email: 'user@example.com',
+        username: 'test_a1b2',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+      prismaMock.user.create.mockResolvedValueOnce(mockCreatedWithSuffix);
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.create).toHaveBeenCalled();
+      expect(result.user.username).toBe('test_a1b2');
+    });
+
+    it('should retry with a suffixed username on P2002 username conflict without re-hashing password', async () => {
+      const hashSpy = jest.spyOn(bcrypt, 'hash');
+      try {
+        prismaMock.user.findUnique.mockResolvedValue(null);
+        prismaMock.user.create
+          .mockRejectedValueOnce(createUniqueConstraintError())
+          .mockResolvedValueOnce({
+            user_id: 12,
+            email: 'user@example.com',
+            username: 'test_c3d4',
+            name: 'Test',
+            last_name: 'User',
+            email_verified: true,
+            role: { role_name: 'USER' },
+          });
+        jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+        const result = await service.validateGoogleUser(mockGooglePayload);
+
+        expect(prismaMock.user.create).toHaveBeenCalledTimes(2);
+        const createCalls = prismaMock.user.create.mock.calls as Array<
+          [{ data: { username: string } }]
+        >;
+        expect(createCalls[0][0].data.username).toBe('test');
+        expect(createCalls[1][0].data.username).toMatch(/^test_[0-9a-f]{4}$/);
+        expect(hashSpy).toHaveBeenCalledTimes(1);
+        expect(result.access_token).toBe('signed_google_jwt');
+        expect(result.user.user_id).toBe(12);
+      } finally {
+        hashSpy.mockRestore();
+      }
+    });
+
+    it('should reload an existing verified account on P2002 email conflict', async () => {
+      const mockExistingUser = {
+        user_id: 14,
+        email: 'user@example.com',
+        username: 'existing_user',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: true,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null) // initial email lookup
+        .mockResolvedValueOnce(null) // initial username lookup
+        .mockResolvedValueOnce(mockExistingUser); // reload on P2002
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.user.updateMany).not.toHaveBeenCalled();
+      expect(result.user.user_id).toBe(14);
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('should verify a reloaded unverified account after a P2002 email conflict', async () => {
+      const mockUnverifiedUser = {
+        user_id: 15,
+        email: 'user@example.com',
+        username: 'pending_user',
+        name: 'Test',
+        last_name: 'User',
+        email_verified: false,
+        role: { role_name: 'USER' },
+      };
+
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null) // initial email lookup
+        .mockResolvedValueOnce(null) // initial username lookup
+        .mockResolvedValueOnce(mockUnverifiedUser) // reload on P2002
+        .mockResolvedValueOnce({
+          ...mockUnverifiedUser,
+          email_verified: true,
+          email_verified_at: new Date(),
+        }); // post-transaction refresh
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+      prismaMock.user.updateMany.mockResolvedValueOnce({ count: 1 });
+      jwtMock.sign.mockReturnValue('signed_google_jwt');
+
+      const result = await service.validateGoogleUser(mockGooglePayload);
+
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: 15, email_verified: false },
+        }),
+      );
+      expect(prismaMock.emailVerificationToken.deleteMany).toHaveBeenCalledWith({
+        where: { user_id: 15 },
+      });
+      expect(result.access_token).toBe('signed_google_jwt');
+    });
+
+    it('should rethrow P2002 error once bounded create retries are exhausted', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValue(createUniqueConstraintError());
+
+      await expect(service.validateGoogleUser(mockGooglePayload)).rejects.toThrow(
+        Prisma.PrismaClientKnownRequestError,
+      );
+
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(5);
+    });
+
+    it('should propagate non-P2002 errors immediately without retrying', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValueOnce(new Error('Database connection lost'));
+
+      await expect(service.validateGoogleUser(mockGooglePayload)).rejects.toThrow(
+        'Database connection lost',
+      );
+
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+      expect(prismaMock.user.findUnique).toHaveBeenCalledTimes(2);
     });
   });
 });

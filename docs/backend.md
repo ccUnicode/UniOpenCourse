@@ -235,7 +235,9 @@ Gestionar el registro de usuarios, la verificación de correo electrónico, la a
 - `src/auth/dto/verify-email.dto.ts`
 - `src/auth/dto/resend-verification.dto.ts`
 - `src/auth/strategies/jwt.strategy.ts`
+- `src/auth/strategies/google.strategy.ts`
 - `src/auth/guards/jwt-auth.guard.ts`
+- `src/auth/guards/google-auth.guard.ts`
 - `src/auth/guards/roles.guard.ts`
 
 ### Reglas de negocio
@@ -249,12 +251,14 @@ Gestionar el registro de usuarios, la verificación de correo electrónico, la a
 - **Reenvío:** Protegido por rate-limit (máximo 5 solicitudes por IP cada 10 min) y un cooldown por usuario. Responde siempre con el mismo mensaje genérico para mitigar enumeración de usuarios.
 - **Login:** Acepta email o username (búsqueda case-insensitive). Exige que el correo esté verificado para usuarios regulares.
 - **JWT:** Caduca en 1 día. El `JwtStrategy` extrae el token preferentemente del header `Authorization: Bearer` o de la cookie `access_token`.
+- **Google OAuth:** Permite autenticación federada. Si el usuario es nuevo lo registra con rol `USER` y correo verificado; si ya existía, valida la cuenta sin alterar su contraseña local. Emite la cookie HttpOnly `access_token`.
 
 ### Dependencias
 
 - `PrismaService` (manejo de base de datos).
 - `MailModule` / `MailService` (envío de correos).
 - `JwtModule` y `@nestjs/passport` (seguridad y tokens).
+- `passport-google-oauth20` (estrategia oficial de Google OAuth 2.0).
 - `ThrottlerModule` (rate limit).
 
 ---

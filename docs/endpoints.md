@@ -858,6 +858,69 @@ No aplica.
 
 ---
 
+## GET /auth/google
+
+### Descripción
+
+Inicia el flujo de autenticación con Google OAuth 2.0 redirigiendo al usuario a la pantalla de consentimiento.
+
+### Autenticación
+
+No requiere autenticación.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros
+
+No aplica.
+
+### Respuesta 302 (Redirección)
+
+Redirige a la URL de autorización de Google (`https://accounts.google.com/o/oauth2/v2/auth?...`).
+
+### Errores
+
+| Código | Caso                                                         |
+| ------ | ------------------------------------------------------------ |
+| 500    | Error si las credenciales de Google OAuth no están configuradas en el entorno. |
+
+---
+
+## GET /auth/google/callback
+
+### Descripción
+
+Endpoint de retorno (*callback*) de Google OAuth. Autentica o registra al usuario en base de datos, establece la cookie HttpOnly `access_token` y redirige al frontend.
+
+### Autenticación
+
+Protegido por `GoogleAuthGuard`.
+
+### Roles permitidos
+
+Público.
+
+### Parámetros de consulta (Query)
+
+| Parámetro | Tipo   | Requerido | Descripción                                                        |
+| --------- | ------ | --------- | ------------------------------------------------------------------ |
+| code      | string | Sí        | Código de autorización temporal de Google para el canje.          |
+| state     | string | No        | Estado opcional para mitigación CSRF.                             |
+
+### Respuesta 302 (Redirección)
+
+Establece la cookie `access_token` y redirige a `${FRONTEND_URL}/auth/google/callback?token=<JWT>`.
+
+### Errores
+
+| Código | Caso                                                                |
+| ------ | ------------------------------------------------------------------- |
+| 401    | Error si el usuario cancela la pantalla de Google o falla el canje del código. |
+
+---
+
 ## Composición del token (JWT)
 
 Tras un login exitoso (`POST /auth/login` o `POST /auth/admin/login`), la API devuelve un JWT firmado. El payload incluye:

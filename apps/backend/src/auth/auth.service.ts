@@ -14,9 +14,14 @@ import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma';
+import { GoogleUserPayload } from './strategies/google.strategy';
 
 const GENERIC_RESEND_MESSAGE =
   'Si el correo existe y aún no está verificado, recibirás un enlace de verificación.';
+const MAX_REGISTER_ATTEMPTS = 2;
+const MAX_GOOGLE_USER_CREATE_ATTEMPTS = 5;
+
+type UserWithRole = Prisma.UserGetPayload<{ include: { role: true } }>;
 
 @Injectable()
 export class AuthService {
@@ -40,14 +45,85 @@ export class AuthService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + this.getVerificationExpiresMs());
 
-    const user = await this.prisma.$transaction(async (tx) => {
+    const user = await this.createPendingUserWithRetry({
+      email,
+      username,
+      name,
+      last_name,
+      hashedPassword,
+      tokenHash,
+      expiresAt,
+    });
+
+    try {
+      await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
+
+    return {
+      message:
+        'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.',
+      email: user.email,
+    };
+  }
+
+  private isUniqueConstraintError(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+    );
+  }
+
+  /**
+   * Inserts a pending user and verification token, mapping concurrent P2002
+   * races to localized 409 ConflictException errors (or retrying once if an
+   * expired conflicting account was cleaned up during the hash window).
+   */
+  private async createPendingUserWithRetry(params: {
+    email: string;
+    username: string;
+    name: string;
+    last_name: string;
+    hashedPassword: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<UserWithRole> {
+    for (let attempt = 0; attempt < MAX_REGISTER_ATTEMPTS; attempt++) {
+      try {
+        return await this.createPendingUserWithToken(params);
+      } catch (error: unknown) {
+        if (!this.isUniqueConstraintError(error)) {
+          throw error;
+        }
+
+        await this.resolveRegistrationConflicts(params.email, params.username);
+      }
+    }
+
+    throw new ConflictException(
+      'El correo electrónico o nombre de usuario ya está en uso',
+    );
+  }
+
+  private async createPendingUserWithToken(params: {
+    email: string;
+    username: string;
+    name: string;
+    last_name: string;
+    hashedPassword: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<UserWithRole> {
+    return this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
-          email,
-          username,
-          name,
-          last_name,
-          password: hashedPassword,
+          email: params.email,
+          username: params.username,
+          name: params.name,
+          last_name: params.last_name,
+          password: params.hashedPassword,
           role: {
             connect: {
               role_name: 'USER',
@@ -65,30 +141,18 @@ export class AuthService {
         where: { user_id: created.user_id },
         create: {
           user_id: created.user_id,
-          token_hash: tokenHash,
-          expires_at: expiresAt,
+          token_hash: params.tokenHash,
+          expires_at: params.expiresAt,
         },
         update: {
-          token_hash: tokenHash,
-          expires_at: expiresAt,
+          token_hash: params.tokenHash,
+          expires_at: params.expiresAt,
           created_at: new Date(),
         },
       });
 
       return created;
     });
-
-    try {
-      await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
-    } catch (error) {
-      console.error('Failed to send verification email:', error);
-    }
-
-    return {
-      message:
-        'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.',
-      email: user.email,
-    };
   }
 
   async login(loginDto: LoginDto) {
@@ -359,5 +423,187 @@ export class AuthService {
   private getResendCooldownMs(): number {
     const minutes = Number(this.config.get<string>('EMAIL_RESEND_COOLDOWN_MINUTES') ?? 3);
     return minutes * 60 * 1000;
+  }
+
+  /**
+   * Validates a user authenticated through Google OAuth.
+   * Creates the account with role USER and verified status if it does not exist,
+   * or completes email verification if an unverified account already exists.
+   *
+   * @param googleUser Normalized profile returned by the Google strategy
+   * @returns Signed access_token and public user details
+   */
+  async validateGoogleUser(googleUser: GoogleUserPayload) {
+    const email = googleUser.email.trim().toLowerCase();
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+      include: { role: true },
+    });
+
+    const user = existingUser
+      ? await this.ensureGoogleUserVerified(existingUser)
+      : await this.createGoogleUser(email, googleUser);
+
+    const payload = {
+      sub: user.user_id,
+      email: user.email,
+      role: user.role.role_name,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        last_name: user.last_name,
+        role: user.role.role_name,
+      },
+    };
+  }
+
+  /**
+   * Ensures an existing account matched by Google OAuth is marked verified and
+   * has any legacy password/token invalidated atomically if still unverified.
+   */
+  private async ensureGoogleUserVerified(user: UserWithRole): Promise<UserWithRole> {
+    if (user.email_verified) {
+      return user;
+    }
+
+    const userId = user.user_id;
+    const randomPassword = randomBytes(32).toString('hex');
+    const invalidatedPassword = await bcrypt.hash(randomPassword, 10);
+
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.updateMany({
+        where: {
+          user_id: userId,
+          email_verified: false,
+        },
+        data: {
+          password: invalidatedPassword,
+          email_verified: true,
+          email_verified_at: new Date(),
+        },
+      });
+
+      if (updated.count > 0) {
+        await tx.emailVerificationToken.deleteMany({
+          where: { user_id: userId },
+        });
+      }
+    });
+
+    const refreshedUser = await this.prisma.user.findUnique({
+      where: { user_id: userId },
+      include: { role: true },
+    });
+    if (!refreshedUser) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+    return refreshedUser;
+  }
+
+  /**
+   * Creates a new Google user with bounded recovery on P2002 unique-constraint
+   * conflicts for either email or username races.
+   */
+  private async createGoogleUser(
+    email: string,
+    googleUser: GoogleUserPayload,
+  ): Promise<UserWithRole> {
+    const baseUsername = this.generateBaseUsername(
+      googleUser.email,
+      googleUser.firstName,
+    );
+    let candidateUsername = await this.generateUniqueUsername(baseUsername);
+
+    const randomPassword = randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    const name = (googleUser.firstName || 'Usuario').trim().slice(0, 50);
+    const lastName = (googleUser.lastName || '').trim().slice(0, 50);
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt < MAX_GOOGLE_USER_CREATE_ATTEMPTS; attempt++) {
+      try {
+        return await this.prisma.user.create({
+          data: {
+            email,
+            username: candidateUsername,
+            name,
+            last_name: lastName,
+            password: hashedPassword,
+            email_verified: true,
+            email_verified_at: new Date(),
+            role: {
+              connect: {
+                role_name: 'USER',
+              },
+            },
+          },
+          include: { role: true },
+        });
+      } catch (error: unknown) {
+        if (!this.isUniqueConstraintError(error)) {
+          throw error;
+        }
+
+        // Check by email first because driver adapters may populate meta.table rather than target columns.
+        const existingByEmail = await this.prisma.user.findUnique({
+          where: { email },
+          include: { role: true },
+        });
+        if (existingByEmail) {
+          return this.ensureGoogleUserVerified(existingByEmail);
+        }
+
+        lastError = error;
+        if (attempt < MAX_GOOGLE_USER_CREATE_ATTEMPTS - 1) {
+          candidateUsername = await this.generateUniqueUsername(baseUsername, {
+            skipBase: true,
+          });
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  private generateBaseUsername(email: string, firstName?: string): string {
+    const raw = (firstName || email.split('@')[0])
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '');
+    return (raw || 'user').slice(0, 50);
+  }
+
+  private buildSuffixedUsername(baseUsername: string, suffix: string): string {
+    return `${baseUsername.slice(0, 70 - suffix.length)}${suffix}`;
+  }
+
+  private async generateUniqueUsername(
+    baseUsername: string,
+    options: { skipBase?: boolean } = {},
+  ): Promise<string> {
+    if (!options.skipBase) {
+      const existing = await this.prisma.user.findUnique({
+        where: { username: baseUsername },
+      });
+      if (!existing) {
+        return baseUsername;
+      }
+    }
+    for (let i = 0; i < 5; i++) {
+      const suffix = `_${randomBytes(2).toString('hex')}`;
+      const candidate = this.buildSuffixedUsername(baseUsername, suffix);
+      const found = await this.prisma.user.findUnique({
+        where: { username: candidate },
+      });
+      if (!found) return candidate;
+    }
+    return this.buildSuffixedUsername(baseUsername, `_${Date.now()}`);
   }
 }

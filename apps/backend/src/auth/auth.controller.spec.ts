@@ -5,23 +5,35 @@ import type { Server } from 'node:http';
 import request from 'supertest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
 
-describe('AuthController HTTP validation', () => {
+describe('AuthController', () => {
+  let controller: AuthController;
   let app: INestApplication<Server>;
-  const authService = {
+  const mockAuthService = {
     login: jest.fn(),
     adminLogin: jest.fn(),
     register: jest.fn(),
     verifyEmail: jest.fn(),
     resendVerificationEmail: jest.fn(),
+    validateGoogleUser: jest.fn(),
+    logout: jest.fn(),
   };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([{ ttl: 600_000, limit: 5 }])],
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue('http://localhost:3000') },
+        },
+      ],
     }).compile();
+    controller = module.get<AuthController>(AuthController);
     app = module.createNestApplication<INestApplication<Server>>();
     await app.init();
   });
@@ -30,6 +42,10 @@ describe('AuthController HTTP validation', () => {
 
   afterAll(async () => {
     await app?.close();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
   });
 
   it.each([
@@ -42,15 +58,91 @@ describe('AuthController HTTP validation', () => {
     'rejects an empty body on %s before calling the service',
     async (route, method) => {
       await request(app.getHttpServer()).post(`/auth/${route}`).send({}).expect(400);
-      expect(authService[method]).not.toHaveBeenCalled();
+      expect(mockAuthService[method]).not.toHaveBeenCalled();
     },
   );
 
   it('still accepts a username as the login identifier', async () => {
     const body = { email: 'estudiante1', password: 'example-password' };
-    authService.login.mockResolvedValueOnce({ access_token: 'test-token' });
+    mockAuthService.login.mockResolvedValueOnce({ access_token: 'test-token' });
 
     await request(app.getHttpServer()).post('/auth/login').send(body).expect(201);
-    expect(authService.login).toHaveBeenCalledWith(body);
+    expect(mockAuthService.login).toHaveBeenCalledWith(body);
+  });
+
+  it('googleAuth should be defined', () => {
+    expect(typeof controller.googleAuth).toBe('function');
+  });
+
+  describe('googleAuthCallback', () => {
+    it('should validate Google user, set cookie and redirect to frontend', async () => {
+      const mockGoogleUser = {
+        email: 'test@gmail.com',
+        firstName: 'Test',
+        lastName: 'User',
+        accessToken: 'token-123',
+      };
+      const mockAuthResult = {
+        access_token: 'jwt-access-token-abc',
+        user: {
+          user_id: 1,
+          email: 'test@gmail.com',
+          username: 'test',
+          name: 'Test',
+          last_name: 'User',
+          role: 'USER',
+        },
+      };
+
+      mockAuthService.validateGoogleUser.mockResolvedValue(mockAuthResult);
+
+      const req = { user: mockGoogleUser } as unknown as Request;
+      const mockCookie = jest.fn();
+      const mockRedirect = jest.fn();
+      const res = {
+        cookie: mockCookie,
+        redirect: mockRedirect,
+      } as unknown as Response;
+
+      await controller.googleAuthCallback(req, res);
+
+      expect(mockAuthService.validateGoogleUser).toHaveBeenCalledWith(mockGoogleUser);
+      expect(mockCookie).toHaveBeenCalledWith(
+        'access_token',
+        'jwt-access-token-abc',
+        expect.objectContaining({
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+        }) as unknown as Record<string, unknown>,
+      );
+      expect(mockRedirect).toHaveBeenCalledWith(
+        'http://localhost:3000/auth/google/callback?token=jwt-access-token-abc',
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('should clear access_token cookie and invoke logout service', () => {
+      const expectedResponse = { message: 'Logout exitoso' };
+      mockAuthService.logout.mockReturnValue(expectedResponse);
+
+      const mockClearCookie = jest.fn();
+      const res = {
+        clearCookie: mockClearCookie,
+      } as unknown as Response;
+
+      const result = controller.logout(res);
+
+      expect(mockClearCookie).toHaveBeenCalledWith(
+        'access_token',
+        expect.objectContaining({
+          httpOnly: true,
+          path: '/',
+        }) as unknown as Record<string, unknown>,
+      );
+      expect(mockAuthService.logout).toHaveBeenCalled();
+      expect(result).toEqual(expectedResponse);
+    });
   });
 });
