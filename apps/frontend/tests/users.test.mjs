@@ -77,3 +77,69 @@ test('user list retains backend errors and propagates network cancellation', asy
     /Aborted/,
   );
 });
+
+test('user detail uses the authenticated proxy and preserves the profile and visits', async () => {
+  const profile = {
+    user_id: 7,
+    name: 'Gabriel',
+    last_name: 'Eustaquio',
+    username: 'gabriel',
+    email: 'gabriel@example.test',
+    email_verified: false,
+    email_verified_at: null,
+    register_date: '2026-11-24T12:00:00Z',
+    role: { role_id: 2, role_name: 'USER' },
+    visited_courses: [{ course_id: 3, course: { name: 'Algoritmia' } }],
+  };
+  const state = createModules({ respond: () => Response.json(profile) });
+  const controller = new AbortController();
+  assert.deepEqual(
+    await state.load('services/users.service').getAdminUser('7', controller.signal),
+    profile,
+  );
+  assert.equal(state.calls[0].url, '/api/proxy/admin/users/7');
+  assert.equal(state.calls[0].options.signal, controller.signal);
+  assert.equal(state.calls[0].options.credentials, 'include');
+  assert.equal(state.calls[0].options.cache, 'no-store');
+});
+
+test('user detail treats invalid identifiers as missing without sending a request', async () => {
+  const state = createModules();
+  const service = state.load('services/users.service');
+  for (const id of ['', '0', '-1', '1.5', 'abc', '1/../2', '1e2', '2147483648']) {
+    assert.equal(await service.getAdminUser(id), null);
+  }
+  assert.equal(state.calls.length, 0);
+});
+
+test('user detail preserves an empty visit history and distinguishes 404 from other failures', async () => {
+  const empty = createModules({
+    respond: () => Response.json({ user_id: 7, visited_courses: [] }),
+  });
+  assert.deepEqual(
+    (await empty.load('services/users.service').getAdminUser('7')).visited_courses,
+    [],
+  );
+  const missing = createModules({ respond: () => Response.json({}, { status: 404 }) });
+  assert.equal(await missing.load('services/users.service').getAdminUser('99'), null);
+  for (const [status, message] of [
+    [401, /sesión ha expirado/],
+    [403, /permisos/],
+    [500, /No se pudo cargar el perfil/],
+  ]) {
+    const failed = createModules({ respond: () => Response.json({}, { status }) });
+    await assert.rejects(
+      failed.load('services/users.service').getAdminUser('7'),
+      message,
+    );
+  }
+});
+
+test('user detail propagates network cancellation rather than returning a false 404', async () => {
+  const state = createModules({
+    respond: () => {
+      throw new Error('Aborted');
+    },
+  });
+  await assert.rejects(state.load('services/users.service').getAdminUser('7'), /Aborted/);
+});

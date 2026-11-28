@@ -94,7 +94,7 @@ El acceso a `/admin/*` (excepto `/admin/login`) está protegido por `middleware.
 - Las cadenas largas se ajustan dentro de las celdas. En móvil, solo la tabla conserva
   desplazamiento horizontal; los controles se distribuyen en varias líneas.
 - Cada botón Gestionar enlaza a `/admin/usuarios/[userId]`; la pantalla individual
-  pertenece a UOC-6 y todavía no forma parte de esta entrega.
+  se implementa por separado en UOC-6.
 
 Comprobación manual: abrir con sesión de administrador, buscar por nombre, usuario
 o correo; navegar entre páginas; alternar 10/15 registros y comprobar que vuelve
@@ -103,6 +103,31 @@ fallos de sesión y reintento. Probar cadenas largas y la navegación móvil.
 
 Pruebas del contrato HTTP en `tests/users.test.mjs`: proxy autenticado, búsqueda
 codificada, paginación, total independiente, resultados vacíos y errores.
+
+### Detalle de usuario (UOC-6)
+
+- `/admin/usuarios/[userId]` presenta una ficha de consulta a pantalla completa,
+  dentro del panel administrativo, con botón superior para volver al listado.
+- Muestra nombre y apellido, username, correo, rol, verificación y fecha de registro.
+  Los campos se renderizan explícitamente: no muestra contraseñas ni tokens.
+- Consume `GET /admin/users/:id` de UOC-4 mediante `getAdminUser` en
+  `services/users.service.ts`. El contrato está en `AdminUserDetail`.
+- La tabla de cursos visitados mantiene el orden de última visita recibido del
+  backend y muestra curso, código, docente, primera y última visita, con enlace
+  para consultar el curso. Sin visitas muestra un estado vacío.
+- Distingue carga, perfil inexistente (404 o ID inválido), permisos/sesión y otros
+  errores, ofreciendo reintento en los errores de consulta. La URL solo admite IDs
+  enteros positivos dentro del rango de PostgreSQL antes de hacer la petición.
+- Cambiar de usuario reinicia el estado y cancela la consulta anterior; evita
+  mostrar el perfil previo mientras carga la nueva ruta.
+- Los textos extensos saltan de línea. En móvil el desplazamiento horizontal
+  queda dentro de la tabla del historial.
+
+Comprobación manual: entrar desde Gestionar, comprobar ficha y cursos visitados,
+volver al listado; probar usuario sin visitas y verificación pendiente, ID
+inexistente y no numérico, errores y reintento. Revisar a 375, 1024 y 1440 px con
+nombres y correos largos. Las pruebas de `tests/users.test.mjs` cubren el contrato
+del detalle, autenticación, IDs inválidos, 404 y propagación de errores.
 
 ---
 
