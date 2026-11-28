@@ -101,6 +101,12 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
+  const createUniqueConstraintError = () =>
+    new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -229,6 +235,87 @@ describe('AuthService', () => {
 
       await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
       expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on P2002 when Google OAuth or another signup registered the email concurrently', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 50,
+          email: 'test@example.com',
+          email_verified: true,
+        });
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El correo electrónico ya está registrado'),
+      );
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on P2002 when another user concurrently claimed the username', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 51,
+          email: 'other@example.com',
+          username: 'testuser',
+          email_verified: true,
+        });
+      prismaMock.user.create.mockRejectedValueOnce(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El nombre de usuario ya está en uso'),
+      );
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should clean an expired conflicting account and retry registration once on P2002', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          user_id: 99,
+          email: 'test@example.com',
+          username: 'testuser',
+          email_verified: false,
+        })
+        .mockResolvedValueOnce(null);
+      prismaMock.emailVerificationToken.findFirst.mockResolvedValue(null);
+      prismaMock.user.create
+        .mockRejectedValueOnce(createUniqueConstraintError())
+        .mockResolvedValueOnce(mockCreatedUser);
+
+      const result = await service.register(registerDto);
+
+      expect(prismaMock.user.delete).toHaveBeenCalledWith({
+        where: { user_id: 99 },
+      });
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(2);
+      expect(result).toHaveProperty('email', 'test@example.com');
+    });
+
+    it('should throw generic ConflictException if bounded register retries remain P2002', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValue(createUniqueConstraintError());
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        new ConflictException('El correo electrónico o nombre de usuario ya está en uso'),
+      );
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(2);
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should propagate non-P2002 errors immediately from register without retrying', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockRejectedValueOnce(new Error('Database timeout'));
+
+      await expect(service.register(registerDto)).rejects.toThrow('Database timeout');
+      expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
+      expect(mailMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -663,12 +750,6 @@ describe('AuthService', () => {
       expect(prismaMock.user.create).toHaveBeenCalled();
       expect(result.user.username).toBe('test_a1b2');
     });
-
-    const createUniqueConstraintError = () =>
-      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
-        code: 'P2002',
-        clientVersion: 'test',
-      });
 
     it('should retry with a suffixed username on P2002 username conflict without re-hashing password', async () => {
       const hashSpy = jest.spyOn(bcrypt, 'hash');

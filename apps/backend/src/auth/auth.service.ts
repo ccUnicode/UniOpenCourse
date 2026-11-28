@@ -18,6 +18,7 @@ import { GoogleUserPayload } from './strategies/google.strategy';
 
 const GENERIC_RESEND_MESSAGE =
   'Si el correo existe y aún no está verificado, recibirás un enlace de verificación.';
+const MAX_REGISTER_ATTEMPTS = 2;
 const MAX_GOOGLE_USER_CREATE_ATTEMPTS = 5;
 
 type UserWithRole = Prisma.UserGetPayload<{ include: { role: true } }>;
@@ -44,14 +45,85 @@ export class AuthService {
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + this.getVerificationExpiresMs());
 
-    const user = await this.prisma.$transaction(async (tx) => {
+    const user = await this.createPendingUserWithRetry({
+      email,
+      username,
+      name,
+      last_name,
+      hashedPassword,
+      tokenHash,
+      expiresAt,
+    });
+
+    try {
+      await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
+
+    return {
+      message:
+        'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.',
+      email: user.email,
+    };
+  }
+
+  private isUniqueConstraintError(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+    );
+  }
+
+  /**
+   * Inserts a pending user and verification token, mapping concurrent P2002
+   * races to localized 409 ConflictException errors (or retrying once if an
+   * expired conflicting account was cleaned up during the hash window).
+   */
+  private async createPendingUserWithRetry(params: {
+    email: string;
+    username: string;
+    name: string;
+    last_name: string;
+    hashedPassword: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<UserWithRole> {
+    for (let attempt = 0; attempt < MAX_REGISTER_ATTEMPTS; attempt++) {
+      try {
+        return await this.createPendingUserWithToken(params);
+      } catch (error: unknown) {
+        if (!this.isUniqueConstraintError(error)) {
+          throw error;
+        }
+
+        await this.resolveRegistrationConflicts(params.email, params.username);
+      }
+    }
+
+    throw new ConflictException(
+      'El correo electrónico o nombre de usuario ya está en uso',
+    );
+  }
+
+  private async createPendingUserWithToken(params: {
+    email: string;
+    username: string;
+    name: string;
+    last_name: string;
+    hashedPassword: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<UserWithRole> {
+    return this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
-          email,
-          username,
-          name,
-          last_name,
-          password: hashedPassword,
+          email: params.email,
+          username: params.username,
+          name: params.name,
+          last_name: params.last_name,
+          password: params.hashedPassword,
           role: {
             connect: {
               role_name: 'USER',
@@ -69,30 +141,18 @@ export class AuthService {
         where: { user_id: created.user_id },
         create: {
           user_id: created.user_id,
-          token_hash: tokenHash,
-          expires_at: expiresAt,
+          token_hash: params.tokenHash,
+          expires_at: params.expiresAt,
         },
         update: {
-          token_hash: tokenHash,
-          expires_at: expiresAt,
+          token_hash: params.tokenHash,
+          expires_at: params.expiresAt,
           created_at: new Date(),
         },
       });
 
       return created;
     });
-
-    try {
-      await this.mailService.sendVerificationEmail(user.email, user.name, rawToken);
-    } catch (error) {
-      console.error('Failed to send verification email:', error);
-    }
-
-    return {
-      message:
-        'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.',
-      email: user.email,
-    };
   }
 
   async login(loginDto: LoginDto) {
@@ -488,10 +548,7 @@ export class AuthService {
           include: { role: true },
         });
       } catch (error: unknown) {
-        if (
-          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-          error.code !== 'P2002'
-        ) {
+        if (!this.isUniqueConstraintError(error)) {
           throw error;
         }
 
